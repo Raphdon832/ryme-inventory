@@ -1,0 +1,260 @@
+import React, { useState } from 'react';
+import { FiSettings, FiBell, FiShield, FiDatabase, FiSave, FiMoon, FiGlobe } from 'react-icons/fi';
+
+const Settings = () => {
+  const [settings, setSettings] = useState({
+    notifications: {
+      emailAlerts: true,
+      lowStockAlerts: true,
+      orderAlerts: true,
+      weeklyReports: false
+    },
+    display: {
+      darkMode: false,
+      compactView: false,
+      currency: 'NGN'
+    },
+    inventory: {
+      lowStockThreshold: 10,
+      autoReorder: false
+    }
+  });
+
+  const [saved, setSaved] = useState(false);
+
+  const handleToggle = (category, setting) => {
+    setSettings({
+      ...settings,
+      [category]: {
+        ...settings[category],
+        [setting]: !settings[category][setting]
+      }
+    });
+    setSaved(false);
+  };
+
+  const handleSave = () => {
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2000);
+  };
+
+  const Toggle = ({ checked, onChange }) => (
+    <button
+      onClick={onChange}
+      style={{
+        width: '44px',
+        height: '24px',
+        borderRadius: '12px',
+        background: checked ? '#0A0A0A' : '#E5E5E5',
+        border: 'none',
+        padding: '2px',
+        cursor: 'pointer',
+        transition: 'background 0.2s'
+      }}
+    >
+      <div style={{
+        width: '20px',
+        height: '20px',
+        borderRadius: '50%',
+        background: 'white',
+        transform: checked ? 'translateX(20px)' : 'translateX(0)',
+        transition: 'transform 0.2s'
+      }} />
+    </button>
+  );
+
+  return (
+    <div className="page-content">
+      <div className="page-header">
+        <div>
+          <h1>Settings</h1>
+          <p className="page-subtitle">Configure your application preferences</p>
+        </div>
+      </div>
+
+      <div style={{ display: 'grid', gap: '24px', marginTop: '24px', maxWidth: '800px' }}>
+        {/* Notifications */}
+        <div className="card">
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
+            <div style={{
+              width: '40px',
+              height: '40px',
+              borderRadius: '10px',
+              background: 'var(--info-bg)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: 'var(--info-text)'
+            }}>
+              <FiBell size={20} />
+            </div>
+            <div>
+              <h3 style={{ margin: 0 }}>Notifications</h3>
+              <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-secondary)' }}>Manage your notification preferences</p>
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 0', borderBottom: '1px solid var(--border-color)' }}>
+              <div>
+                <p style={{ margin: 0, fontWeight: 500 }}>Email Alerts</p>
+                <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-tertiary)' }}>Receive important updates via email</p>
+              </div>
+              <Toggle checked={settings.notifications.emailAlerts} onChange={() => handleToggle('notifications', 'emailAlerts')} />
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 0', borderBottom: '1px solid var(--border-color)' }}>
+              <div>
+                <p style={{ margin: 0, fontWeight: 500 }}>Low Stock Alerts</p>
+                <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-tertiary)' }}>Get notified when products are running low</p>
+              </div>
+              <Toggle checked={settings.notifications.lowStockAlerts} onChange={() => handleToggle('notifications', 'lowStockAlerts')} />
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 0', borderBottom: '1px solid var(--border-color)' }}>
+              <div>
+                <p style={{ margin: 0, fontWeight: 500 }}>Order Notifications</p>
+                <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-tertiary)' }}>Receive alerts for new orders</p>
+              </div>
+              <Toggle checked={settings.notifications.orderAlerts} onChange={() => handleToggle('notifications', 'orderAlerts')} />
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 0' }}>
+              <div>
+                <p style={{ margin: 0, fontWeight: 500 }}>Weekly Reports</p>
+                <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-tertiary)' }}>Receive weekly summary reports</p>
+              </div>
+              <Toggle checked={settings.notifications.weeklyReports} onChange={() => handleToggle('notifications', 'weeklyReports')} />
+            </div>
+          </div>
+        </div>
+
+        {/* Display */}
+        <div className="card">
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
+            <div style={{
+              width: '40px',
+              height: '40px',
+              borderRadius: '10px',
+              background: 'var(--warning-bg)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: 'var(--warning-text)'
+            }}>
+              <FiMoon size={20} />
+            </div>
+            <div>
+              <h3 style={{ margin: 0 }}>Display</h3>
+              <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-secondary)' }}>Customize your display preferences</p>
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 0', borderBottom: '1px solid var(--border-color)' }}>
+              <div>
+                <p style={{ margin: 0, fontWeight: 500 }}>Dark Mode</p>
+                <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-tertiary)' }}>Use dark theme (coming soon)</p>
+              </div>
+              <Toggle checked={settings.display.darkMode} onChange={() => handleToggle('display', 'darkMode')} />
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 0', borderBottom: '1px solid var(--border-color)' }}>
+              <div>
+                <p style={{ margin: 0, fontWeight: 500 }}>Compact View</p>
+                <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-tertiary)' }}>Show more items in less space</p>
+              </div>
+              <Toggle checked={settings.display.compactView} onChange={() => handleToggle('display', 'compactView')} />
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 0' }}>
+              <div>
+                <p style={{ margin: 0, fontWeight: 500 }}>Currency</p>
+                <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-tertiary)' }}>Select your preferred currency</p>
+              </div>
+              <select
+                value={settings.display.currency}
+                onChange={(e) => setSettings({ ...settings, display: { ...settings.display, currency: e.target.value } })}
+                style={{ width: 'auto', padding: '8px 16px' }}
+              >
+                <option value="NGN">₦ Nigerian Naira</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        {/* Inventory */}
+        <div className="card">
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
+            <div style={{
+              width: '40px',
+              height: '40px',
+              borderRadius: '10px',
+              background: 'var(--success-bg)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: 'var(--success-text)'
+            }}>
+              <FiDatabase size={20} />
+            </div>
+            <div>
+              <h3 style={{ margin: 0 }}>Inventory</h3>
+              <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-secondary)' }}>Configure inventory settings</p>
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 0', borderBottom: '1px solid var(--border-color)' }}>
+              <div>
+                <p style={{ margin: 0, fontWeight: 500 }}>Low Stock Threshold</p>
+                <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-tertiary)' }}>Items below this quantity trigger alerts</p>
+              </div>
+              <input
+                type="number"
+                value={settings.inventory.lowStockThreshold}
+                onChange={(e) => setSettings({ ...settings, inventory: { ...settings.inventory, lowStockThreshold: parseInt(e.target.value) } })}
+                style={{ width: '80px', textAlign: 'center' }}
+                min="1"
+              />
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 0' }}>
+              <div>
+                <p style={{ margin: 0, fontWeight: 500 }}>Auto Reorder</p>
+                <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-tertiary)' }}>Automatically create reorder requests</p>
+              </div>
+              <Toggle checked={settings.inventory.autoReorder} onChange={() => handleToggle('inventory', 'autoReorder')} />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div style={{ 
+        marginTop: '32px', 
+        paddingTop: '24px', 
+        borderTop: '1px solid var(--border-color)',
+        display: 'flex',
+        justifyContent: 'center'
+      }}>
+        <button 
+          onClick={handleSave} 
+          style={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: '8px',
+            padding: '10px 20px',
+            fontSize: '13px',
+            fontWeight: 500,
+            background: saved ? '#00B074' : '#0A0A0A',
+            borderRadius: '50px'
+          }}
+        >
+          <FiSave size={14} /> {saved ? 'Saved!' : 'Save Changes'}
+        </button>
+      </div>
+    </div>
+  );
+};
+
+export default Settings;

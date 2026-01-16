@@ -1,0 +1,44 @@
+import React from 'react';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import Layout from './components/Layout';
+import Dashboard from './pages/Dashboard';
+import Inventory from './pages/Inventory';
+import AddProduct from './pages/AddProduct';
+import Orders from './pages/Orders';
+import OrderDetails from './pages/OrderDetails';
+import Profile from './pages/Profile';
+import Settings from './pages/Settings';
+import ActivityLog from './pages/ActivityLog';
+import Tasks from './pages/Tasks';
+import Calendar from './pages/Calendar';
+import Analytics from './pages/Analytics';
+import Team from './pages/Team';
+import Help from './pages/Help';
+import './App.css';
+
+function App() {
+  return (
+    <Router>
+      <Layout>
+        <Routes>
+          <Route path="/" element={<Dashboard />} />
+          <Route path="/inventory" element={<Inventory />} />
+          <Route path="/inventory/add" element={<AddProduct />} />
+          <Route path="/inventory/edit/:id" element={<AddProduct />} />
+          <Route path="/orders" element={<Orders />} />
+          <Route path="/orders/:id" element={<OrderDetails />} />
+          <Route path="/activity-log" element={<ActivityLog />} />
+          <Route path="/tasks" element={<Tasks />} />
+          <Route path="/calendar" element={<Calendar />} />
+          <Route path="/analytics" element={<Analytics />} />
+          <Route path="/team" element={<Team />} />
+          <Route path="/help" element={<Help />} />
+          <Route path="/profile" element={<Profile />} />
+          <Route path="/settings" element={<Settings />} />
+        </Routes>
+      </Layout>
+    </Router>
+  );
+}
+
+export default App;
