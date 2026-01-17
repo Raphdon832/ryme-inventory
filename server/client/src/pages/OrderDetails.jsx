@@ -54,130 +54,270 @@ const OrderDetails = () => {
     }
   };
 
-  const handlePrintInvoice = () => {
+  const handlePrintInvoice = async () => {
     if (!order) return;
     
-    const doc = new jsPDF();
-    
-    // Config
-    const pageWidth = doc.internal.pageSize.getWidth();
-    const config = {
-      companyName: "Ryme Interiors",
-      // Add logo data URL here if needed, for instance:
-      // logoUrl: "data:image/png;base64,...",
+    // Load Logo
+    const loadImage = (url) => {
+        return new Promise((resolve, reject) => {
+            const img = new Image();
+            img.src = url;
+            img.onload = () => resolve(img);
+            img.onerror = reject;
+        });
     };
 
-    // Header
-    doc.setFontSize(22);
-    doc.setTextColor(40, 40, 40);
-    doc.text('INVOICE', pageWidth - 20, 20, { align: 'right' });
+    let logoImg = null;
+    try {
+        logoImg = await loadImage('/Ryme Logo Black.png');
+    } catch (error) {
+        console.error("Failed to load logo", error);
+    }
+
+    const doc = new jsPDF();
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
     
-    doc.setFontSize(14);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(0, 0, 0); // Black for B&W theme
-    doc.text(config.companyName, 20, 20);
+    // Theme Colors
+    const primaryColor = [20, 20, 20]; // Almost Black
+    const secondaryColor = [100, 100, 100]; // Dark Gray
+    const lightGray = [248, 249, 250]; // Very Light Gray for Headers
+    const textGray = [156, 163, 175]; // Light Text Gray for labels
     
-    // Line Separator
-    doc.setLineWidth(0.5);
-    doc.setDrawColor(200, 200, 200);
-    doc.line(20, 30, pageWidth - 20, 30);
-    
-    // Invoice # Generation (Hash ID to 7 digits for display if not numeric)
-    // Simple hash to number: sum of char codes % 10000000
-    // Or just use timestamp part:
-    let invoiceNum = "0000000";
+    // Config
+    const config = {
+      companyName: "Ryme Interiors", 
+    };
+
+    // --- Header ---
+    // Logo
+    if (logoImg) {
+        const logoWidth = 40; 
+        const logoHeight = (logoImg.height * logoWidth) / logoImg.width;
+        doc.addImage(logoImg, 'PNG', 20, 12, logoWidth, logoHeight);
+    } else {
+        doc.setFontSize(18);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(...primaryColor);
+        doc.text(config.companyName, 20, 26);
+    }
+
+    // Invoice Number
+    let invoiceNum = "INV 000";
     if (order.id) {
-        // Just take last 7 numeric chars if exist, otherwise hash
-        // Simple consistent number from string ID
-        let hash = 0;
-        for (let i = 0; i < order.id.length; i++) {
-            hash = ((hash << 5) - hash) + order.id.charCodeAt(i);
-            hash |= 0; // Convert to 32bit integer
-        }
-        invoiceNum = String(Math.abs(hash)).slice(0, 7).padStart(7, '0');
+        // Generate a clean invoice number format like INV YYYYMM-00-HASH
+        const datePart = new Date(order.order_date).toISOString().slice(0, 7).replace('-', ''); // YYYYMM
+        const idHash = order.id.slice(0, 2).toUpperCase() + order.id.slice(-2).toUpperCase();
+        invoiceNum = `INV ${datePart}-00-${idHash}`;
     }
-
-    // Order Info
-    doc.setFontSize(10);
+    
+    doc.setFontSize(11);
     doc.setFont('helvetica', 'normal');
-    doc.setTextColor(60, 60, 60);
+    doc.setTextColor(...primaryColor);
+    doc.text(invoiceNum, pageWidth - 20, 26, { align: 'right' });
+
+    // Line Divider
+    doc.setDrawColor(240, 240, 240);
+    doc.setLineWidth(0.5);
+    doc.line(20, 35, pageWidth - 20, 35);
+
+    // --- Info Section ---
+    const startY = 50;
+    const col2X = pageWidth / 2 + 10;
     
-    const rightColX = pageWidth - 20;
+    doc.setFontSize(9);
     
-    // Left Side: Customer Info
-    doc.text(`Bill To:`, 20, 45);
+    // Row 1: Due Date (Subject Removed)
+    // Label - Due Date
+    doc.setTextColor(...textGray);
+    doc.text('Due Date', 20, startY);
+    // Value
+    doc.setTextColor(...primaryColor);
     doc.setFont('helvetica', 'bold');
-    doc.text(order.customer_name || 'Guest', 20, 50);
-    doc.setFont('helvetica', 'normal');
-    if (order.customer_address) {
-        // Wrap text if address is long
-        const splitAddress = doc.splitTextToSize(order.customer_address, 80);
-        doc.text(splitAddress, 20, 55);
-    }
+    const orderDate = new Date(order.order_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+    doc.text(orderDate, 20, startY + 6);
+    // Subject column removed as requested
 
-    // Right Side: Invoice Meta
-    doc.text(`Invoice #:`, rightColX - 30, 45, { align: 'right' });
-    doc.text(invoiceNum, rightColX, 45, { align: 'right' });
+    // Row 2: Billed To & Currency
+    const row2Y = startY + 20;
     
-    doc.text(`Date:`, rightColX - 30, 50, { align: 'right' });
-    doc.text(new Date(order.order_date).toLocaleDateString(), rightColX, 50, { align: 'right' });
+    // Label - Billed To
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(...textGray);
+    doc.text('Billed To', 20, row2Y);
+    // Value
+    doc.setTextColor(...primaryColor);
+    doc.setFont('helvetica', 'bold');
+    doc.text(order.customer_name || 'Guest', 20, row2Y + 6);
+    
+    // Billed To Address (Regular font, smaller)
+    if (order.customer_address) {
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(8);
+        doc.setTextColor(...secondaryColor);
+        // Wrap text if needed
+        const splitAddress = doc.splitTextToSize(order.customer_address, 70);
+        doc.text(splitAddress, 20, row2Y + 11);
+        doc.setFontSize(9); // Reset size
+    }
+    
+    // Label - Currency
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(...textGray);
+    doc.text('Currency', col2X, row2Y);
+    // Value
+    doc.setTextColor(...primaryColor);
+    doc.setFont('helvetica', 'bold');
+    doc.text('NGN - Nigerian Naira', col2X, row2Y + 6);
 
-    // Table
-    const tableColumn = ["S/N", "Product", "Qty", "Unit Price", "Total"];
+    // --- Table ---
+    const tableStartY = row2Y + 30;
+    
+    // Updated: Added S/N column
+    const tableColumn = ["S/N", "ITEM", "QTY", "UNIT PRICE", "AMOUNT"];
     const tableRows = [];
+
+    // Helper to sanitize currency for PDF (removes unsupported symbols like ₦)
+    const safeCurrency = (val) => {
+        const formatted = formatCurrency(val);
+        return formatted.replace(/[^\x00-\x7F]/g, "N"); // Replace non-ascii with N
+    };
 
     order.items.forEach((item, index) => {
       const itemData = [
-        index + 1,
-        item.product_name,
+        index + 1, // S/N
+        item.product_name + (item.sorting_code ? `\nCode: ${item.sorting_code}` : ''),
         item.quantity,
-        `${formatCurrency(item.sales_price_at_time)}`,
-        `${formatCurrency(item.sales_price_at_time * item.quantity)}`
+        safeCurrency(item.sales_price_at_time),
+        safeCurrency(item.sales_price_at_time * item.quantity)
       ];
       tableRows.push(itemData);
     });
 
     autoTable(doc, {
+      startY: tableStartY,
       head: [tableColumn],
       body: tableRows,
-      startY: 75, // Moved down to accommodate address
-      theme: 'grid',
-      headStyles: { fillColor: [40, 40, 40], textColor: [255, 255, 255] }, // Dark Gray for B&W theme
-      styles: { fontSize: 9, textColor: [0, 0, 0] },
+      theme: 'plain',
+      margin: { left: 15, right: 15 }, // Reduced margins for wider table
+      styles: {
+        fontSize: 9,
+        cellPadding: 2, // Reduced padding significantly (was 8) to prevent wrapping
+        textColor: primaryColor,
+        font: 'helvetica',
+        valign: 'middle',
+        overflow: 'linebreak'
+      },
+      headStyles: {
+        fillColor: lightGray,
+        textColor: textGray,
+        fontSize: 8,
+        fontStyle: 'bold',
+        halign: 'left',
+        cellPadding: { top: 4, bottom: 4, left: 2, right: 2 } // specific padding for header
+      },
+      bodyStyles: {
+        lineWidth: 0,
+        minCellHeight: 10, // Ensure rows aren't too squashed vertically
+      },
       columnStyles: {
-        0: { cellWidth: 15 }, // S/N column
-        3: { halign: 'right' },
-        4: { halign: 'right' }
+        0: { cellWidth: 10, halign: 'center', textColor: secondaryColor }, // S/N
+        1: { cellWidth: 'auto', fontStyle: 'bold' }, // Item
+        2: { cellWidth: 15, halign: 'center', textColor: secondaryColor }, // Qty
+        3: { cellWidth: 35, halign: 'right', textColor: secondaryColor }, // Unit Price 
+        4: { cellWidth: 40, halign: 'right', fontStyle: 'bold' }, // Amount
+      },
+      didParseCell: (data) => {
+        // Custom alignment for header
+        if (data.section === 'head') {
+            if (data.column.index === 0 || data.column.index === 2) data.cell.styles.halign = 'center';
+            if (data.column.index === 3 || data.column.index === 4) data.cell.styles.halign = 'right';
+        }
       }
     });
     
-    // Totals
-    const finalY = (doc).lastAutoTable.finalY + 15;
-    const rightMargin = pageWidth - 20;
+    // --- Totals Section ---
+    const totalsRightMargin = pageWidth - 20;
+    const totalsLabelX = totalsRightMargin - 50;
+    let currentY = doc.lastAutoTable.finalY + 15;
     
-    doc.setFontSize(10);
-    
-    if (order.subtotal) {
-           doc.text(`Subtotal: ${formatCurrency(order.subtotal)}`, rightMargin, finalY, { align: 'right' });
+    // Helper to draw total rows
+    const drawTotalRow = (label, valueRaw, isBold = false, isHeavy = false, isDiscount = false) => {
+        doc.setFontSize(isHeavy ? 11 : 9);
+        doc.setFont('helvetica', isBold ? 'bold' : 'normal');
         
-        if (order.discount && order.discount.type !== 'none') {
-             const discountAmount = order.subtotal - order.total_sales_price;
-             doc.setTextColor(0, 0, 0); // Black for B&W theme
-             doc.text(`Discount: -${formatCurrency(discountAmount)}`, rightMargin, finalY + 6, { align: 'right' });
-             doc.setTextColor(60, 60, 60); // Reset
-        }
+        // Label
+        doc.setTextColor(...(isBold ? primaryColor : secondaryColor));
+        doc.text(label, totalsLabelX, currentY, { align: 'right' });
         
-        doc.setFontSize(12);
-        doc.setFont('helvetica', 'bold');
-           doc.text(`Total: ${formatCurrency(order.total_sales_price)}`, rightMargin, finalY + 14, { align: 'right' });
-    } else {
-        doc.setFontSize(12);
-        doc.setFont('helvetica', 'bold');
-           doc.text(`Total: ${formatCurrency(order.total_sales_price)}`, rightMargin, finalY + 10, { align: 'right' });
-    }
+        // Value (cleaned)
+        // If valueRaw is a number, format it. If string, use as is (sanitized)
+        let displayValue = typeof valueRaw === 'number' ? safeCurrency(valueRaw) : valueRaw.replace(/[^\x00-\x7F]/g, "N");
 
-    // save using the 7 digit number
-    doc.save(`invoice_${invoiceNum}.pdf`);
+        doc.setTextColor(...(isDiscount ? [239, 68, 68] : primaryColor)); // Red for discount
+        doc.text(displayValue, totalsRightMargin, currentY, { align: 'right' });
+        
+        currentY += 8; // Spacing per row
+    };
+
+    // Subtotal
+    const subtotal = order.subtotal || order.total_sales_price;
+    drawTotalRow('Sub total', subtotal);
+    
+    // Discount
+    if (order.discount && order.discount.value > 0) {
+        const total = order.total_sales_price;
+        const discountAmount = subtotal - total;
+        if (discountAmount > 0) {
+             drawTotalRow(`Discount`, `-${safeCurrency(discountAmount)}`, false, false, true);
+        }
+    }
+    
+    // Visual Line before Total
+    currentY += 2;
+    doc.setDrawColor(240, 240, 240);
+    doc.line(totalsRightMargin - 70, currentY - 6, totalsRightMargin, currentY - 6);
+    
+    // Total
+    drawTotalRow('Total', order.total_sales_price, true, false);
+    
+    // Amount Due (Grand Total)
+    drawTotalRow('Amount due', order.total_sales_price, true, true);
+
+    
+    // --- Footer Notes ---
+    const footerY = pageHeight - 35;
+    
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'italic');
+    doc.setTextColor(...primaryColor);
+    doc.text('*Notes:', 20, footerY);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(...secondaryColor);
+    doc.text('Products that you have purchased cannot be returned.', 32, footerY);
+    
+    // Attachment Box
+    const attachY = footerY + 8;
+    // Box
+    doc.setDrawColor(230, 230, 230);
+    doc.setLineWidth(0.3);
+    doc.roundedRect(20, attachY, 80, 16, 2, 2, 'S');
+    // Icon (Simple sheet icon)
+    doc.setFillColor(243, 244, 246);
+    doc.rect(24, attachY + 3, 10, 10, 'F');
+    doc.setDrawColor(209, 213, 219);
+    doc.rect(24, attachY + 3, 10, 10, 'S');
+    // Text
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(9);
+    doc.setTextColor(...primaryColor);
+    doc.text('Product list.PDF', 40, attachY + 7);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8);
+    doc.setTextColor(16, 185, 129); // Green text
+    doc.text('Downloaded', 40, attachY + 12);
+    
+    doc.save(`invoice_${invoiceNum.replace(/\s/g, '_')}.pdf`);
   };
 
   if (loading) {
