@@ -69,7 +69,7 @@ const OrderDetails = () => {
 
     let logoImg = null;
     try {
-        logoImg = await loadImage('/Ryme Logo Black.png');
+        logoImg = await loadImage('/RymeLogoPDF.png');
     } catch (error) {
         console.error("Failed to load logo", error);
     }
@@ -127,18 +127,26 @@ const OrderDetails = () => {
     
     doc.setFontSize(9);
     
-    // Row 1: Due Date (Subject Removed)
-    // Label - Due Date
+    // Row 1: Date & Currency
+    // Label - Date
     doc.setTextColor(...textGray);
-    doc.text('Due Date', 20, startY);
+    doc.text('Date', 20, startY);
     // Value
     doc.setTextColor(...primaryColor);
     doc.setFont('helvetica', 'bold');
     const orderDate = new Date(order.order_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
     doc.text(orderDate, 20, startY + 6);
-    // Subject column removed as requested
 
-    // Row 2: Billed To & Currency
+    // Label - Currency (Moved from Row 2)
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(...textGray);
+    doc.text('Currency', col2X, startY);
+    // Value
+    doc.setTextColor(...primaryColor);
+    doc.setFont('helvetica', 'bold');
+    doc.text('NGN - Nigerian Naira', col2X, startY + 6);
+
+    // Row 2: Billed To (Currency Removed)
     const row2Y = startY + 20;
     
     // Label - Billed To
@@ -161,14 +169,7 @@ const OrderDetails = () => {
         doc.setFontSize(9); // Reset size
     }
     
-    // Label - Currency
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(...textGray);
-    doc.text('Currency', col2X, row2Y);
-    // Value
-    doc.setTextColor(...primaryColor);
-    doc.setFont('helvetica', 'bold');
-    doc.text('NGN - Nigerian Naira', col2X, row2Y + 6);
+    // Currency was here - now removed
 
     // --- Table ---
     const tableStartY = row2Y + 30;
@@ -294,28 +295,7 @@ const OrderDetails = () => {
     doc.text('*Notes:', 20, footerY);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(...secondaryColor);
-    doc.text('Products that you have purchased cannot be returned.', 32, footerY);
-    
-    // Attachment Box
-    const attachY = footerY + 8;
-    // Box
-    doc.setDrawColor(230, 230, 230);
-    doc.setLineWidth(0.3);
-    doc.roundedRect(20, attachY, 80, 16, 2, 2, 'S');
-    // Icon (Simple sheet icon)
-    doc.setFillColor(243, 244, 246);
-    doc.rect(24, attachY + 3, 10, 10, 'F');
-    doc.setDrawColor(209, 213, 219);
-    doc.rect(24, attachY + 3, 10, 10, 'S');
-    // Text
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(9);
-    doc.setTextColor(...primaryColor);
-    doc.text('Product list.PDF', 40, attachY + 7);
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(8);
-    doc.setTextColor(16, 185, 129); // Green text
-    doc.text('Downloaded', 40, attachY + 12);
+    // Removed specific return policy note and attachment box
     
     doc.save(`invoice_${invoiceNum.replace(/\s/g, '_')}.pdf`);
   };
