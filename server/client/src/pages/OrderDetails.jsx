@@ -4,11 +4,13 @@ import { FiArrowLeft, FiUser, FiCalendar, FiPackage, FiTag, FiTrendingUp, FiPrin
 import api from '../api';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { useSettings } from '../contexts/SettingsContext';
 import './OrderDetails.css';
 
 const OrderDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { formatCurrency } = useSettings();
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -129,8 +131,8 @@ const OrderDetails = () => {
         index + 1,
         item.product_name,
         item.quantity,
-        `N${item.sales_price_at_time.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`,
-        `N${(item.sales_price_at_time * item.quantity).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`
+        `${formatCurrency(item.sales_price_at_time)}`,
+        `${formatCurrency(item.sales_price_at_time * item.quantity)}`
       ];
       tableRows.push(itemData);
     });
@@ -156,22 +158,22 @@ const OrderDetails = () => {
     doc.setFontSize(10);
     
     if (order.subtotal) {
-        doc.text(`Subtotal: N${order.subtotal.toLocaleString(undefined, {minimumFractionDigits: 2})}`, rightMargin, finalY, { align: 'right' });
+           doc.text(`Subtotal: ${formatCurrency(order.subtotal)}`, rightMargin, finalY, { align: 'right' });
         
         if (order.discount && order.discount.type !== 'none') {
              const discountAmount = order.subtotal - order.total_sales_price;
              doc.setTextColor(0, 0, 0); // Black for B&W theme
-             doc.text(`Discount: -N${discountAmount.toLocaleString(undefined, {minimumFractionDigits: 2})}`, rightMargin, finalY + 6, { align: 'right' });
+             doc.text(`Discount: -${formatCurrency(discountAmount)}`, rightMargin, finalY + 6, { align: 'right' });
              doc.setTextColor(60, 60, 60); // Reset
         }
         
         doc.setFontSize(12);
         doc.setFont('helvetica', 'bold');
-        doc.text(`Total: N${order.total_sales_price.toLocaleString(undefined, {minimumFractionDigits: 2})}`, rightMargin, finalY + 14, { align: 'right' });
+           doc.text(`Total: ${formatCurrency(order.total_sales_price)}`, rightMargin, finalY + 14, { align: 'right' });
     } else {
         doc.setFontSize(12);
         doc.setFont('helvetica', 'bold');
-        doc.text(`Total: N${order.total_sales_price.toLocaleString(undefined, {minimumFractionDigits: 2})}`, rightMargin, finalY + 10, { align: 'right' });
+           doc.text(`Total: ${formatCurrency(order.total_sales_price)}`, rightMargin, finalY + 10, { align: 'right' });
     }
 
     // save using the 7 digit number
@@ -288,7 +290,7 @@ const OrderDetails = () => {
               <FiTag />
             </div>
             <div className="stat-content">
-              <span className="stat-value">₦{order.total_sales_price?.toFixed(2) || '0.00'}</span>
+              <span className="stat-value">{formatCurrency(order.total_sales_price || 0)}</span>
               <span className="stat-label">Total Revenue</span>
             </div>
           </div>
@@ -297,7 +299,7 @@ const OrderDetails = () => {
               <FiTrendingUp />
             </div>
             <div className="stat-content">
-              <span className="stat-value">₦{order.total_profit?.toFixed(2) || '0.00'}</span>
+              <span className="stat-value">{formatCurrency(order.total_profit || 0)}</span>
               <span className="stat-label">Total Profit ({profitMargin}%)</span>
             </div>
           </div>
@@ -342,16 +344,16 @@ const OrderDetails = () => {
                       <span className="quantity-badge">{item.quantity}</span>
                     </td>
                     <td className="text-muted">
-                      ₦{costPerUnit.toFixed(2)}
+                      {formatCurrency(costPerUnit)}
                     </td>
                     <td>
-                      ₦{item.sales_price_at_time?.toFixed(2) || '0.00'}
+                      {formatCurrency(item.sales_price_at_time || 0)}
                     </td>
                     <td className="font-semibold">
-                      ₦{totalPrice.toFixed(2)}
+                      {formatCurrency(totalPrice)}
                     </td>
                     <td>
-                      <span className="profit-value">+₦{totalProfit.toFixed(2)}</span>
+                      <span className="profit-value">{formatCurrency(totalProfit, { showSign: true })}</span>
                     </td>
                   </tr>
                 );
@@ -364,29 +366,29 @@ const OrderDetails = () => {
         <div className="order-totals">
           <div className="totals-row">
             <span>Subtotal</span>
-            <span>₦{(order.subtotal || order.total_sales_price)?.toFixed(2)}</span>
+            <span>{formatCurrency(order.subtotal || order.total_sales_price || 0)}</span>
           </div>
 
           {order.subtotal && order.discount && order.discount.type !== 'none' && (
              <div className="totals-row" style={{ color: '#ef4444' }}>
                 <span>Discount {order.discount.type === 'percentage' ? `(${order.discount.value}%)` : ''}</span>
-                <span>-₦{(order.subtotal - order.total_sales_price).toFixed(2)}</span>
+               <span>-{formatCurrency(order.subtotal - order.total_sales_price)}</span>
              </div>
           )}
 
           <div className="totals-row">
             <span>Total Cost of Production</span>
             <span className="text-muted">
-              ₦{((order.total_sales_price || 0) - (order.total_profit || 0)).toFixed(2)}
+              {formatCurrency((order.total_sales_price || 0) - (order.total_profit || 0))}
             </span>
           </div>
           <div className="totals-row total-profit">
             <span>Total Profit</span>
-            <span className="profit-amount">+₦{order.total_profit?.toFixed(2) || '0.00'}</span>
+            <span className="profit-amount">{formatCurrency(order.total_profit || 0, { showSign: true })}</span>
           </div>
           <div className="totals-row grand-total">
             <span>Grand Total</span>
-            <span>₦{order.total_sales_price?.toFixed(2) || '0.00'}</span>
+            <span>{formatCurrency(order.total_sales_price || 0)}</span>
           </div>
         </div>
       </div>

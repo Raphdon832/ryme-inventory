@@ -37,10 +37,10 @@ const Layout = ({ children }) => {
               <FiBell size={18} />
             </button>
             <div className="header-profile">
-              <div className="avatar">TM</div>
+              <div className="avatar">RI</div>
               <div className="profile-info">
-                <span className="profile-name">Totok Michael</span>
-                <span className="profile-email">tmichael20@mail.com</span>
+                <span className="profile-name">Ryme Interiors</span>
+                <span className="profile-email">rymeinteriors@gmail.com</span>
               </div>
             </div>
           </div>

@@ -2,9 +2,11 @@ import React, { useState, useEffect } from 'react';
 import api from '../api';
 import { Link } from 'react-router-dom';
 import { FiPlus, FiShoppingCart, FiTag, FiTrendingUp, FiX, FiCheck, FiTrash2, FiEye, FiAlertCircle } from 'react-icons/fi';
+import { useSettings } from '../contexts/SettingsContext';
 import './Orders.css';
 
 const Orders = () => {
+  const { formatCurrency, currencySymbol } = useSettings();
   const [orders, setOrders] = useState([]);
   const [products, setProducts] = useState([]);
   const [showModal, setShowModal] = useState(false);
@@ -196,7 +198,7 @@ const Orders = () => {
 
         <div 
           className="stat-widget clickable border-purple"
-          onClick={() => setStatModal({ open: true, label: 'Total Revenue', value: `₦${totalRevenue.toLocaleString(undefined, { minimumFractionDigits: 2 })}`, footnote: 'Total revenue from paid orders' })}
+          onClick={() => setStatModal({ open: true, label: 'Total Revenue', value: formatCurrency(totalRevenue), footnote: 'Total revenue from paid orders' })}
         >
           <div className="stat-header">
             <div className="stat-icon purple">
@@ -204,12 +206,12 @@ const Orders = () => {
             </div>
           </div>
           <div className="stat-label">Total Revenue</div>
-          <div className="stat-value">₦{totalRevenue.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
+          <div className="stat-value">{formatCurrency(totalRevenue)}</div>
         </div>
 
         <div 
           className="stat-widget clickable border-green"
-          onClick={() => setStatModal({ open: true, label: 'Total Profit', value: `₦${totalProfit.toLocaleString(undefined, { minimumFractionDigits: 2 })}`, footnote: 'Net profit from all paid orders' })}
+          onClick={() => setStatModal({ open: true, label: 'Total Profit', value: formatCurrency(totalProfit), footnote: 'Net profit from all paid orders' })}
         >
           <div className="stat-header">
             <div className="stat-icon green">
@@ -217,12 +219,12 @@ const Orders = () => {
             </div>
           </div>
           <div className="stat-label">Total Profit</div>
-          <div className="stat-value">₦{totalProfit.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
+          <div className="stat-value">{formatCurrency(totalProfit)}</div>
         </div>
 
         <div 
           className="stat-widget clickable border-orange"
-          onClick={() => setStatModal({ open: true, label: 'Avg. Order Value', value: `₦${avgOrderValue.toLocaleString(undefined, { minimumFractionDigits: 2 })}`, footnote: 'Average value per order' })}
+          onClick={() => setStatModal({ open: true, label: 'Avg. Order Value', value: formatCurrency(avgOrderValue), footnote: 'Average value per order' })}
         >
           <div className="stat-header">
             <div className="stat-icon orange">
@@ -230,7 +232,7 @@ const Orders = () => {
             </div>
           </div>
           <div className="stat-label">Avg. Order Value</div>
-          <div className="stat-value">₦{avgOrderValue.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
+          <div className="stat-value">{formatCurrency(avgOrderValue)}</div>
         </div>
       </div>
 
@@ -338,10 +340,10 @@ const Orders = () => {
                       minute: '2-digit'
                     })}
                   </td>
-                  <td style={{ fontWeight: 700 }}>₦{order.total_sales_price.toFixed(2)}</td>
+                  <td style={{ fontWeight: 700 }}>{formatCurrency(order.total_sales_price)}</td>
                   <td>
                     <span style={{ fontWeight: 600, color: order.total_profit >= 0 ? 'var(--success-text)' : 'var(--danger-text)' }}>
-                      {order.total_profit >= 0 ? '+' : ''}₦{order.total_profit.toFixed(2)}
+                      {formatCurrency(order.total_profit, { showSign: true })}
                     </span>
                   </td>
                   <td>
@@ -440,12 +442,12 @@ const Orders = () => {
                           <div className="order-card-footer">
                             <div className="order-card-amount">
                               <span className="order-card-amount-label">Total</span>
-                              <span className="order-card-amount-value">₦{order.total_sales_price.toLocaleString()}</span>
+                              <span className="order-card-amount-value">{formatCurrency(order.total_sales_price, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</span>
                             </div>
                             <div className="order-card-profit">
                               <span className="order-card-amount-label">Profit</span>
                               <span className={`order-card-profit-value ${order.total_profit >= 0 ? 'positive' : 'negative'}`}>
-                                {order.total_profit >= 0 ? '+' : ''}₦{order.total_profit.toLocaleString()}
+                                {formatCurrency(order.total_profit, { showSign: true, minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                               </span>
                             </div>
                           </div>
@@ -475,12 +477,12 @@ const Orders = () => {
                       <div className="order-card-footer">
                         <div className="order-card-amount">
                           <span className="order-card-amount-label">Total</span>
-                          <span className="order-card-amount-value">₦{order.total_sales_price.toLocaleString()}</span>
+                          <span className="order-card-amount-value">{formatCurrency(order.total_sales_price, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</span>
                         </div>
                         <div className="order-card-profit">
                           <span className="order-card-amount-label">Profit</span>
                           <span className={`order-card-profit-value ${order.total_profit >= 0 ? 'positive' : 'negative'}`}>
-                            {order.total_profit >= 0 ? '+' : ''}₦{order.total_profit.toLocaleString()}
+                            {formatCurrency(order.total_profit, { showSign: true, minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                           </span>
                         </div>
                         <FiEye className="order-card-arrow" />
@@ -597,7 +599,7 @@ const Orders = () => {
                     <option value="">-- Choose a product --</option>
                     {products.filter(p => p.stock_quantity > 0).map(p => (
                       <option key={p.id} value={p.id}>
-                        {p.name} • ₦{p.sales_price.toFixed(2)} • Stock: {p.stock_quantity}
+                        {p.sorting_code ? `[${p.sorting_code}] ` : ''}{p.name} • {formatCurrency(p.sales_price)} • Stock: {p.stock_quantity}
                       </option>
                     ))}
                   </select>
@@ -641,9 +643,9 @@ const Orders = () => {
                           <tr key={index}>
                             <td style={{ fontWeight: 600 }}>{item.product_name}</td>
                             <td>{item.quantity}</td>
-                            <td>₦{item.sales_price.toFixed(2)}</td>
-                            <td style={{ fontWeight: 600 }}>₦{(item.sales_price * item.quantity).toFixed(2)}</td>
-                            <td style={{ color: 'var(--success-text)', fontWeight: 600 }}>+₦{(item.profit * item.quantity).toFixed(2)}</td>
+                            <td>{formatCurrency(item.sales_price)}</td>
+                            <td style={{ fontWeight: 600 }}>{formatCurrency(item.sales_price * item.quantity)}</td>
+                            <td style={{ color: 'var(--success-text)', fontWeight: 600 }}>{formatCurrency(item.profit * item.quantity, { showSign: true })}</td>
                             <td style={{ textAlign: 'right' }}>
                               <button 
                                 className="table-action-btn"
@@ -669,12 +671,12 @@ const Orders = () => {
                   
                   <div className="summary-row">
                     <span>Subtotal:</span>
-                    <span style={{ fontWeight: 600 }}>₦{calculateSubtotal().toFixed(2)}</span>
+                    <span style={{ fontWeight: 600 }}>{formatCurrency(calculateSubtotal())}</span>
                   </div>
 
                   <div className="summary-row">
                     <span>Cost of Goods:</span>
-                    <span style={{ fontWeight: 600 }}>₦{calculateCost().toFixed(2)}</span>
+                    <span style={{ fontWeight: 600 }}>{formatCurrency(calculateCost())}</span>
                   </div>
 
                   {/* Discount Controls */}
@@ -689,7 +691,7 @@ const Orders = () => {
                       >
                         <option value="none">No Discount</option>
                         <option value="percentage">Percentage (%)</option>
-                        <option value="fixed">Fixed Amount (₦)</option>
+                        <option value="fixed">Fixed Amount ({currencySymbol})</option>
                       </select>
                       
                       {newOrder.discount.type !== 'none' && (
@@ -708,18 +710,18 @@ const Orders = () => {
                   {newOrder.discount.type !== 'none' && calculateDiscountAmount() > 0 && (
                      <div className="summary-row" style={{ color: 'var(--success-text)' }}>
                        <span>Discount:</span>
-                       <span>-₦{calculateDiscountAmount().toFixed(2)}</span>
+                       <span>-{formatCurrency(calculateDiscountAmount())}</span>
                      </div>
                   )}
 
                   <div className="summary-row total">
                     <span>Total Sales Price:</span>
-                    <span style={{ color: 'var(--primary-color)' }}>₦{calculateTotal().toFixed(2)}</span>
+                    <span style={{ color: 'var(--primary-color)' }}>{formatCurrency(calculateTotal())}</span>
                   </div>
                   <div className="summary-row" style={{ marginTop: '4px' }}>
                     <span>Estimated Profit:</span>
                     <span style={{ color: calculateProfit() >= 0 ? 'var(--success-text)' : 'var(--danger-text)', fontWeight: 600 }}>
-                      {calculateProfit() >= 0 ? '+' : ''}₦{calculateProfit().toFixed(2)}
+                      {formatCurrency(calculateProfit(), { showSign: true })}
                     </span>
                   </div>
                 </div>

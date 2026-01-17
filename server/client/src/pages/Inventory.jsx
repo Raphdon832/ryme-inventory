@@ -2,9 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../api';
 import { FiPlus, FiEdit2, FiTrash2, FiPackage, FiTag, FiTrendingUp, FiX, FiCheck } from 'react-icons/fi';
+import { useSettings } from '../contexts/SettingsContext';
 
 const Inventory = () => {
   const navigate = useNavigate();
+  const { settings, formatCurrency } = useSettings();
   const [products, setProducts] = useState([]);
   const [deleteMode, setDeleteMode] = useState(false);
   const [selectedProducts, setSelectedProducts] = useState([]);
@@ -65,7 +67,9 @@ const Inventory = () => {
   const totalProducts = products.length;
   const totalStockValue = products.reduce((acc, p) => acc + (p.cost_of_production * p.stock_quantity), 0);
   const totalPotentialRevenue = products.reduce((acc, p) => acc + (p.sales_price * p.stock_quantity), 0);
-  const lowStockCount = products.filter(p => p.stock_quantity < 5).length;
+  const lowStockThreshold = Number(settings.inventory.lowStockThreshold || 5);
+  const lowStockCount = products.filter(p => p.stock_quantity < lowStockThreshold).length;
+  const warningThreshold = Math.max(lowStockThreshold * 2, lowStockThreshold + 1);
 
   return (
     <div>
@@ -98,7 +102,7 @@ const Inventory = () => {
             </div>
           </div>
           <div className="stat-label">Stock Value (Cost)</div>
-          <div className="stat-value">₦{totalStockValue.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
+          <div className="stat-value">{formatCurrency(totalStockValue)}</div>
         </div>
 
         <div className="stat-widget border-green">
@@ -108,7 +112,7 @@ const Inventory = () => {
             </div>
           </div>
           <div className="stat-label">Potential Revenue</div>
-          <div className="stat-value">₦{totalPotentialRevenue.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
+          <div className="stat-value">{formatCurrency(totalPotentialRevenue)}</div>
         </div>
 
         <div className={`stat-widget ${lowStockCount > 0 ? 'border-red' : 'border-green'}`}>
@@ -170,6 +174,7 @@ const Inventory = () => {
             <thead>
               <tr>
                 {deleteMode && <th style={{ width: '40px' }}></th>}
+                <th>Code</th>
                 <th>Product</th>
                 <th>Cost of Production</th>
                 <th>Markup</th>
@@ -204,6 +209,24 @@ const Inventory = () => {
                     </td>
                   )}
                   <td>
+                    {product.sorting_code ? (
+                      <span style={{ 
+                        fontFamily: "'JetBrains Mono', monospace", 
+                        fontWeight: 600, 
+                        fontSize: '12px',
+                        letterSpacing: '0.5px',
+                        background: 'rgba(79, 106, 245, 0.1)',
+                        color: 'var(--primary-color)',
+                        padding: '4px 8px',
+                        borderRadius: '4px'
+                      }}>
+                        {product.sorting_code}
+                      </span>
+                    ) : (
+                      <span style={{ color: 'var(--text-tertiary)', fontSize: '12px' }}>—</span>
+                    )}
+                  </td>
+                  <td>
                     <div>
                       <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{product.name}</div>
                       {product.description && (
@@ -211,18 +234,18 @@ const Inventory = () => {
                       )}
                     </div>
                   </td>
-                  <td style={{ fontWeight: 500 }}>₦{product.cost_of_production.toFixed(2)}</td>
+                  <td style={{ fontWeight: 500 }}>{formatCurrency(product.cost_of_production)}</td>
                   <td>
                     <span className="badge badge-info">
                       {product.markup_amount && Number(product.markup_amount) > 0
-                        ? `₦${Number(product.markup_amount).toFixed(2)}`
+                        ? formatCurrency(Number(product.markup_amount))
                         : `${product.markup_percentage}%`}
                     </span>
                   </td>
-                  <td style={{ fontWeight: 700, color: 'var(--primary-color)' }}>₦{product.sales_price.toFixed(2)}</td>
-                  <td style={{ fontWeight: 600, color: 'var(--success-text)' }}>+₦{product.profit.toFixed(2)}</td>
+                  <td style={{ fontWeight: 700, color: 'var(--primary-color)' }}>{formatCurrency(product.sales_price)}</td>
+                  <td style={{ fontWeight: 600, color: 'var(--success-text)' }}>{formatCurrency(product.profit, { showSign: true })}</td>
                   <td>
-                    <span className={`badge ${product.stock_quantity < 5 ? 'badge-danger' : product.stock_quantity < 10 ? 'badge-warning' : 'badge-success'}`}>
+                    <span className={`badge ${product.stock_quantity < lowStockThreshold ? 'badge-danger' : product.stock_quantity < warningThreshold ? 'badge-warning' : 'badge-success'}`}>
                       {product.stock_quantity} units
                     </span>
                   </td>
@@ -250,7 +273,7 @@ const Inventory = () => {
               ))}
               {products.length === 0 && (
                 <tr>
-                  <td colSpan="7" style={{ textAlign: 'center', padding: '48px', color: 'var(--text-secondary)' }}>
+                  <td colSpan="9" style={{ textAlign: 'center', padding: '48px', color: 'var(--text-secondary)' }}>
                     <FiPackage size={40} style={{ opacity: 0.3, marginBottom: '12px' }} />
                     <p style={{ margin: 0, fontWeight: 500 }}>No products yet</p>
                     <p style={{ margin: '4px 0 0 0', fontSize: '13px' }}>Add your first product to get started</p>

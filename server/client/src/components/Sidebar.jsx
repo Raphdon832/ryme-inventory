@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import {
   FiHome,
@@ -13,9 +13,28 @@ import {
   FiHelpCircle,
   FiClock
 } from 'react-icons/fi';
+import { collection, onSnapshot, query, where } from 'firebase/firestore';
+import { db } from '../api';
 import './Sidebar.css';
 
 const Sidebar = ({ isOpen, onClose }) => {
+  const [pendingTasksCount, setPendingTasksCount] = useState(0);
+
+  useEffect(() => {
+    const q = query(collection(db, 'tasks'), where('status', '==', 'pending'));
+    const unsub = onSnapshot(
+      q,
+      (snapshot) => {
+        setPendingTasksCount(snapshot.size);
+      },
+      (error) => {
+        console.error('Error subscribing to tasks:', error);
+      }
+    );
+
+    return () => unsub();
+  }, []);
+
   return (
     <aside className={`sidebar ${isOpen ? 'open' : ''}`}>
       <div className="sidebar-header">
@@ -39,25 +58,6 @@ const Sidebar = ({ isOpen, onClose }) => {
         </NavLink>
 
         <NavLink
-          to="/tasks"
-          className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
-          onClick={() => onClose && onClose()}
-        >
-          <span className="nav-icon"><FiCheckSquare /></span>
-          <span>Tasks</span>
-          <span className="nav-badge">12+</span>
-        </NavLink>
-
-        <NavLink
-          to="/calendar"
-          className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
-          onClick={() => onClose && onClose()}
-        >
-          <span className="nav-icon"><FiCalendar /></span>
-          <span>Calendar</span>
-        </NavLink>
-
-        <NavLink
           to="/inventory"
           className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
           onClick={() => onClose && onClose()}
@@ -73,6 +73,27 @@ const Sidebar = ({ isOpen, onClose }) => {
         >
           <span className="nav-icon"><FiShoppingCart /></span>
           <span>Orders</span>
+        </NavLink>
+
+        <NavLink
+          to="/tasks"
+          className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
+          onClick={() => onClose && onClose()}
+        >
+          <span className="nav-icon"><FiCheckSquare /></span>
+          <span>Tasks</span>
+          {pendingTasksCount > 0 && (
+            <span className="nav-badge">{pendingTasksCount > 99 ? '99+' : pendingTasksCount}</span>
+          )}
+        </NavLink>
+
+        <NavLink
+          to="/calendar"
+          className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
+          onClick={() => onClose && onClose()}
+        >
+          <span className="nav-icon"><FiCalendar /></span>
+          <span>Calendar</span>
         </NavLink>
 
         <NavLink

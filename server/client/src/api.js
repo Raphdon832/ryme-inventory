@@ -115,6 +115,12 @@ const api = {
     if (path === '/products') {
       const pricing = computePricing(payload);
       const docRef = await addDoc(productsRef, {
+        // Segmented product identity fields
+        brand_name: payload.brand_name || '',
+        product_name: payload.product_name || '',
+        volume_size: payload.volume_size || '',
+        sorting_code: payload.sorting_code || '',
+        // Combined display name
         name: payload.name,
         description: payload.description || '',
         stock_quantity: Number(payload.stock_quantity || 0),
@@ -258,6 +264,12 @@ const api = {
       const pricing = computePricing(payload);
       const docRef = doc(productsRef, id);
       await updateDoc(docRef, {
+        // Segmented product identity fields
+        brand_name: payload.brand_name || '',
+        product_name: payload.product_name || '',
+        volume_size: payload.volume_size || '',
+        sorting_code: payload.sorting_code || '',
+        // Combined display name
         name: payload.name,
         description: payload.description || '',
         stock_quantity: Number(payload.stock_quantity || 0),

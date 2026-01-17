@@ -30,3 +30,6 @@ Thumbs.db
 # Temporary files
 *.local
 *.tmp
+
+# Local Netlify folder
+.netlify

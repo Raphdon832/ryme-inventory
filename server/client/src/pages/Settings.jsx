@@ -1,46 +1,40 @@
 import React, { useState } from 'react';
-import { FiSettings, FiBell, FiShield, FiDatabase, FiSave, FiMoon, FiGlobe } from 'react-icons/fi';
+import { FiBell, FiDatabase, FiSave, FiMoon } from 'react-icons/fi';
+import { useSettings } from '../contexts/SettingsContext';
 
 const Settings = () => {
-  const [settings, setSettings] = useState({
-    notifications: {
-      emailAlerts: true,
-      lowStockAlerts: true,
-      orderAlerts: true,
-      weeklyReports: false
-    },
-    display: {
-      darkMode: false,
-      compactView: false,
-      currency: 'NGN'
-    },
-    inventory: {
-      lowStockThreshold: 10,
-      autoReorder: false
-    }
-  });
+  const {
+    settings,
+    updateSettings,
+    saveSettings,
+    saving,
+    loading,
+    error
+  } = useSettings();
 
   const [saved, setSaved] = useState(false);
 
   const handleToggle = (category, setting) => {
-    setSettings({
-      ...settings,
+    updateSettings({
       [category]: {
-        ...settings[category],
         [setting]: !settings[category][setting]
       }
     });
     setSaved(false);
   };
 
-  const handleSave = () => {
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
+  const handleSave = async () => {
+    const success = await saveSettings();
+    if (success) {
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
+    }
   };
 
-  const Toggle = ({ checked, onChange }) => (
+  const Toggle = ({ checked, onChange, disabled }) => (
     <button
       onClick={onChange}
+      disabled={disabled}
       style={{
         width: '44px',
         height: '24px',
@@ -48,7 +42,8 @@ const Settings = () => {
         background: checked ? '#0A0A0A' : '#E5E5E5',
         border: 'none',
         padding: '2px',
-        cursor: 'pointer',
+        cursor: disabled ? 'not-allowed' : 'pointer',
+        opacity: disabled ? 0.6 : 1,
         transition: 'background 0.2s'
       }}
     >
@@ -71,6 +66,12 @@ const Settings = () => {
           <p className="page-subtitle">Configure your application preferences</p>
         </div>
       </div>
+
+      {error && (
+        <div className="card" style={{ padding: '12px 16px', borderColor: 'rgba(239, 68, 68, 0.4)', color: 'var(--danger-text)', marginTop: '16px' }}>
+          {error}
+        </div>
+      )}
 
       <div style={{ display: 'grid', gap: '24px', marginTop: '24px', maxWidth: '800px' }}>
         {/* Notifications */}
@@ -100,7 +101,7 @@ const Settings = () => {
                 <p style={{ margin: 0, fontWeight: 500 }}>Email Alerts</p>
                 <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-tertiary)' }}>Receive important updates via email</p>
               </div>
-              <Toggle checked={settings.notifications.emailAlerts} onChange={() => handleToggle('notifications', 'emailAlerts')} />
+              <Toggle checked={settings.notifications.emailAlerts} onChange={() => handleToggle('notifications', 'emailAlerts')} disabled={loading} />
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 0', borderBottom: '1px solid var(--border-color)' }}>
@@ -108,7 +109,7 @@ const Settings = () => {
                 <p style={{ margin: 0, fontWeight: 500 }}>Low Stock Alerts</p>
                 <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-tertiary)' }}>Get notified when products are running low</p>
               </div>
-              <Toggle checked={settings.notifications.lowStockAlerts} onChange={() => handleToggle('notifications', 'lowStockAlerts')} />
+              <Toggle checked={settings.notifications.lowStockAlerts} onChange={() => handleToggle('notifications', 'lowStockAlerts')} disabled={loading} />
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 0', borderBottom: '1px solid var(--border-color)' }}>
@@ -116,7 +117,7 @@ const Settings = () => {
                 <p style={{ margin: 0, fontWeight: 500 }}>Order Notifications</p>
                 <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-tertiary)' }}>Receive alerts for new orders</p>
               </div>
-              <Toggle checked={settings.notifications.orderAlerts} onChange={() => handleToggle('notifications', 'orderAlerts')} />
+              <Toggle checked={settings.notifications.orderAlerts} onChange={() => handleToggle('notifications', 'orderAlerts')} disabled={loading} />
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 0' }}>
@@ -124,7 +125,7 @@ const Settings = () => {
                 <p style={{ margin: 0, fontWeight: 500 }}>Weekly Reports</p>
                 <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-tertiary)' }}>Receive weekly summary reports</p>
               </div>
-              <Toggle checked={settings.notifications.weeklyReports} onChange={() => handleToggle('notifications', 'weeklyReports')} />
+              <Toggle checked={settings.notifications.weeklyReports} onChange={() => handleToggle('notifications', 'weeklyReports')} disabled={loading} />
             </div>
           </div>
         </div>
@@ -154,9 +155,9 @@ const Settings = () => {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 0', borderBottom: '1px solid var(--border-color)' }}>
               <div>
                 <p style={{ margin: 0, fontWeight: 500 }}>Dark Mode</p>
-                <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-tertiary)' }}>Use dark theme (coming soon)</p>
+                <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-tertiary)' }}>Use the dark color theme</p>
               </div>
-              <Toggle checked={settings.display.darkMode} onChange={() => handleToggle('display', 'darkMode')} />
+              <Toggle checked={settings.display.darkMode} onChange={() => handleToggle('display', 'darkMode')} disabled={loading} />
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 0', borderBottom: '1px solid var(--border-color)' }}>
@@ -164,7 +165,7 @@ const Settings = () => {
                 <p style={{ margin: 0, fontWeight: 500 }}>Compact View</p>
                 <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-tertiary)' }}>Show more items in less space</p>
               </div>
-              <Toggle checked={settings.display.compactView} onChange={() => handleToggle('display', 'compactView')} />
+              <Toggle checked={settings.display.compactView} onChange={() => handleToggle('display', 'compactView')} disabled={loading} />
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 0' }}>
@@ -174,10 +175,14 @@ const Settings = () => {
               </div>
               <select
                 value={settings.display.currency}
-                onChange={(e) => setSettings({ ...settings, display: { ...settings.display, currency: e.target.value } })}
+                onChange={(e) => updateSettings({ display: { currency: e.target.value } })}
                 style={{ width: 'auto', padding: '8px 16px' }}
+                disabled={loading}
               >
                 <option value="NGN">₦ Nigerian Naira</option>
+                <option value="USD">$ US Dollar</option>
+                <option value="EUR">€ Euro</option>
+                <option value="GBP">£ British Pound</option>
               </select>
             </div>
           </div>
@@ -213,9 +218,10 @@ const Settings = () => {
               <input
                 type="number"
                 value={settings.inventory.lowStockThreshold}
-                onChange={(e) => setSettings({ ...settings, inventory: { ...settings.inventory, lowStockThreshold: parseInt(e.target.value) } })}
+                onChange={(e) => updateSettings({ inventory: { lowStockThreshold: Math.max(1, Number(e.target.value || 1)) } })}
                 style={{ width: '80px', textAlign: 'center' }}
                 min="1"
+                disabled={loading}
               />
             </div>
 
@@ -224,7 +230,7 @@ const Settings = () => {
                 <p style={{ margin: 0, fontWeight: 500 }}>Auto Reorder</p>
                 <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-tertiary)' }}>Automatically create reorder requests</p>
               </div>
-              <Toggle checked={settings.inventory.autoReorder} onChange={() => handleToggle('inventory', 'autoReorder')} />
+              <Toggle checked={settings.inventory.autoReorder} onChange={() => handleToggle('inventory', 'autoReorder')} disabled={loading} />
             </div>
           </div>
         </div>
@@ -239,6 +245,7 @@ const Settings = () => {
       }}>
         <button 
           onClick={handleSave} 
+          disabled={saving || loading}
           style={{ 
             display: 'flex', 
             alignItems: 'center', 
@@ -247,10 +254,12 @@ const Settings = () => {
             fontSize: '13px',
             fontWeight: 500,
             background: saved ? '#00B074' : '#0A0A0A',
-            borderRadius: '50px'
+            borderRadius: '50px',
+            opacity: saving || loading ? 0.7 : 1,
+            cursor: saving || loading ? 'not-allowed' : 'pointer'
           }}
         >
-          <FiSave size={14} /> {saved ? 'Saved!' : 'Save Changes'}
+          <FiSave size={14} /> {saving ? 'Saving...' : saved ? 'Saved!' : 'Save Changes'}
         </button>
       </div>
     </div>

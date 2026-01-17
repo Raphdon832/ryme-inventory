@@ -96,6 +96,51 @@ body {
   overflow-x: hidden;
 }
 
+body.theme-dark {
+  --bg-body: #0b0b0d;
+  --bg-surface: #111317;
+  --bg-surface-hover: #1a1d22;
+  --card-bg: #111317;
+
+  --sidebar-bg: #0b0b0d;
+  --sidebar-hover: #14161a;
+  --sidebar-active: #2563eb;
+  --sidebar-text: #a1a1aa;
+  --sidebar-text-active: #ffffff;
+
+  --text-primary: #f4f4f5;
+  --text-secondary: #cbd5e1;
+  --text-tertiary: #94a3b8;
+
+  --border-color: #262626;
+  --border-hover: #3f3f46;
+
+  --success-bg: rgba(16, 185, 129, 0.15);
+  --success-text: #34d399;
+  --warning-bg: rgba(245, 158, 11, 0.15);
+  --warning-text: #fbbf24;
+  --danger-bg: rgba(239, 68, 68, 0.15);
+  --danger-text: #f87171;
+  --info-bg: rgba(59, 130, 246, 0.15);
+  --info-text: #60a5fa;
+}
+
+body.compact-view {
+  --header-height: 68px;
+  --sidebar-width: 260px;
+  font-size: 13px;
+}
+
+body.compact-view .card,
+body.compact-view .stat-widget {
+  padding: 14px;
+}
+
+body.compact-view .page-title h1,
+body.compact-view .page-header h1 {
+  font-size: 20px;
+}
+
 img, video, canvas {
   max-width: 100%;
   height: auto;

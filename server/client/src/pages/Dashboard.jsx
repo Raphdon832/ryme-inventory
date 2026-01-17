@@ -1,6 +1,9 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../api';
+import { addDoc, collection, Timestamp } from 'firebase/firestore';
+import { db } from '../api';
+import { useSettings } from '../contexts/SettingsContext';
 import {
   BarChart,
   Bar,
@@ -18,6 +21,7 @@ import {
 
 const Dashboard = () => {
   const navigate = useNavigate();
+  const { settings, formatCurrency } = useSettings();
   const [stats, setStats] = useState({
     totalProducts: 0,
     totalOrders: 0,
@@ -34,10 +38,11 @@ const Dashboard = () => {
   const [importRows, setImportRows] = useState([]);
   const [importError, setImportError] = useState('');
   const [statModal, setStatModal] = useState({ open: false, label: '', value: '', footnote: '' });
+  const [reorderStatus, setReorderStatus] = useState('');
 
   useEffect(() => {
     fetchStats();
-  }, []);
+  }, [settings.inventory.lowStockThreshold]);
 
   const fetchStats = async () => {
     try {
@@ -53,14 +58,13 @@ const Dashboard = () => {
 
       const totalRevenue = orders.reduce((acc, order) => acc + order.total_sales_price, 0);
       const totalProfit = orders.reduce((acc, order) => acc + order.total_profit, 0);
-      const lowStock = products.filter(p => p.stock_quantity < 5);
 
       setStats({
         totalProducts: products.length,
         totalOrders: orders.length,
         totalRevenue,
         totalProfit,
-        lowStockItems: lowStock,
+        lowStockItems: [],
         revenueChart: dashboardData.revenueChart,
         topProducts: dashboardData.topProducts,
         orders,
@@ -68,6 +72,29 @@ const Dashboard = () => {
       });
     } catch (error) {
       console.error('Error fetching dashboard stats:', error);
+    }
+  };
+
+  const handleReorderTask = async () => {
+    if (!lowStockItems.length) return;
+    const item = lowStockItems[0];
+    try {
+      setReorderStatus('creating');
+      await addDoc(collection(db, 'tasks'), {
+        title: `Reorder ${item.name}`,
+        description: `Low stock threshold reached. Current stock: ${item.stock_quantity}.`,
+        priority: 'high',
+        status: 'pending',
+        dueDate: Timestamp.fromDate(new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)),
+        createdAt: Timestamp.now(),
+        updatedAt: Timestamp.now()
+      });
+      setReorderStatus('created');
+      setTimeout(() => setReorderStatus(''), 2000);
+    } catch (error) {
+      console.error('Error creating reorder task:', error);
+      setReorderStatus('error');
+      setTimeout(() => setReorderStatus(''), 2000);
     }
   };
 
@@ -90,7 +117,10 @@ const Dashboard = () => {
   }, [stats.revenueChart]);
 
   const topProducts = stats.topProducts || [];
-  const lowStockItems = stats.lowStockItems || [];
+  const lowStockItems = useMemo(() => {
+    const threshold = Number(settings.inventory.lowStockThreshold || 5);
+    return (stats.products || []).filter(p => p.stock_quantity < threshold);
+  }, [stats.products, settings.inventory.lowStockThreshold]);
 
   const recentOrders = useMemo(() => {
     if (!stats.orders || stats.orders.length === 0) return [];
@@ -113,8 +143,8 @@ const Dashboard = () => {
     ), 0);
   }, [stats.products]);
 
-  const formatCurrency = (value) =>
-    `₦${Number(value || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
+  const formatCurrencyCompact = (value) =>
+    formatCurrency(value, { maximumFractionDigits: 0, minimumFractionDigits: 0 });
 
   const progressValue = stats.totalRevenue > 0
     ? Math.round((stats.totalProfit / stats.totalRevenue) * 100)
@@ -164,25 +194,25 @@ const Dashboard = () => {
 
         <div 
           className="stat-widget clickable"
-          onClick={() => setStatModal({ open: true, label: 'Total Revenue', value: formatCurrency(stats.totalRevenue), footnote: 'Total sales revenue from all completed orders' })}
+          onClick={() => setStatModal({ open: true, label: 'Total Revenue', value: formatCurrencyCompact(stats.totalRevenue), footnote: 'Total sales revenue from all completed orders' })}
         >
           <div className="stat-header">
             <span className="stat-label">Total Revenue</span>
             <span className="stat-arrow"><FiArrowUpRight /></span>
           </div>
-          <div className="stat-value auto-fit">{formatCurrency(stats.totalRevenue)}</div>
+          <div className="stat-value auto-fit">{formatCurrencyCompact(stats.totalRevenue)}</div>
           <div className="stat-footnote">Total sales value</div>
         </div>
 
         <div 
           className="stat-widget clickable"
-          onClick={() => setStatModal({ open: true, label: 'Total Profit', value: formatCurrency(stats.totalProfit), footnote: 'Net profit generated from all sales' })}
+          onClick={() => setStatModal({ open: true, label: 'Total Profit', value: formatCurrencyCompact(stats.totalProfit), footnote: 'Net profit generated from all sales' })}
         >
           <div className="stat-header">
             <span className="stat-label">Total Profit</span>
             <span className="stat-arrow"><FiArrowUpRight /></span>
           </div>
-          <div className="stat-value auto-fit">{formatCurrency(stats.totalProfit)}</div>
+          <div className="stat-value auto-fit">{formatCurrencyCompact(stats.totalProfit)}</div>
           <div className="stat-footnote">Profit generated</div>
         </div>
       </div>
@@ -226,25 +256,42 @@ const Dashboard = () => {
           </div>
         </div>
 
-        <div className="card reminder-card">
-          <div className="card-header">
-            <h3>Low Stock Alert</h3>
+        {settings.notifications.lowStockAlerts && (
+          <div className="card reminder-card">
+            <div className="card-header">
+              <h3>Low Stock Alert</h3>
+            </div>
+            <div className="reminder-content">
+              {lowStockItems.length === 0 ? (
+                <>
+                  <h4>All items are stocked</h4>
+                  <p>No low stock items at the moment.</p>
+                </>
+              ) : (
+                <>
+                  <h4>{lowStockItems[0].name}</h4>
+                  <p>Only {lowStockItems[0].stock_quantity} units left</p>
+                  <button
+                    className="primary full"
+                    onClick={handleReorderTask}
+                    disabled={reorderStatus === 'creating'}
+                  >
+                    {reorderStatus === 'creating'
+                      ? 'Creating Task...'
+                      : reorderStatus === 'created'
+                        ? 'Task Created'
+                        : 'Create Reorder Task'}
+                  </button>
+                  {reorderStatus === 'error' && (
+                    <p style={{ color: 'var(--danger-text)', marginTop: '8px', fontSize: '12px' }}>
+                      Failed to create task. Try again.
+                    </p>
+                  )}
+                </>
+              )}
+            </div>
           </div>
-          <div className="reminder-content">
-            {lowStockItems.length === 0 ? (
-              <>
-                <h4>All items are stocked</h4>
-                <p>No low stock items at the moment.</p>
-              </>
-            ) : (
-              <>
-                <h4>{lowStockItems[0].name}</h4>
-                <p>Only {lowStockItems[0].stock_quantity} units left</p>
-                <button className="primary full">Reorder Stock</button>
-              </>
-            )}
-          </div>
-        </div>
+        )}
 
         <div className="card list-card">
           <div className="card-header">
@@ -264,7 +311,7 @@ const Dashboard = () => {
                     <div className="list-title">{item.name}</div>
                     <div className="list-subtitle">{item.total_sold} units sold</div>
                   </div>
-                  <div className="list-meta">{formatCurrency(item.total_revenue)}</div>
+                  <div className="list-meta">{formatCurrencyCompact(item.total_revenue)}</div>
                 </div>
               ))
             )}
@@ -293,7 +340,7 @@ const Dashboard = () => {
                       {new Date(order.order_date).toLocaleDateString()}
                     </div>
                   </div>
-                  <div className="list-meta">{formatCurrency(order.total_sales_price)}</div>
+                  <div className="list-meta">{formatCurrencyCompact(order.total_sales_price)}</div>
                 </div>
               ))
             )}
@@ -328,9 +375,9 @@ const Dashboard = () => {
           <div className="card-header">
             <h3>Inventory Value</h3>
           </div>
-          <div className="timer-display">{formatCurrency(stockValue)}</div>
+          <div className="timer-display">{formatCurrencyCompact(stockValue)}</div>
           <div className="timer-meta">
-            Potential revenue: {formatCurrency(potentialRevenue)}
+            Potential revenue: {formatCurrencyCompact(potentialRevenue)}
           </div>
         </div>
       </div>

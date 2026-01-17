@@ -3,9 +3,11 @@ import { FiTrendingUp, FiTrendingDown, FiDollarSign, FiShoppingCart, FiPackage, 
 import { collection, getDocs, query, orderBy } from 'firebase/firestore';
 import { db } from '../api';
 import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
+import { useSettings } from '../contexts/SettingsContext';
 import './Analytics.css';
 
 const Analytics = () => {
+  const { formatCurrency } = useSettings();
   const [orders, setOrders] = useState([]);
   const [products, setProducts] = useState([]);
   const [dateRange, setDateRange] = useState('30');
@@ -156,7 +158,7 @@ const Analytics = () => {
               {Math.abs(revenueChange).toFixed(1)}%
             </span>
           </div>
-          <div className="stat-value">₦{totalRevenue.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
+          <div className="stat-value">{formatCurrency(totalRevenue)}</div>
           <div className="stat-label">Total Revenue</div>
         </div>
 
@@ -164,7 +166,7 @@ const Analytics = () => {
           <div className="stat-header">
             <div className="stat-icon green"><FiTrendingUp /></div>
           </div>
-          <div className="stat-value">₦{totalProfit.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
+          <div className="stat-value">{formatCurrency(totalProfit)}</div>
           <div className="stat-label">Total Profit</div>
         </div>
 
@@ -180,7 +182,7 @@ const Analytics = () => {
           <div className="stat-header">
             <div className="stat-icon orange"><FiBarChart2 /></div>
           </div>
-          <div className="stat-value">₦{avgOrderValue.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
+          <div className="stat-value">{formatCurrency(avgOrderValue)}</div>
           <div className="stat-label">Avg. Order Value</div>
         </div>
       </div>
@@ -244,7 +246,7 @@ const Analytics = () => {
                   <div className="product-name">{product.name}</div>
                   <div className="product-quantity">{product.quantity} sold</div>
                 </div>
-                <div className="product-revenue">₦{product.revenue.toLocaleString()}</div>
+                <div className="product-revenue">{formatCurrency(product.revenue, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</div>
               </div>
             ))}
             {getTopProducts().length === 0 && (
