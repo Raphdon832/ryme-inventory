@@ -8,8 +8,7 @@ import useScrollLock from '../hooks/useScrollLock';
 
 const Inventory = () => {
   const navigate = useNavigate();
-  const { formatCurrency, settings } = useSettings();
-  const currencySymbol = settings.currency.symbol || '$';
+  const { formatCurrency, settings, currencySymbol } = useSettings();
   const [products, setProducts] = useState([]);
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedProducts, setSelectedProducts] = useState([]);
