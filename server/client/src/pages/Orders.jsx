@@ -2,8 +2,9 @@ import React, { useState, useEffect, useRef } from 'react';
 import api from '../api';
 import { SkeletonTable, SkeletonOrderCardList } from '../components/Skeleton.jsx';
 import { Link } from 'react-router-dom';
-import { FiPlus, FiShoppingCart, FiTag, FiTrendingUp, FiX, FiCheck, FiTrash2, FiEye, FiAlertCircle, FiSearch } from 'react-icons/fi';
+import { FiPlus, FiShoppingCart, FiTag, FiTrendingUp, FiX, FiCheck, FiTrash2, FiEye, FiAlertCircle, FiSearch, FiEdit2 } from 'react-icons/fi';
 import { useSettings } from '../contexts/SettingsContext';
+import useScrollLock from '../hooks/useScrollLock';
 import './Orders.css';
 
 const Orders = () => {
@@ -11,6 +12,7 @@ const Orders = () => {
   const [orders, setOrders] = useState([]);
   const [products, setProducts] = useState([]);
   const [showModal, setShowModal] = useState(false);
+  const [editingOrderId, setEditingOrderId] = useState(null);
   const [showAllOrders, setShowAllOrders] = useState(false);
   const [statModal, setStatModal] = useState({ open: false, label: '', value: '', footnote: '' });
   const [deleteMode, setDeleteMode] = useState(false);
@@ -20,6 +22,10 @@ const Orders = () => {
   const [productSearch, setProductSearch] = useState('');
   const [showProductDropdown, setShowProductDropdown] = useState(false);
   const productSearchRef = useRef(null);
+
+  // Lock scroll when any modal is open
+  useScrollLock(showModal || showDeleteConfirm || statModal.open);
+
   const [newOrder, setNewOrder] = useState({
     customer_name: '',
     customer_address: '',
@@ -150,24 +156,52 @@ const Orders = () => {
     setNewOrder({ ...newOrder, items: updatedItems });
   };
 
+  const handleEditOrder = (order) => {
+    setEditingOrderId(order.id);
+    setNewOrder({
+      customer_name: order.customer_name,
+      customer_address: order.customer_address || '',
+      items: order.items.map(item => {
+        const product = products.find(p => p.id === item.product_id);
+        return {
+          ...item,
+          product_name: item.product_name || (product ? product.name : 'Unknown Product'),
+          sales_price: item.sales_price_at_time || (product ? product.sales_price : 0),
+          cost: item.profit_at_time === undefined ? (product ? product.cost_of_production : 0) : (item.sales_price_at_time - item.profit_at_time),
+          stock: product ? product.stock_quantity : 0
+        };
+      }),
+      discount: order.discount || { type: 'none', value: 0 }
+    });
+    setShowModal(true);
+  };
+
   const handleSubmitOrder = async () => {
     if (!newOrder.customer_name || newOrder.items.length === 0) return;
 
     try {
-      await api.post('/orders', {
+      const orderPayload = {
         customer_name: newOrder.customer_name,
         customer_address: newOrder.customer_address,
         items: newOrder.items.map(item => ({ product_id: item.product_id, quantity: item.quantity })),
         discount: newOrder.discount
-      });
+      };
+
+      if (editingOrderId) {
+        await api.put(`/orders/${editingOrderId}`, orderPayload);
+      } else {
+        await api.post('/orders', orderPayload);
+      }
+
       setNewOrder({ customer_name: '', customer_address: '', items: [], discount: { type: 'none', value: 0 } });
+      setEditingOrderId(null);
       setProductSearch('');
       setShowProductDropdown(false);
       setShowModal(false);
       fetchOrders();
       fetchProducts(); // Refresh to update stock
     } catch (error) {
-      console.error('Error creating order:', error);
+      console.error('Error saving order:', error);
     }
   };
 
@@ -410,14 +444,24 @@ const Orders = () => {
                   </td>
                   {!deleteMode && (
                     <td>
-                      <Link 
-                        to={`/orders/${order.id}`} 
-                        className="table-action-btn"
-                        title="View Details"
-                        style={{ display: 'inline-block' }}
-                      >
-                        <FiEye size={18} />
-                      </Link>
+                      <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                        <Link 
+                          to={`/orders/${order.id}`} 
+                          className="table-action-btn"
+                          title="View Details"
+                          style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                        >
+                          <FiEye size={18} />
+                        </Link>
+                        <button
+                          className="table-action-btn edit-btn"
+                          title="Edit Order"
+                          onClick={() => handleEditOrder(order)}
+                          style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--primary-color)' }}
+                        >
+                          <FiEdit2 size={16} />
+                        </button>
+                      </div>
                     </td>
                   )}
                 </tr>
@@ -532,7 +576,16 @@ const Orders = () => {
                             {formatCurrency(order.total_profit, { showSign: true, minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                           </span>
                         </div>
-                        <FiEye className="order-card-arrow" />
+                        <div style={{ display: 'flex', gap: '12px', alignItems: 'center', marginLeft: 'auto' }}>
+                          <button
+                            className="order-card-edit-btn"
+                            onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleEditOrder(order); }}
+                            style={{ background: 'none', border: 'none', color: 'var(--primary-color)', padding: '4px', display: 'flex' }}
+                          >
+                            <FiEdit2 size={16} />
+                          </button>
+                          <FiEye className="order-card-arrow" style={{ margin: 0 }} />
+                        </div>
                       </div>
                     </Link>
                   );
@@ -595,16 +648,15 @@ const Orders = () => {
         </div>
       )}
 
-      {/* Create Order Modal */}
       {showModal && (
-        <div className="modal-overlay">
+        <div className="modal-overlay" onMouseDown={(e) => { if (e.target === e.currentTarget) { setShowModal(false); setEditingOrderId(null); setNewOrder({ customer_name: '', customer_address: '', items: [], discount: { type: 'none', value: 0 } }); setProductSearch(''); } }}>
           <div className="modal-content">
             <div className="modal-header">
-              <h3 style={{ margin: 0 }}>Create New Order</h3>
+              <h3 style={{ margin: 0 }}>{editingOrderId ? 'Edit Order' : 'Create New Order'}</h3>
               <button 
                 className="secondary" 
                 style={{ padding: '8px', width: '36px', height: '36px' }}
-                onClick={() => { setShowModal(false); setNewOrder({ customer_name: '', customer_address: '', items: [], discount: { type: 'none', value: 0 } }); }}
+                onClick={() => { setShowModal(false); setEditingOrderId(null); setNewOrder({ customer_name: '', customer_address: '', items: [], discount: { type: 'none', value: 0 } }); setProductSearch(''); setShowProductDropdown(false); }}
               >
                 <FiX size={18} />
               </button>
@@ -688,8 +740,8 @@ const Orders = () => {
                     className="form-input"
                     type="number" 
                     min="1" 
-                    value={currentItem.quantity} 
-                    onChange={(e) => setCurrentItem({...currentItem, quantity: Number(e.target.value) || 1})} 
+                    value={currentItem.quantity || ''} 
+                    onChange={(e) => setCurrentItem({...currentItem, quantity: e.target.value === '' ? '' : Number(e.target.value)})} 
                   />
                 </div>
                 <div>
@@ -778,8 +830,11 @@ const Orders = () => {
                           className="form-input"
                           style={{ width: '120px' }}
                           placeholder={newOrder.discount.type === 'percentage' ? 'Percent' : 'Amount'}
-                          value={newOrder.discount.value}
-                          onChange={(e) => setNewOrder({...newOrder, discount: { ...newOrder.discount, value: Number(e.target.value) }})}
+                          value={newOrder.discount.value === 0 ? '' : newOrder.discount.value}
+                          onChange={(e) => {
+                            const val = e.target.value === '' ? 0 : Number(e.target.value);
+                            setNewOrder({...newOrder, discount: { ...newOrder.discount, value: val }});
+                          }}
                         />
                       )}
                     </div>
@@ -810,7 +865,7 @@ const Orders = () => {
               <button 
                 type="button" 
                 className="secondary" 
-                onClick={() => { setShowModal(false); setNewOrder({ customer_name: '', customer_address: '', items: [], discount: { type: 'none', value: 0 } }); setProductSearch(''); setShowProductDropdown(false); }} 
+                onClick={() => { setShowModal(false); setEditingOrderId(null); setNewOrder({ customer_name: '', customer_address: '', items: [], discount: { type: 'none', value: 0 } }); setProductSearch(''); setShowProductDropdown(false); }} 
               >
                 Cancel
               </button>
@@ -819,7 +874,7 @@ const Orders = () => {
                 onClick={handleSubmitOrder}
                 disabled={!newOrder.customer_name || newOrder.items.length === 0}
               >
-                <FiCheck size={16} /> Complete Order
+                <FiCheck size={16} /> {editingOrderId ? 'Update Order' : 'Complete Order'}
               </button>
             </div>
           </div>

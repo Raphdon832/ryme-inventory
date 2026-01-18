@@ -197,7 +197,8 @@ const api = {
         items: orderItems
       });
 
-      // await batch.commit(); // No batch updates needed for creation now
+      // Log activity
+      await api.logActivity('create', 'order', `New order created for ${customer_name} - ${orderItems.length} items`, { id: orderDoc.id, customer_name, total_sales_price: final_total_sales_price });
 
       const snapshot = await getDoc(orderDoc);
       return { data: { data: normalizeDoc(snapshot) } };
@@ -257,6 +258,69 @@ const api = {
          const snapshot = await getDoc(doc(ordersRef, id));
          return { data: { data: normalizeDoc(snapshot) } };
        }
+
+       // General order update
+       const { customer_name, customer_address, items, discount } = payload;
+       
+       // Calculate new totals
+       let total_sales_price = 0;
+       let total_profit = 0;
+       const orderItems = [];
+
+       const productSnapshots = await Promise.all(
+         items.map(item => getDoc(doc(productsRef, String(item.product_id))))
+       );
+
+       items.forEach((item, index) => {
+         const snapshot = productSnapshots[index];
+         if (!snapshot.exists()) {
+           throw new Error('Product not found for order item.');
+         }
+
+         const product = normalizeDoc(snapshot);
+         const quantity = Number(item.quantity || 0);
+
+         total_sales_price += product.sales_price * quantity;
+         total_profit += product.profit * quantity;
+
+         orderItems.push({
+           product_id: product.id,
+           product_name: product.name,
+           quantity,
+           sales_price_at_time: product.sales_price,
+           profit_at_time: product.profit
+         });
+       });
+
+       let discountAmount = 0;
+       if (discount && discount.value > 0) {
+         if (discount.type === 'percentage') {
+           discountAmount = total_sales_price * (discount.value / 100);
+         } else if (discount.type === 'fixed') {
+           discountAmount = discount.value;
+         }
+       }
+
+       const final_total_sales_price = total_sales_price - discountAmount;
+       const final_total_profit = total_profit - discountAmount;
+
+       const orderRef = doc(ordersRef, id);
+       await updateDoc(orderRef, {
+         customer_name,
+         customer_address: customer_address || '',
+         subtotal: total_sales_price,
+         discount: discount || { type: 'none', value: 0 },
+         total_sales_price: final_total_sales_price,
+         total_profit: final_total_profit,
+         items: orderItems,
+         updated_at: new Date().toISOString()
+       });
+
+       // Log activity
+       await api.logActivity('update', 'order', `Order #${id.slice(0, 8)} updated - ${orderItems.length} items`, { id, customer_name, total_sales_price: final_total_sales_price });
+
+       const snapshot = await getDoc(orderRef);
+       return { data: { data: normalizeDoc(snapshot) } };
     }
 
     if (path.startsWith('/products/')) {

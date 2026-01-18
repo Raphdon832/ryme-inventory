@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import api from '../api';
 import { FiClock, FiTrash2, FiRefreshCw, FiAlertCircle, FiShoppingCart, FiBox, FiEdit, FiPlus, FiCheck, FiX } from 'react-icons/fi';
+import useScrollLock from '../hooks/useScrollLock';
 import './ActivityLog.css';
 
 const ActivityLog = () => {
@@ -10,6 +11,9 @@ const ActivityLog = () => {
   const [loading, setLoading] = useState(true);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(null);
   const [showRestoreConfirm, setShowRestoreConfirm] = useState(null);
+
+  // Lock scroll when any confirmation modal is open
+  useScrollLock(showDeleteConfirm !== null || showRestoreConfirm !== null);
 
   useEffect(() => {
     fetchData();

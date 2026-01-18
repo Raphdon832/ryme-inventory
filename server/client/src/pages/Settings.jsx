@@ -218,9 +218,11 @@ const Settings = () => {
               <input
                 type="number"
                 value={settings.inventory.lowStockThreshold}
-                onChange={(e) => updateSettings({ inventory: { lowStockThreshold: Math.max(1, Number(e.target.value || 1)) } })}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  updateSettings({ inventory: { lowStockThreshold: val === "" ? "" : Number(val) } });
+                }}
                 style={{ width: '80px', textAlign: 'center' }}
-                min="1"
                 disabled={loading}
               />
             </div>

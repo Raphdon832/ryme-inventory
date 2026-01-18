@@ -5,6 +5,7 @@ import { addDoc, collection, Timestamp } from 'firebase/firestore';
 import { db } from '../api';
 import { useSettings } from '../contexts/SettingsContext';
 import { SkeletonStatsGrid, SkeletonCard } from '../components/Skeleton';
+import useScrollLock from '../hooks/useScrollLock';
 import {
   BarChart,
   Bar,
@@ -41,6 +42,9 @@ const Dashboard = () => {
   const [importError, setImportError] = useState('');
   const [statModal, setStatModal] = useState({ open: false, label: '', value: '', footnote: '' });
   const [reorderStatus, setReorderStatus] = useState('');
+
+  // Lock scroll when any modal is open
+  useScrollLock(showImportModal || statModal.open);
 
   useEffect(() => {
     fetchStats();

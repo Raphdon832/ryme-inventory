@@ -169,7 +169,13 @@ const AddProduct = () => {
       setManualCodeEdit(true);
     }
     
-    setFormData(prev => ({ ...prev, [name]: value }));
+    // For number fields, allow empty string so user can delete and type
+    const fieldsToFix = ['cost_of_production', 'markup_percentage', 'markup_amount', 'stock_quantity'];
+    if (fieldsToFix.includes(name)) {
+      setFormData(prev => ({ ...prev, [name]: value }));
+    } else {
+      setFormData(prev => ({ ...prev, [name]: value }));
+    }
   };
 
   const resetToAutoCode = () => {

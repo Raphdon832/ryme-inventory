@@ -4,15 +4,19 @@ import api from '../api';
 import { SkeletonTable } from '../components/Skeleton.jsx';
 import { FiPlus, FiEdit2, FiTrash2, FiPackage, FiTag, FiTrendingUp, FiX, FiCheck } from 'react-icons/fi';
 import { useSettings } from '../contexts/SettingsContext';
+import useScrollLock from '../hooks/useScrollLock';
 
 const Inventory = () => {
   const navigate = useNavigate();
-  const { settings, formatCurrency } = useSettings();
+  const { formatCurrency, settings } = useSettings();
   const [products, setProducts] = useState([]);
   const [deleteMode, setDeleteMode] = useState(false);
   const [selectedProducts, setSelectedProducts] = useState([]);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [loadingProducts, setLoadingProducts] = useState(true);
+
+  // Lock scroll when delete confirmation modal is open
+  useScrollLock(showDeleteConfirm);
 
   useEffect(() => {
     fetchProducts();

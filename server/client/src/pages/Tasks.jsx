@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { FiPlus, FiCheck, FiTrash2, FiEdit2, FiCalendar, FiFlag, FiX, FiClock, FiCheckSquare, FiSquare } from 'react-icons/fi';
 import { collection, addDoc, getDocs, updateDoc, deleteDoc, doc, query, orderBy, Timestamp } from 'firebase/firestore';
 import { db } from '../api';
+import useScrollLock from '../hooks/useScrollLock';
 import './Tasks.css';
 
 const Tasks = () => {
@@ -16,6 +17,9 @@ const Tasks = () => {
     dueDate: '',
     status: 'pending'
   });
+
+  // Lock scroll when task modal is open
+  useScrollLock(showModal);
 
   useEffect(() => {
     fetchTasks();
