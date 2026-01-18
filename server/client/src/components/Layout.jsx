@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
 import { FiMenu, FiSearch, FiBell, FiMail } from 'react-icons/fi';
 import Sidebar from './Sidebar';
+import Splash from './Splash';
 
 const Layout = ({ children }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [showSplash, setShowSplash] = useState(true);
 
   return (
     <div className="dashboard-layout">
@@ -13,6 +15,7 @@ const Layout = ({ children }) => {
       />
       <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
       <main className="main-content">
+        {showSplash && <Splash duration={900} onDone={() => setShowSplash(false)} />}
         <header className="top-header">
           <div className="header-left">
             <button

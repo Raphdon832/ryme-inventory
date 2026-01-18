@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../api';
+import { SkeletonTable } from '../components/Skeleton.jsx';
 import { FiPlus, FiEdit2, FiTrash2, FiPackage, FiTag, FiTrendingUp, FiX, FiCheck } from 'react-icons/fi';
 import { useSettings } from '../contexts/SettingsContext';
 
@@ -11,6 +12,7 @@ const Inventory = () => {
   const [deleteMode, setDeleteMode] = useState(false);
   const [selectedProducts, setSelectedProducts] = useState([]);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [loadingProducts, setLoadingProducts] = useState(true);
 
   useEffect(() => {
     fetchProducts();
@@ -20,8 +22,10 @@ const Inventory = () => {
     try {
       const response = await api.get('/products');
       setProducts(response.data.data);
+      setLoadingProducts(false);
     } catch (error) {
       console.error('Error fetching products:', error);
+      setLoadingProducts(false);
     }
   };
 

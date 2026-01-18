@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import api from '../api';
+import { SkeletonTable } from '../components/Skeleton.jsx';
 import { Link } from 'react-router-dom';
 import { FiPlus, FiShoppingCart, FiTag, FiTrendingUp, FiX, FiCheck, FiTrash2, FiEye, FiAlertCircle } from 'react-icons/fi';
 import { useSettings } from '../contexts/SettingsContext';
@@ -15,6 +16,7 @@ const Orders = () => {
   const [deleteMode, setDeleteMode] = useState(false);
   const [selectedOrders, setSelectedOrders] = useState([]);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [loadingOrders, setLoadingOrders] = useState(true);
   const [newOrder, setNewOrder] = useState({
     customer_name: '',
     customer_address: '',
@@ -33,10 +35,13 @@ const Orders = () => {
 
   const fetchOrders = async () => {
     try {
+      setLoadingOrders(true);
       const response = await api.get('/orders');
       setOrders(response.data.data);
     } catch (error) {
       console.error('Error fetching orders:', error);
+    } finally {
+      setLoadingOrders(false);
     }
   };
 
@@ -295,6 +300,9 @@ const Orders = () => {
         
         {/* Desktop Table View */}
         <div className="table-container desktop-only">
+          {loadingOrders ? (
+            <SkeletonTable rows={8} cols={7} />
+          ) : (
           <table>
             <thead>
               <tr>
@@ -390,6 +398,7 @@ const Orders = () => {
               )}
             </tbody>
           </table>
+          )}
         </div>
 
         {/* Mobile Card View */}
