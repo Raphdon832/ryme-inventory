@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import api from '../api';
 import { SkeletonTable, SkeletonOrderCardList } from '../components/Skeleton.jsx';
 import { Link } from 'react-router-dom';
-import { FiPlus, FiShoppingCart, FiTag, FiTrendingUp, FiX, FiCheck, FiTrash2, FiEye, FiAlertCircle } from 'react-icons/fi';
+import { FiPlus, FiShoppingCart, FiTag, FiTrendingUp, FiX, FiCheck, FiTrash2, FiEye, FiAlertCircle, FiSearch } from 'react-icons/fi';
 import { useSettings } from '../contexts/SettingsContext';
 import './Orders.css';
 
@@ -17,6 +17,9 @@ const Orders = () => {
   const [selectedOrders, setSelectedOrders] = useState([]);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [loadingOrders, setLoadingOrders] = useState(true);
+  const [productSearch, setProductSearch] = useState('');
+  const [showProductDropdown, setShowProductDropdown] = useState(false);
+  const productSearchRef = useRef(null);
   const [newOrder, setNewOrder] = useState({
     customer_name: '',
     customer_address: '',
@@ -31,6 +34,17 @@ const Orders = () => {
   useEffect(() => {
     fetchOrders();
     fetchProducts();
+  }, []);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (productSearchRef.current && !productSearchRef.current.contains(e.target)) {
+        setShowProductDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
   const fetchOrders = async () => {
@@ -110,7 +124,26 @@ const Orders = () => {
       });
     }
     setCurrentItem({ product_id: '', quantity: 1 });
+    setProductSearch('');
+    setShowProductDropdown(false);
   };
+
+  const handleSelectProduct = (product) => {
+    setCurrentItem({ ...currentItem, product_id: product.id });
+    setProductSearch(product.sorting_code ? `[${product.sorting_code}] ${product.name}` : product.name);
+    setShowProductDropdown(false);
+  };
+
+  // Filter products by sorting code or name
+  const filteredProducts = products
+    .filter(p => p.stock_quantity > 0)
+    .filter(p => {
+      if (!productSearch) return true;
+      const search = productSearch.toLowerCase();
+      const matchesCode = p.sorting_code && p.sorting_code.toLowerCase().includes(search);
+      const matchesName = p.name.toLowerCase().includes(search);
+      return matchesCode || matchesName;
+    });
 
   const handleRemoveItem = (index) => {
     const updatedItems = newOrder.items.filter((_, i) => i !== index);
@@ -128,6 +161,8 @@ const Orders = () => {
         discount: newOrder.discount
       });
       setNewOrder({ customer_name: '', customer_address: '', items: [], discount: { type: 'none', value: 0 } });
+      setProductSearch('');
+      setShowProductDropdown(false);
       setShowModal(false);
       fetchOrders();
       fetchProducts(); // Refresh to update stock
@@ -602,20 +637,50 @@ const Orders = () => {
 
               {/* Add Product */}
               <div className="item-row">
-                <div>
+                <div style={{ position: 'relative' }} ref={productSearchRef}>
                   <label className="form-label">Select Product</label>
-                  <select 
-                    className="form-select"
-                    value={currentItem.product_id} 
-                    onChange={(e) => setCurrentItem({...currentItem, product_id: e.target.value})}
-                  >
-                    <option value="">-- Choose a product --</option>
-                    {products.filter(p => p.stock_quantity > 0).map(p => (
-                      <option key={p.id} value={p.id}>
-                        {p.sorting_code ? `[${p.sorting_code}] ` : ''}{p.name} • {formatCurrency(p.sales_price)} • Stock: {p.stock_quantity}
-                      </option>
-                    ))}
-                  </select>
+                  <div style={{ position: 'relative' }}>
+                    <FiSearch size={16} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-tertiary)', pointerEvents: 'none' }} />
+                    <input 
+                      className="form-input"
+                      type="text"
+                      placeholder="Search by code or name..."
+                      value={productSearch}
+                      onChange={(e) => {
+                        setProductSearch(e.target.value);
+                        setShowProductDropdown(true);
+                        if (!e.target.value) setCurrentItem({ ...currentItem, product_id: '' });
+                      }}
+                      onFocus={() => setShowProductDropdown(true)}
+                      style={{ paddingLeft: 36 }}
+                    />
+                  </div>
+                  {showProductDropdown && (
+                    <div className="product-search-dropdown">
+                      {filteredProducts.length === 0 ? (
+                        <div className="product-search-empty">No products found</div>
+                      ) : (
+                        filteredProducts.slice(0, 8).map(p => (
+                          <div 
+                            key={p.id} 
+                            className={`product-search-item ${currentItem.product_id === p.id ? 'selected' : ''}`}
+                            onClick={() => handleSelectProduct(p)}
+                          >
+                            <div className="product-search-info">
+                              {p.sorting_code && (
+                                <span className="product-search-code">{p.sorting_code}</span>
+                              )}
+                              <span className="product-search-name">{p.name}</span>
+                            </div>
+                            <div className="product-search-meta">
+                              <span>{formatCurrency(p.sales_price)}</span>
+                              <span className="product-search-stock">Stock: {p.stock_quantity}</span>
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  )}
                 </div>
                 <div>
                   <label className="form-label">Qty</label>
@@ -745,7 +810,7 @@ const Orders = () => {
               <button 
                 type="button" 
                 className="secondary" 
-                onClick={() => { setShowModal(false); setNewOrder({ customer_name: '', customer_address: '', items: [], discount: { type: 'none', value: 0 } }); }} 
+                onClick={() => { setShowModal(false); setNewOrder({ customer_name: '', customer_address: '', items: [], discount: { type: 'none', value: 0 } }); setProductSearch(''); setShowProductDropdown(false); }} 
               >
                 Cancel
               </button>
