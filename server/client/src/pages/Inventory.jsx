@@ -73,12 +73,12 @@ const Inventory = () => {
 
   return (
     <div>
-      <div className="page-title" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+      <div className="page-title page-title--with-actions">
         <div>
           <h1>Inventory</h1>
           <p>Manage your products, costs, and pricing</p>
         </div>
-        <button onClick={() => navigate('/inventory/add')}>
+        <button className="add-btn-bordered" onClick={() => navigate('/inventory/add')}>
           <FiPlus size={18} /> Add Product
         </button>
       </div>

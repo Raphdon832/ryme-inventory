@@ -158,7 +158,7 @@ const Dashboard = () => {
           <p>Track stock levels, sales, and profit in one place.</p>
         </div>
         <div className="page-actions">
-          <button className="primary" onClick={() => navigate('/inventory/add')}>
+          <button className="add-btn-bordered" onClick={() => navigate('/inventory/add')}>
             <FiPlus size={16} /> Add Product
           </button>
           <button className="secondary" onClick={() => setShowImportModal(true)}>
@@ -169,7 +169,7 @@ const Dashboard = () => {
 
       <div className="stats-grid bento-grid">
         <div 
-          className="stat-widget highlight clickable"
+          className="stat-widget clickable accent-blue"
           onClick={() => setStatModal({ open: true, label: 'Total Products', value: stats.totalProducts, footnote: 'Total number of products in your inventory' })}
         >
           <div className="stat-header">
@@ -181,7 +181,7 @@ const Dashboard = () => {
         </div>
 
         <div 
-          className="stat-widget clickable"
+          className="stat-widget clickable accent-purple"
           onClick={() => setStatModal({ open: true, label: 'Total Orders', value: stats.totalOrders, footnote: 'Total number of orders processed to date' })}
         >
           <div className="stat-header">
@@ -193,7 +193,7 @@ const Dashboard = () => {
         </div>
 
         <div 
-          className="stat-widget clickable"
+          className="stat-widget clickable accent-green"
           onClick={() => setStatModal({ open: true, label: 'Total Revenue', value: formatCurrencyCompact(stats.totalRevenue), footnote: 'Total sales revenue from all completed orders' })}
         >
           <div className="stat-header">
@@ -205,7 +205,7 @@ const Dashboard = () => {
         </div>
 
         <div 
-          className="stat-widget clickable"
+          className="stat-widget clickable accent-orange"
           onClick={() => setStatModal({ open: true, label: 'Total Profit', value: formatCurrencyCompact(stats.totalProfit), footnote: 'Net profit generated from all sales' })}
         >
           <div className="stat-header">
