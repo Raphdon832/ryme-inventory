@@ -541,46 +541,74 @@ p, span, a, button, input, select, th, td {
 .splash-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(245, 247, 250, 0.85);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
+  background: rgba(245, 247, 250, 0.92);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 1000;
+  animation: splashFadeIn 0.3s ease-out;
+}
+
+.splash-overlay.hiding {
+  animation: splashFadeOut 0.4s ease-in forwards;
+}
+
+@keyframes splashFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes splashFadeOut {
+  from { opacity: 1; transform: scale(1); }
+  to { opacity: 0; transform: scale(1.02); }
 }
 
 .splash-card {
   background: var(--bg-surface);
   border: 1px solid var(--border-color);
-  border-radius: 16px;
-  padding: 24px 28px;
+  border-radius: 20px;
+  padding: 28px 32px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
   box-shadow: var(--shadow-lg);
+  animation: splashCardPop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes splashCardPop {
+  from { opacity: 0; transform: scale(0.9); }
+  to { opacity: 1; transform: scale(1); }
 }
 
 .splash-logo {
-  width: 56px;
-  height: 56px;
-  border-radius: 12px;
+  width: 64px;
+  height: 64px;
+  border-radius: 14px;
+  animation: logoPulse 1.5s ease-in-out infinite;
+}
+
+@keyframes logoPulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05); }
 }
 
 .splash-title {
   font-weight: 700;
-  font-size: 16px;
+  font-size: 17px;
   color: var(--text-primary);
+  letter-spacing: -0.2px;
 }
 
 .splash-spinner {
-  width: 18px;
-  height: 18px;
-  border: 2px solid var(--border-color);
+  width: 20px;
+  height: 20px;
+  border: 2.5px solid var(--border-color);
   border-top-color: var(--primary-color);
   border-radius: 50%;
-  animation: spin 0.8s linear infinite;
+  animation: spin 0.7s linear infinite;
 }
 
 @keyframes spin {
@@ -608,6 +636,26 @@ p, span, a, button, input, select, th, td {
   height: 16px;
 }
 
+.skeleton-stat {
+  min-height: 100px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 20px;
+}
+
+.skeleton-card {
+  padding: 20px;
+}
+
+.skeleton-order-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 12px;
+}
+
 @keyframes shimmer {
   0% { background-position: 200% 0; }
   100% { background-position: -200% 0; }
@@ -617,6 +665,15 @@ p, span, a, button, input, select, th, td {
 button, .btn-primary, .btn-secondary, .add-btn-bordered, .icon-button {
   position: relative;
   overflow: hidden;
+  transition: transform 0.1s ease, box-shadow 0.15s ease;
+}
+
+button:active,
+.btn-primary:active,
+.btn-secondary:active,
+.add-btn-bordered:active,
+.icon-button:active {
+  transform: scale(0.97);
 }
 
 button:active::after,
@@ -628,17 +685,30 @@ button:active::after,
   position: absolute;
   left: 50%;
   top: 50%;
-  width: 8px;
-  height: 8px;
-  background: rgba(37, 99, 235, 0.25);
+  width: 6px;
+  height: 6px;
+  background: rgba(37, 99, 235, 0.3);
   border-radius: 50%;
   transform: translate(-50%, -50%) scale(1);
-  animation: ripple 600ms ease-out;
+  animation: ripple 500ms cubic-bezier(0.4, 0, 0.2, 1);
+  pointer-events: none;
+}
+
+.btn-primary:active::after {
+  background: rgba(255, 255, 255, 0.35);
+}
+
+.btn-danger:active::after {
+  background: rgba(255, 255, 255, 0.3);
 }
 
 @keyframes ripple {
-  to {
-    transform: translate(-50%, -50%) scale(22);
+  0% {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(28);
     opacity: 0;
   }
 }

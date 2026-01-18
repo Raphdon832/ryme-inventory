@@ -4,6 +4,7 @@ import api from '../api';
 import { addDoc, collection, Timestamp } from 'firebase/firestore';
 import { db } from '../api';
 import { useSettings } from '../contexts/SettingsContext';
+import { SkeletonStatsGrid, SkeletonCard } from '../components/Skeleton';
 import {
   BarChart,
   Bar,
@@ -22,6 +23,7 @@ import {
 const Dashboard = () => {
   const navigate = useNavigate();
   const { settings, formatCurrency } = useSettings();
+  const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({
     totalProducts: 0,
     totalOrders: 0,
@@ -46,6 +48,7 @@ const Dashboard = () => {
 
   const fetchStats = async () => {
     try {
+      setLoading(true);
       const [productsRes, ordersRes, dashboardRes] = await Promise.all([
         api.get('/products'),
         api.get('/orders'),
@@ -72,6 +75,8 @@ const Dashboard = () => {
       });
     } catch (error) {
       console.error('Error fetching dashboard stats:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -167,6 +172,9 @@ const Dashboard = () => {
         </div>
       </div>
 
+      {loading ? (
+        <SkeletonStatsGrid count={4} />
+      ) : (
       <div className="stats-grid bento-grid">
         <div 
           className="stat-widget clickable accent-blue"
@@ -216,6 +224,7 @@ const Dashboard = () => {
           <div className="stat-footnote">Profit generated</div>
         </div>
       </div>
+      )}
 
       {/* Stat Detail Modal */}
       {statModal.open && (

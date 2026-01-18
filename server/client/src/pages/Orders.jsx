@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import api from '../api';
-import { SkeletonTable } from '../components/Skeleton.jsx';
+import { SkeletonTable, SkeletonOrderCardList } from '../components/Skeleton.jsx';
 import { Link } from 'react-router-dom';
 import { FiPlus, FiShoppingCart, FiTag, FiTrendingUp, FiX, FiCheck, FiTrash2, FiEye, FiAlertCircle } from 'react-icons/fi';
 import { useSettings } from '../contexts/SettingsContext';
@@ -402,6 +402,9 @@ const Orders = () => {
         </div>
 
         {/* Mobile Card View */}
+        {loadingOrders ? (
+          <SkeletonOrderCardList count={3} />
+        ) : (
         <div className="orders-list-mobile mobile-only">
           {orders.length === 0 ? (
             <div className="empty-orders-mobile">
@@ -524,6 +527,7 @@ const Orders = () => {
             </>
           )}
         </div>
+        )}
       </div>
 
       {/* Delete Confirmation Modal */}
