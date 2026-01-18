@@ -2,21 +2,29 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../api';
 import { SkeletonTable } from '../components/Skeleton.jsx';
-import { FiPlus, FiEdit2, FiTrash2, FiPackage, FiTag, FiTrendingUp, FiX, FiCheck } from 'react-icons/fi';
+import { FiPlus, FiEdit2, FiTrash2, FiPackage, FiTag, FiTrendingUp, FiX, FiCheck, FiPercent, FiDollarSign } from 'react-icons/fi';
 import { useSettings } from '../contexts/SettingsContext';
 import useScrollLock from '../hooks/useScrollLock';
 
 const Inventory = () => {
   const navigate = useNavigate();
   const { formatCurrency, settings } = useSettings();
+  const currencySymbol = settings.currency.symbol || '$';
   const [products, setProducts] = useState([]);
-  const [deleteMode, setDeleteMode] = useState(false);
+  const [selectionMode, setSelectionMode] = useState(false);
   const [selectedProducts, setSelectedProducts] = useState([]);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showBulkUpdateModal, setShowBulkUpdateModal] = useState(false);
   const [loadingProducts, setLoadingProducts] = useState(true);
+  const [bulkUpdateForm, setBulkUpdateForm] = useState({
+    markupType: 'percentage', // percentage or amount
+    markupValue: '',
+    costType: 'percentage', // percentage or fixed
+    costAdjustment: ''
+  });
 
-  // Lock scroll when delete confirmation modal is open
-  useScrollLock(showDeleteConfirm);
+  // Lock scroll when modals are open
+  useScrollLock(showDeleteConfirm || showBulkUpdateModal);
 
   useEffect(() => {
     fetchProducts();
@@ -58,7 +66,7 @@ const Inventory = () => {
         await api.delete(`/products/${productId}`);
       }
       setSelectedProducts([]);
-      setDeleteMode(false);
+      setSelectionMode(false);
       setShowDeleteConfirm(false);
       fetchProducts();
     } catch (error) {
@@ -66,8 +74,50 @@ const Inventory = () => {
     }
   };
 
-  const cancelDeleteMode = () => {
-    setDeleteMode(false);
+  const handleBulkUpdate = async () => {
+    try {
+      setLoadingProducts(true);
+      
+      const updates = selectedProducts.map(async (productId) => {
+        const product = products.find(p => p.id === productId);
+        if (!product) return;
+
+        let newCost = Number(product.cost_of_production);
+        if (bulkUpdateForm.costType === 'percentage' && bulkUpdateForm.costAdjustment) {
+          newCost = newCost * (1 + Number(bulkUpdateForm.costAdjustment) / 100);
+        } else if (bulkUpdateForm.costType === 'fixed' && bulkUpdateForm.costAdjustment) {
+          newCost = newCost + Number(bulkUpdateForm.costAdjustment);
+        }
+
+        const payload = {
+          ...product,
+          cost_of_production: newCost,
+          // Update markup only if a value was provided
+          markup_percentage: bulkUpdateForm.markupValue 
+            ? (bulkUpdateForm.markupType === 'percentage' ? Number(bulkUpdateForm.markupValue) : 0)
+            : product.markup_percentage,
+          markup_amount: bulkUpdateForm.markupValue
+            ? (bulkUpdateForm.markupType === 'amount' ? Number(bulkUpdateForm.markupValue) : 0)
+            : product.markup_amount
+        };
+
+        return api.put(`/products/${productId}`, payload);
+      });
+
+      await Promise.all(updates);
+      
+      setSelectedProducts([]);
+      setSelectionMode(false);
+      setShowBulkUpdateModal(false);
+      fetchProducts();
+    } catch (error) {
+      console.error('Error bulk updating products:', error);
+      setLoadingProducts(false);
+    }
+  };
+
+  const cancelSelectionMode = () => {
+    setSelectionMode(false);
     setSelectedProducts([]);
   };
 
@@ -142,15 +192,24 @@ const Inventory = () => {
             <span style={{ color: 'var(--text-tertiary)', fontSize: '13px' }}>{products.length} items</span>
           </div>
           <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-            {deleteMode ? (
+            {selectionMode ? (
               <>
                 <button 
                   className="icon-btn-circle"
-                  onClick={cancelDeleteMode}
+                  onClick={cancelSelectionMode}
                   title="Cancel"
                   style={{ width: '40px', height: '40px', borderRadius: '50%', padding: 0, background: 'var(--bg-surface)', border: '1px solid var(--border-color)', color: 'var(--text-secondary)' }}
                 >
                   <FiX size={18} />
+                </button>
+                <button 
+                  className="icon-btn-circle"
+                  onClick={() => setShowBulkUpdateModal(true)}
+                  disabled={selectedProducts.length === 0}
+                  title={`Update ${selectedProducts.length} selected`}
+                  style={{ width: '40px', height: '40px', borderRadius: '50%', padding: 0, background: selectedProducts.length > 0 ? 'rgba(79, 106, 245, 0.1)' : 'var(--bg-surface)', border: '1px solid var(--border-color)', color: 'var(--primary-color)' }}
+                >
+                  <FiTag size={18} />
                 </button>
                 <button 
                   className="icon-btn-circle danger"
@@ -167,55 +226,58 @@ const Inventory = () => {
               </>
             ) : (
               <button 
-                onClick={() => setDeleteMode(true)}
-                title="Delete products"
+                onClick={() => setSelectionMode(true)}
+                title="Select products for bulk actions"
                 style={{ width: '40px', height: '40px', borderRadius: '50%', padding: 0, background: 'var(--bg-surface)', border: '1px solid var(--border-color)', color: 'var(--text-secondary)' }}
               >
-                <FiTrash2 size={18} />
+                <FiCheck size={18} />
               </button>
             )}
           </div>
         </div>
         
         <div className="table-container">
-          <table>
-            <thead>
-              <tr>
-                {deleteMode && <th style={{ width: '40px' }}></th>}
-                <th>Code</th>
-                <th>Product</th>
-                <th>Cost of Production</th>
-                <th>Markup</th>
-                <th>Sales Price</th>
-                <th>Profit/Unit</th>
-                <th>Stock</th>
-                {!deleteMode && <th>Actions</th>}
-              </tr>
-            </thead>
-            <tbody>
-              {products.map(product => (
-                <tr 
-                  key={product.id}
-                  onClick={deleteMode ? () => toggleProductSelection(product.id) : undefined}
-                  style={{ cursor: deleteMode ? 'pointer' : 'default', background: selectedProducts.includes(product.id) ? 'rgba(239, 68, 68, 0.05)' : undefined }}
-                >
-                  {deleteMode && (
-                    <td>
-                      <div style={{ 
-                        width: '20px', 
-                        height: '20px', 
-                        borderRadius: '50%', 
-                        border: selectedProducts.includes(product.id) ? 'none' : '2px solid var(--border-color)',
-                        background: selectedProducts.includes(product.id) ? '#EF4444' : 'transparent',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        color: 'white'
-                      }}>
-                        {selectedProducts.includes(product.id) && <FiCheck size={12} />}
-                      </div>
-                    </td>
-                  )}
+          {loadingProducts ? (
+            <SkeletonTable rows={8} cols={6} />
+          ) : (
+            <table>
+              <thead>
+                <tr>
+                  {selectionMode && <th style={{ width: '40px' }}></th>}
+                  <th>Code</th>
+                  <th>Product</th>
+                  <th>Cost of Production</th>
+                  <th>Markup</th>
+                  <th>Sales Price</th>
+                  <th>Profit/Unit</th>
+                  <th>Stock</th>
+                  {!selectionMode && <th>Actions</th>}
+                </tr>
+              </thead>
+              <tbody>
+                {products.map(product => (
+                  <tr 
+                    key={product.id}
+                    onClick={selectionMode ? () => toggleProductSelection(product.id) : undefined}
+                    style={{ cursor: selectionMode ? 'pointer' : 'default', background: selectedProducts.includes(product.id) ? 'rgba(79, 106, 245, 0.05)' : undefined }}
+                  >
+                    {selectionMode && (
+                      <td>
+                        <div style={{ 
+                          width: '20px', 
+                          height: '20px', 
+                          borderRadius: '50%', 
+                          border: selectedProducts.includes(product.id) ? 'none' : '2px solid var(--border-color)',
+                          background: selectedProducts.includes(product.id) ? 'var(--primary-color)' : 'transparent',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          color: 'white'
+                        }}>
+                          {selectedProducts.includes(product.id) && <FiCheck size={12} />}
+                        </div>
+                      </td>
+                    )}
                   <td>
                     {product.sorting_code ? (
                       <span style={{ 
@@ -257,7 +319,7 @@ const Inventory = () => {
                       {product.stock_quantity} units
                     </span>
                   </td>
-                  {!deleteMode && (
+                  {!selectionMode && (
                     <td>
                       <div style={{ display: 'flex', gap: '8px' }}>
                         <button 
@@ -290,8 +352,9 @@ const Inventory = () => {
               )}
             </tbody>
           </table>
-        </div>
+        )}
       </div>
+    </div>
 
       {/* Delete Confirmation Modal */}
       {showDeleteConfirm && (
@@ -318,6 +381,87 @@ const Inventory = () => {
               >
                 Delete
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Bulk Update Modal */}
+      {showBulkUpdateModal && (
+        <div className="modal-overlay" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+          <div style={{ background: 'var(--bg-surface)', borderRadius: '16px', padding: '24px', maxWidth: '400px', width: '95%', maxHeight: '90vh', overflowY: 'auto' }}>
+            <h3 style={{ margin: '0 0 8px' }}>Bulk Price Update</h3>
+            <p style={{ margin: '0 0 24px', color: 'var(--text-secondary)', fontSize: '14px' }}>
+              Updating {selectedProducts.length} product(s). Values left empty will remain unchanged.
+            </p>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+              {/* Cost Update */}
+              <div>
+                <label style={{ display: 'block', fontSize: '14px', fontWeight: 600, marginBottom: '8px' }}>Adjust Cost of Production</label>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <div style={{ position: 'relative', flex: 1 }}>
+                    <input 
+                      type="number" 
+                      placeholder="Amount"
+                      value={bulkUpdateForm.costAdjustment}
+                      onChange={(e) => setBulkUpdateForm(prev => ({ ...prev, costAdjustment: e.target.value }))}
+                      style={{ paddingLeft: '24px' }}
+                    />
+                    <span style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)', fontSize: '14px' }}>{bulkUpdateForm.costType === 'fixed' ? currencySymbol : '%'}</span>
+                  </div>
+                  <select 
+                    style={{ width: '100px', padding: '8px' }}
+                    value={bulkUpdateForm.costType}
+                    onChange={(e) => setBulkUpdateForm(prev => ({ ...prev, costType: e.target.value }))}
+                  >
+                    <option value="percentage">%</option>
+                    <option value="fixed">{currencySymbol}</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Markup Update */}
+              <div>
+                <label style={{ display: 'block', fontSize: '14px', fontWeight: 600, marginBottom: '8px' }}>Adjust Markup (Set New Value)</label>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <div style={{ position: 'relative', flex: 1 }}>
+                    <input 
+                      type="number" 
+                      placeholder="Value"
+                      value={bulkUpdateForm.markupValue}
+                      onChange={(e) => setBulkUpdateForm(prev => ({ ...prev, markupValue: e.target.value }))}
+                      style={{ paddingLeft: '24px' }}
+                    />
+                    <span style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)', fontSize: '14px' }}>{bulkUpdateForm.markupType === 'amount' ? currencySymbol : '%'}</span>
+                  </div>
+                  <select 
+                    style={{ width: '100px', padding: '8px' }}
+                    value={bulkUpdateForm.markupType}
+                    onChange={(e) => setBulkUpdateForm(prev => ({ ...prev, markupType: e.target.value }))}
+                  >
+                    <option value="percentage">%</option>
+                    <option value="amount">{currencySymbol}</option>
+                  </select>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', gap: '12px', marginTop: '12px' }}>
+                <button 
+                  className="secondary"
+                  onClick={() => setShowBulkUpdateModal(false)}
+                  style={{ flex: 1 }}
+                >
+                  Cancel
+                </button>
+                <button 
+                  onClick={handleBulkUpdate}
+                  style={{ flex: 1 }}
+                  disabled={!bulkUpdateForm.costAdjustment && !bulkUpdateForm.markupValue}
+                >
+                  Apply Changes
+                </button>
+              </div>
             </div>
           </div>
         </div>
