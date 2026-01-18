@@ -174,8 +174,14 @@ const OrderDetails = () => {
     // --- Table ---
     const tableStartY = row2Y + 30;
     
-    // Updated: Added S/N column
-    const tableColumn = ["S/N", "ITEM", "QTY", "UNIT PRICE", "AMOUNT"];
+    // Check if any item has a discount to dynamically add column
+    const hasItemDiscounts = order.items.some(item => (item.discount_percentage || 0) > 0);
+    
+    // Updated: Added S/N column and Discount column if needed
+    const tableColumn = hasItemDiscounts 
+        ? ["S/N", "ITEM", "QTY", "RATE", "DISC.", "AMOUNT"]
+        : ["S/N", "ITEM", "QTY", "RATE", "AMOUNT"];
+        
     const tableRows = [];
 
     // Helper to sanitize currency for PDF (removes unsupported symbols like ₦)
@@ -185,13 +191,21 @@ const OrderDetails = () => {
     };
 
     order.items.forEach((item, index) => {
+      const discount = item.discount_percentage || 0;
+      const effectiveTotal = (item.sales_price_at_time * (1 - discount / 100)) * item.quantity;
+      
       const itemData = [
         index + 1, // S/N
-        item.product_name + (item.sorting_code ? `\nCode: ${item.sorting_code}` : ''),
+        item.product_name, // Removed sorting code from invoice name
         item.quantity,
         safeCurrency(item.sales_price_at_time),
-        safeCurrency(item.sales_price_at_time * item.quantity)
       ];
+
+      if (hasItemDiscounts) {
+          itemData.push(""); // Placeholder for Disc column (drawn manually)
+      }
+
+      itemData.push(safeCurrency(effectiveTotal));
       tableRows.push(itemData);
     });
 
@@ -221,18 +235,67 @@ const OrderDetails = () => {
         lineWidth: 0,
         minCellHeight: 10, // Ensure rows aren't too squashed vertically
       },
-      columnStyles: {
+      columnStyles: hasItemDiscounts ? {
+        0: { cellWidth: 8, halign: 'center', textColor: secondaryColor }, // S/N
+        1: { cellWidth: 'auto', fontStyle: 'bold' }, // Item
+        2: { cellWidth: 12, halign: 'center', textColor: secondaryColor }, // Qty
+        3: { cellWidth: 30, halign: 'right', textColor: secondaryColor }, // Rate
+        4: { cellWidth: 15, halign: 'center' }, // Disc
+        5: { cellWidth: 35, halign: 'right', fontStyle: 'bold' }, // Amount
+      } : {
         0: { cellWidth: 10, halign: 'center', textColor: secondaryColor }, // S/N
         1: { cellWidth: 'auto', fontStyle: 'bold' }, // Item
         2: { cellWidth: 15, halign: 'center', textColor: secondaryColor }, // Qty
-        3: { cellWidth: 35, halign: 'right', textColor: secondaryColor }, // Unit Price 
+        3: { cellWidth: 35, halign: 'right', textColor: secondaryColor }, // Rate
         4: { cellWidth: 40, halign: 'right', fontStyle: 'bold' }, // Amount
       },
       didParseCell: (data) => {
         // Custom alignment for header
         if (data.section === 'head') {
             if (data.column.index === 0 || data.column.index === 2) data.cell.styles.halign = 'center';
-            if (data.column.index === 3 || data.column.index === 4) data.cell.styles.halign = 'right';
+            if (hasItemDiscounts) {
+                 if (data.column.index === 3 || data.column.index === 5) data.cell.styles.halign = 'right';
+                 if (data.column.index === 4) data.cell.styles.halign = 'center';
+            } else {
+                 if (data.column.index === 3 || data.column.index === 4) data.cell.styles.halign = 'right';
+            }
+        }
+      },
+      didDrawCell: (data) => {
+        // Draw badge in Discount column if applicable
+        if (hasItemDiscounts && data.section === 'body' && data.column.index === 4) {
+            const item = order.items[data.row.index];
+            if (item && item.discount_percentage > 0) {
+                 const badgeText = `-${item.discount_percentage}%`;
+                 const fontSize = 4; 
+                 doc.setFontSize(fontSize);
+                 doc.setFont('helvetica', 'bold');
+                 
+                 const textWidth = doc.getTextWidth(badgeText);
+                 const paddingX = 1; 
+                 const badgeWidth = textWidth + (paddingX * 2);
+                 const badgeHeight = fontSize + 1.5; 
+                 const radius = badgeHeight / 2; 
+                 
+                 // Center in cell
+                 const badgeX = data.cell.x + (data.cell.width / 2) - (badgeWidth / 2);
+                 const badgeY = data.cell.y + (data.cell.height / 2) - (badgeHeight / 2);
+                 
+                 doc.setFillColor(16, 185, 129); // Green background
+                 doc.roundedRect(badgeX, badgeY, badgeWidth, badgeHeight, radius, radius, 'F');
+                 
+                 doc.setTextColor(255, 255, 255); // White text
+                 const textX = badgeX + (badgeWidth / 2);
+                 const textY = badgeY + (badgeHeight / 2);
+                 doc.text(badgeText, textX, textY, { align: 'center', baseline: 'middle' });
+            } else {
+                // Optional: Draw a subtle dash for items without discount
+                doc.setFontSize(8);
+                doc.setTextColor(...secondaryColor);
+                const dashText = "-";
+                const dashWidth = doc.getTextWidth(dashText);
+                doc.text(dashText, data.cell.x + (data.cell.width / 2) - (dashWidth / 2), data.cell.y + (data.cell.height / 2) + 1);
+            }
         }
       }
     });

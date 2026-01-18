@@ -157,16 +157,23 @@ const api = {
         if (product.stock_quantity < quantity) {
           throw new Error(`Insufficient stock for ${product.name}.`);
         }
+        
+        const discountPct = Number(item.discount_percentage) || 0;
+        const effectivePrice = product.sales_price * (1 - discountPct / 100);
+        const lineTotal = effectivePrice * quantity;
+        const lineProfit = (effectivePrice - product.cost_of_production) * quantity;
 
-        total_sales_price += product.sales_price * quantity;
-        total_profit += product.profit * quantity;
+        total_sales_price += lineTotal;
+        total_profit += lineProfit;
 
         orderItems.push({
           product_id: product.id,
           product_name: product.name,
           quantity,
           sales_price_at_time: product.sales_price,
-          profit_at_time: product.profit
+          discount_percentage: discountPct,
+          profit_at_time: (effectivePrice - product.cost_of_production),
+          sorting_code: product.sorting_code
         });
 
         // Stock is NOT reduced here anymore. It will be reduced when marked as Paid.
@@ -280,15 +287,22 @@ const api = {
          const product = normalizeDoc(snapshot);
          const quantity = Number(item.quantity || 0);
 
-         total_sales_price += product.sales_price * quantity;
-         total_profit += product.profit * quantity;
+         const discountPct = Number(item.discount_percentage) || 0;
+         const effectivePrice = product.sales_price * (1 - discountPct / 100);
+         const lineTotal = effectivePrice * quantity;
+         const lineProfit = (effectivePrice - product.cost_of_production) * quantity;
+
+         total_sales_price += lineTotal;
+         total_profit += lineProfit;
 
          orderItems.push({
            product_id: product.id,
            product_name: product.name,
            quantity,
            sales_price_at_time: product.sales_price,
-           profit_at_time: product.profit
+           discount_percentage: discountPct,
+           profit_at_time: (effectivePrice - product.cost_of_production),
+           sorting_code: product.sorting_code
          });
        });
 

@@ -34,7 +34,8 @@ const Orders = () => {
   });
   const [currentItem, setCurrentItem] = useState({
     product_id: '',
-    quantity: 1
+    quantity: 1,
+    discount: 0
   });
 
   useEffect(() => {
@@ -109,11 +110,13 @@ const Orders = () => {
 
     // Check if item already exists in order
     const existingIndex = newOrder.items.findIndex(i => i.product_id === currentItem.product_id);
+    const discount = Number(currentItem.discount) || 0;
     
     if (existingIndex > -1) {
-      // Update quantity
+      // Update quantity and discount
       const updatedItems = [...newOrder.items];
       updatedItems[existingIndex].quantity += Number(currentItem.quantity);
+      updatedItems[existingIndex].discount_percentage = discount;
       setNewOrder({ ...newOrder, items: updatedItems });
     } else {
       setNewOrder({
@@ -123,13 +126,15 @@ const Orders = () => {
           quantity: Number(currentItem.quantity), 
           product_name: product.name, 
           sales_price: product.sales_price, 
+          discount_percentage: discount,
           profit: product.profit,
           cost: product.cost_of_production,
-          stock: product.stock_quantity
+          stock: product.stock_quantity,
+          sorting_code: product.sorting_code
         }]
       });
     }
-    setCurrentItem({ product_id: '', quantity: 1 });
+    setCurrentItem({ product_id: '', quantity: 1, discount: 0 });
     setProductSearch('');
     setShowProductDropdown(false);
   };
@@ -183,7 +188,11 @@ const Orders = () => {
       const orderPayload = {
         customer_name: newOrder.customer_name,
         customer_address: newOrder.customer_address,
-        items: newOrder.items.map(item => ({ product_id: item.product_id, quantity: item.quantity })),
+        items: newOrder.items.map(item => ({ 
+          product_id: item.product_id, 
+          quantity: item.quantity,
+          discount_percentage: item.discount_percentage
+        })),
         discount: newOrder.discount
       };
 
@@ -206,7 +215,11 @@ const Orders = () => {
   };
 
   const calculateSubtotal = () => {
-    return newOrder.items.reduce((acc, item) => acc + (item.sales_price * item.quantity), 0);
+    return newOrder.items.reduce((acc, item) => {
+      const discount = Number(item.discount_percentage) || 0;
+      const effectivePrice = item.sales_price * (1 - discount / 100);
+      return acc + (effectivePrice * item.quantity);
+    }, 0);
   };
 
   const calculateCost = () => {
@@ -230,8 +243,10 @@ const Orders = () => {
   };
 
   const calculateProfit = () => {
-    const baseProfit = newOrder.items.reduce((acc, item) => acc + (item.profit * item.quantity), 0);
-    return baseProfit - calculateDiscountAmount();
+    const totalSales = calculateSubtotal();
+    const totalCost = calculateCost();
+    // Profit = (Sales - Cost) - Global Discount
+    return (totalSales - totalCost) - calculateDiscountAmount();
   };
 
   // Stats (only count paid orders for revenue and profit)
@@ -745,6 +760,18 @@ const Orders = () => {
                   />
                 </div>
                 <div>
+                  <label className="form-label">Discount %</label>
+                  <input 
+                    className="form-input"
+                    type="number" 
+                    min="0" 
+                    max="100"
+                    placeholder="0"
+                    value={currentItem.discount || ''} 
+                    onChange={(e) => setCurrentItem({...currentItem, discount: e.target.value === '' ? '' : Number(e.target.value)})} 
+                  />
+                </div>
+                <div>
                   <div style={{ height: '24px' }}></div> {/* Spacer */}
                   <button className="btn-primary" onClick={handleAddItem} type="button" style={{ width: '100%', justifyContent: 'center' }}>
                     <FiPlus size={16} /> Add Item
@@ -763,19 +790,29 @@ const Orders = () => {
                           <th>Product</th>
                           <th>Qty</th>
                           <th>Unit Price</th>
+                          <th>Disc.</th>
                           <th>Subtotal</th>
                           <th>Profit</th>
                           <th></th>
                         </tr>
                       </thead>
                       <tbody>
-                        {newOrder.items.map((item, index) => (
+                        {newOrder.items.map((item, index) => {
+                          const discount = item.discount_percentage || 0;
+                          const effectivePrice = item.sales_price * (1 - discount / 100);
+                          const subtotal = effectivePrice * item.quantity;
+                          const profit = (effectivePrice - item.cost) * item.quantity;
+                          
+                          return (
                           <tr key={index}>
                             <td style={{ fontWeight: 600 }}>{item.product_name}</td>
                             <td>{item.quantity}</td>
                             <td>{formatCurrency(item.sales_price)}</td>
-                            <td style={{ fontWeight: 600 }}>{formatCurrency(item.sales_price * item.quantity)}</td>
-                            <td style={{ color: 'var(--success-text)', fontWeight: 600 }}>{formatCurrency(item.profit * item.quantity, { showSign: true })}</td>
+                            <td>{discount > 0 ? <span className="badge badge-warning">{discount}%</span> : '-'}</td>
+                            <td style={{ fontWeight: 600 }}>{formatCurrency(subtotal)}</td>
+                            <td style={{ color: profit >= 0 ? 'var(--success-text)' : 'var(--danger-text)', fontWeight: 600 }}>
+                              {formatCurrency(profit, { showSign: true })}
+                            </td>
                             <td style={{ textAlign: 'right' }}>
                               <button 
                                 className="table-action-btn"
@@ -785,7 +822,8 @@ const Orders = () => {
                               </button>
                             </td>
                           </tr>
-                        ))}
+                          );
+                        })}
                       </tbody>
                     </table>
                   </div>
