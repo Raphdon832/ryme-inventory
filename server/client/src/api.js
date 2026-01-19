@@ -350,6 +350,11 @@ const api = {
        // General order update
        const { customer_name, customer_address, items, discount } = payload;
        
+       // Get the existing order to compare changes
+       const existingOrderSnap = await getDoc(doc(ordersRef, id));
+       const existingOrder = existingOrderSnap.exists() ? existingOrderSnap.data() : null;
+       const existingItems = existingOrder?.items || [];
+       
        // Calculate new totals
        let total_sales_price = 0;
        let total_profit = 0;
@@ -411,8 +416,45 @@ const api = {
          updated_at: new Date().toISOString()
        });
 
-       // Log activity
-       await api.logActivity('update', 'order', `Order #${id.slice(0, 8)} updated - ${orderItems.length} items`, { id, customer_name, total_sales_price: final_total_sales_price });
+       // Calculate what changed (added/removed/modified items)
+       const changes = {
+         added: [],
+         removed: [],
+         modified: []
+       };
+
+       // Find added/modified items
+       orderItems.forEach(newItem => {
+         const existingItem = existingItems.find(e => e.product_id === newItem.product_id);
+         if (!existingItem) {
+           changes.added.push({ product_name: newItem.product_name, quantity: newItem.quantity });
+         } else if (existingItem.quantity !== newItem.quantity || existingItem.discount_percentage !== newItem.discount_percentage) {
+           changes.modified.push({
+             product_name: newItem.product_name,
+             old_quantity: existingItem.quantity,
+             new_quantity: newItem.quantity,
+             old_discount: existingItem.discount_percentage || 0,
+             new_discount: newItem.discount_percentage || 0
+           });
+         }
+       });
+
+       // Find removed items
+       existingItems.forEach(existingItem => {
+         const stillExists = orderItems.find(n => n.product_id === existingItem.product_id);
+         if (!stillExists) {
+           changes.removed.push({ product_name: existingItem.product_name, quantity: existingItem.quantity });
+         }
+       });
+
+       // Log activity with detailed changes
+       await api.logActivity('update', 'order', `Order #${id.slice(0, 8)} updated - ${orderItems.length} items`, { 
+         id, 
+         customer_name, 
+         total_sales_price: final_total_sales_price,
+         changes,
+         items: orderItems
+       });
 
        const snapshot = await getDoc(orderRef);
        return { data: { data: normalizeDoc(snapshot) } };
