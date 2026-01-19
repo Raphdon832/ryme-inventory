@@ -234,7 +234,8 @@ const api = {
                throw new Error("Order is already paid");
             }
 
-            // Check and deduct stock for each item
+            // First, read all product data
+            const productUpdates = [];
             for (const item of orderData.items) {
                const productRef = doc(productsRef, String(item.product_id));
                const productSnap = await transaction.get(productRef);
@@ -250,8 +251,16 @@ const api = {
                  throw new Error(`Insufficient stock for ${item.product_name}. Available: ${currentStock}`);
                }
                
-               transaction.update(productRef, {
-                 stock_quantity: currentStock - item.quantity
+               productUpdates.push({
+                 ref: productRef,
+                 newStock: currentStock - item.quantity
+               });
+            }
+
+            // Then submit all writes
+            for (const update of productUpdates) {
+               transaction.update(update.ref, {
+                 stock_quantity: update.newStock
                });
             }
 
