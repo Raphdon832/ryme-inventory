@@ -39,8 +39,19 @@ const Orders = () => {
   });
 
   useEffect(() => {
-    fetchOrders();
-    fetchProducts();
+    const unsubscribeOrders = api.subscribe('/orders', (response) => {
+      setOrders(response.data);
+      setLoadingOrders(false);
+    });
+
+    const unsubscribeProducts = api.subscribe('/products', (response) => {
+      setProducts(response.data);
+    });
+
+    return () => {
+      unsubscribeOrders();
+      unsubscribeProducts();
+    };
   }, []);
 
   // Close dropdown when clicking outside
@@ -53,27 +64,6 @@ const Orders = () => {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
-
-  const fetchOrders = async () => {
-    try {
-      setLoadingOrders(true);
-      const response = await api.get('/orders');
-      setOrders(response.data.data);
-    } catch (error) {
-      console.error('Error fetching orders:', error);
-    } finally {
-      setLoadingOrders(false);
-    }
-  };
-
-  const fetchProducts = async () => {
-    try {
-      const response = await api.get('/products');
-      setProducts(response.data.data);
-    } catch (error) {
-      console.error('Error fetching products:', error);
-    }
-  };
 
   const toggleOrderSelection = (orderId) => {
     setSelectedOrders(prev => 
@@ -207,8 +197,8 @@ const Orders = () => {
       setProductSearch('');
       setShowProductDropdown(false);
       setShowModal(false);
-      fetchOrders();
-      fetchProducts(); // Refresh to update stock
+      // fetchOrders(); Handled by snapshot
+      // fetchProducts(); Handled by snapshot
     } catch (error) {
       console.error('Error saving order:', error);
     }

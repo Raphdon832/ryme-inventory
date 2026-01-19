@@ -15,18 +15,11 @@ const OrderDetails = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchOrderDetails = async () => {
-      try {
-        const response = await api.get(`/orders/${id}`);
-        setOrder(response.data.data);
-      } catch (error) {
-        console.error('Error fetching order details:', error);
-      } finally {
+    const unsubscribe = api.subscribe(`/orders/${id}`, (response) => {
+        setOrder(response.data);
         setLoading(false);
-      }
-    };
-
-    fetchOrderDetails();
+    });
+    return () => unsubscribe();
   }, [id]);
 
   const handleMarkAsPaid = async () => {
@@ -34,17 +27,9 @@ const OrderDetails = () => {
     if (window.confirm('Are you sure you want to mark this order as paid? This will deduct the items from stock.')) {
         try {
             setLoading(true);
-            const response = await api.put(`/orders/${id}`, { action: 'mark_paid' });
-            
-            if (response.data.success) {
-                // Update local state
-                setOrder(prev => ({
-                    ...prev,
-                    payment_status: 'Paid',
-                    paid_at: new Date().toISOString()
-                }));
-                alert('Order marked as paid successfully!');
-            }
+            await api.put(`/orders/${id}`, { action: 'mark_paid' });
+            // State update handled by snapshot
+            alert('Order marked as paid successfully!');
         } catch (error) {
             console.error('Error marking order as paid:', error);
             alert(error.response?.data?.message || 'Failed to mark order as paid');

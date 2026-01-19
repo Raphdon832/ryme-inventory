@@ -26,25 +26,19 @@ const Inventory = () => {
   useScrollLock(showDeleteConfirm || showBulkUpdateModal);
 
   useEffect(() => {
-    fetchProducts();
-  }, []);
+    const unsubscribe = api.subscribe('/products', (response) => {
+      setProducts(response.data);
+      setLoadingProducts(false);
+    });
 
-  const fetchProducts = async () => {
-    try {
-      const response = await api.get('/products');
-      setProducts(response.data.data);
-      setLoadingProducts(false);
-    } catch (error) {
-      console.error('Error fetching products:', error);
-      setLoadingProducts(false);
-    }
-  };
+    return () => unsubscribe();
+  }, []);
 
   const handleDelete = async (productId) => {
     if (window.confirm('Are you sure you want to delete this product?')) {
       try {
         await api.delete(`/products/${productId}`);
-        fetchProducts();
+        // No need to fetchProducts(), snapshot will update automatically
       } catch (error) {
         console.error('Error deleting product:', error);
       }
@@ -67,7 +61,7 @@ const Inventory = () => {
       setSelectedProducts([]);
       setSelectionMode(false);
       setShowDeleteConfirm(false);
-      fetchProducts();
+      // fetchProducts(); Handled by snapshot
     } catch (error) {
       console.error('Error deleting products:', error);
     }
@@ -108,7 +102,7 @@ const Inventory = () => {
       setSelectedProducts([]);
       setSelectionMode(false);
       setShowBulkUpdateModal(false);
-      fetchProducts();
+      // fetchProducts(); Handled by snapshot
     } catch (error) {
       console.error('Error bulk updating products:', error);
       setLoadingProducts(false);

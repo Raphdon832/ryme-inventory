@@ -11,6 +11,7 @@ import {
   writeBatch,
   runTransaction,
   where,
+  onSnapshot,
   Timestamp
 } from 'firebase/firestore';
 import { db } from './firebase';
@@ -109,6 +110,77 @@ const api = {
     }
 
     throw new Error(`Unknown GET endpoint: ${path}`);
+  },
+
+  subscribe(path, callback) {
+    if (path === '/products') {
+      return onSnapshot(productsRef, (snapshot) => {
+        const data = snapshot.docs.map(normalizeDoc);
+        callback({ data });
+      });
+    }
+
+    if (path.startsWith('/products/')) {
+      const id = path.split('/')[2];
+      return onSnapshot(doc(productsRef, id), (snapshot) => {
+        const data = snapshot.exists() ? normalizeDoc(snapshot) : null;
+        callback({ data });
+      });
+    }
+
+    if (path === '/orders') {
+      const q = query(ordersRef, orderBy('order_date', 'desc'));
+      return onSnapshot(q, (snapshot) => {
+        const data = snapshot.docs.map(normalizeDoc);
+        callback({ data });
+      });
+    }
+
+    if (path.startsWith('/orders/')) {
+      const id = path.split('/')[2];
+      return onSnapshot(doc(ordersRef, id), (snapshot) => {
+        const data = snapshot.exists() ? normalizeDoc(snapshot) : null;
+        callback({ data });
+      });
+    }
+
+    if (path === '/dashboard-stats') {
+      return onSnapshot(ordersRef, (snapshot) => {
+        const orders = snapshot.docs.map(normalizeDoc);
+        
+        const revenueByDate = new Map();
+        const productTotals = new Map();
+
+        orders.forEach((order) => {
+          const dateKey = order.order_date ? String(order.order_date).slice(0, 10) : 'unknown';
+          const current = revenueByDate.get(dateKey) || { revenue: 0, profit: 0 };
+          revenueByDate.set(dateKey, {
+            revenue: current.revenue + Number(order.total_sales_price || 0),
+            profit: current.profit + Number(order.total_profit || 0)
+          });
+
+          (order.items || []).forEach((item) => {
+            const key = item.product_name || item.product_id;
+            const totals = productTotals.get(key) || { name: item.product_name || 'Unknown', total_sold: 0, total_revenue: 0 };
+            totals.total_sold += Number(item.quantity || 0);
+            totals.total_revenue += Number(item.sales_price_at_time || 0) * Number(item.quantity || 0);
+            productTotals.set(key, totals);
+          });
+        });
+
+        const revenueChart = Array.from(revenueByDate.entries())
+          .sort(([a], [b]) => a.localeCompare(b))
+          .map(([date, values]) => ({ date, revenue: values.revenue, profit: values.profit }));
+
+        const topProducts = Array.from(productTotals.values())
+          .sort((a, b) => b.total_sold - a.total_sold)
+          .slice(0, 5);
+
+        callback({ data: { revenueChart, topProducts } });
+      });
+    }
+
+    throw new Error(`Unknown SUBSCRIBE endpoint: ${path}`);
   },
 
   async post(path, payload) {

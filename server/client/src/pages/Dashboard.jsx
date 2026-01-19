@@ -47,42 +47,66 @@ const Dashboard = () => {
   useScrollLock(showImportModal || statModal.open);
 
   useEffect(() => {
-    fetchStats();
-  }, [settings.inventory.lowStockThreshold]);
+    const unsubscribeProducts = api.subscribe('/products', (response) => {
+      const products = response.data;
+      setStats(prev => ({
+        ...prev,
+        products,
+        totalProducts: products.length
+      }));
+      setLoading(false);
+    });
 
-  const fetchStats = async () => {
-    try {
-      setLoading(true);
-      const [productsRes, ordersRes, dashboardRes] = await Promise.all([
-        api.get('/products'),
-        api.get('/orders'),
-        api.get('/dashboard-stats')
-      ]);
-
-      const products = productsRes.data.data;
-      const orders = ordersRes.data.data;
-      const dashboardData = dashboardRes.data.data;
-
+    const unsubscribeOrders = api.subscribe('/orders', (response) => {
+      const orders = response.data;
+      
       const totalRevenue = orders.reduce((acc, order) => acc + order.total_sales_price, 0);
       const totalProfit = orders.reduce((acc, order) => acc + order.total_profit, 0);
 
-      setStats({
-        totalProducts: products.length,
+      const revenueByDate = new Map();
+      const productTotals = new Map();
+
+      orders.forEach((order) => {
+        const dateKey = order.order_date ? String(order.order_date).slice(0, 10) : 'unknown';
+        const current = revenueByDate.get(dateKey) || { revenue: 0, profit: 0 };
+        revenueByDate.set(dateKey, {
+          revenue: current.revenue + Number(order.total_sales_price || 0),
+          profit: current.profit + Number(order.total_profit || 0)
+        });
+
+        (order.items || []).forEach((item) => {
+          const key = item.product_name || item.product_id;
+          const totals = productTotals.get(key) || { name: item.product_name || 'Unknown', total_sold: 0, total_revenue: 0 };
+          totals.total_sold += Number(item.quantity || 0);
+          totals.total_revenue += Number(item.sales_price_at_time || 0) * Number(item.quantity || 0);
+          productTotals.set(key, totals);
+        });
+      });
+
+      const revenueChart = Array.from(revenueByDate.entries())
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([date, values]) => ({ date, revenue: values.revenue, profit: values.profit }));
+
+      const topProducts = Array.from(productTotals.values())
+        .sort((a, b) => b.total_sold - a.total_sold)
+        .slice(0, 5);
+
+      setStats(prev => ({
+        ...prev,
+        orders,
         totalOrders: orders.length,
         totalRevenue,
         totalProfit,
-        lowStockItems: [],
-        revenueChart: dashboardData.revenueChart,
-        topProducts: dashboardData.topProducts,
-        orders,
-        products
-      });
-    } catch (error) {
-      console.error('Error fetching dashboard stats:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+        revenueChart,
+        topProducts
+      }));
+    });
+
+    return () => {
+      unsubscribeProducts();
+      unsubscribeOrders();
+    };
+  }, []);
 
   const handleReorderTask = async () => {
     if (!lowStockItems.length) return;
