@@ -87,13 +87,15 @@ const OrderDetails = () => {
         doc.text(config.companyName, 20, 26);
     }
 
-    // Invoice Number
-    let invoiceNum = "INV 000";
+    // Invoice Number - "Sales Invoice" for paid orders, "Invoice" for pending
+    const isPaid = order.payment_status === 'Paid';
+    const invoicePrefix = isPaid ? 'Sales Invoice' : 'Invoice';
+    let invoiceNum = `${invoicePrefix} 000`;
     if (order.id) {
         // Generate a clean invoice number format like INV YYYYMM-00-HASH
         const datePart = new Date(order.order_date).toISOString().slice(0, 7).replace('-', ''); // YYYYMM
         const idHash = order.id.slice(0, 2).toUpperCase() + order.id.slice(-2).toUpperCase();
-        invoiceNum = `INV ${datePart}-00-${idHash}`;
+        invoiceNum = `${invoicePrefix} ${datePart}-00-${idHash}`;
     }
     
     doc.setFontSize(11);

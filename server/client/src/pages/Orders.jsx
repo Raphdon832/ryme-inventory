@@ -458,14 +458,16 @@ const Orders = () => {
                         >
                           <FiEye size={18} />
                         </Link>
-                        <button
-                          className="table-action-btn edit-btn"
-                          title="Edit Order"
-                          onClick={() => handleEditOrder(order)}
-                          style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--primary-color)' }}
-                        >
-                          <FiEdit2 size={16} />
-                        </button>
+                        {order.payment_status !== 'Paid' && (
+                          <button
+                            className="table-action-btn edit-btn"
+                            title="Edit Order"
+                            onClick={() => handleEditOrder(order)}
+                            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--primary-color)' }}
+                          >
+                            <FiEdit2 size={16} />
+                          </button>
+                        )}
                       </div>
                     </td>
                   )}
@@ -582,13 +584,15 @@ const Orders = () => {
                           </span>
                         </div>
                         <div style={{ display: 'flex', gap: '12px', alignItems: 'center', marginLeft: 'auto' }}>
-                          <button
-                            className="order-card-edit-btn"
-                            onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleEditOrder(order); }}
-                            style={{ background: 'none', border: 'none', color: 'var(--primary-color)', padding: '4px', display: 'flex' }}
-                          >
-                            <FiEdit2 size={16} />
-                          </button>
+                          {order.payment_status !== 'Paid' && (
+                            <button
+                              className="order-card-edit-btn"
+                              onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleEditOrder(order); }}
+                              style={{ background: 'none', border: 'none', color: 'var(--primary-color)', padding: '4px', display: 'flex' }}
+                            >
+                              <FiEdit2 size={16} />
+                            </button>
+                          )}
                           <FiEye className="order-card-arrow" style={{ margin: 0 }} />
                         </div>
                       </div>
