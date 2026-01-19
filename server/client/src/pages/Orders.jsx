@@ -409,14 +409,14 @@ const Orders = () => {
                         </div>
                         <div style={{ display: 'flex', gap: '12px', alignItems: 'center', marginLeft: 'auto' }}>
                           {order.payment_status !== 'Paid' && (
-                            <Link
-                              to={`/orders/edit/${order.id}`}
+                            <button
+                              type="button"
                               className="order-card-edit-btn"
-                              onClick={(e) => { e.stopPropagation(); }}
+                              onClick={(e) => { e.stopPropagation(); navigate(`/orders/edit/${order.id}`); }}
                               style={{ background: 'none', border: 'none', color: 'var(--primary-color)', padding: '4px', display: 'flex' }}
                             >
                               <FiEdit2 size={16} />
-                            </Link>
+                            </button>
                           )}
                           <FiEye className="order-card-arrow" style={{ margin: 0 }} />
                         </div>
