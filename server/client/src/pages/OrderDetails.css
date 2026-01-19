@@ -92,6 +92,60 @@
   color: white;
 }
 
+/* Share Button Container */
+.share-button-container {
+  position: relative;
+}
+
+.share-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 8px;
+  min-width: 180px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+  z-index: 100;
+  animation: fadeInDown 0.15s ease;
+}
+
+@keyframes fadeInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.share-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 12px;
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.share-menu-item:hover {
+  background: var(--bg-surface-hover, rgba(0, 0, 0, 0.05));
+}
+
+.share-menu-item svg {
+  flex-shrink: 0;
+}
+
 /* Order Info Card */
 .order-info-card {
   background: var(--card-bg);
