@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { FiBell, FiDatabase, FiSave, FiMoon } from 'react-icons/fi';
+import { FiBell, FiDatabase, FiSave, FiMoon, FiRefreshCw } from 'react-icons/fi';
 import { useSettings } from '../contexts/SettingsContext';
+import api from '../api';
 
 const Settings = () => {
   const {
@@ -13,6 +14,9 @@ const Settings = () => {
   } = useSettings();
 
   const [saved, setSaved] = useState(false);
+  const [migrating, setMigrating] = useState(false);
+  const [migrationProgress, setMigrationProgress] = useState(null);
+  const [migrationResult, setMigrationResult] = useState(null);
 
   const handleToggle = (category, setting) => {
     updateSettings({
@@ -28,6 +32,40 @@ const Settings = () => {
     if (success) {
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
+    }
+  };
+
+  const handleNormalizeSortingCodes = async () => {
+    if (migrating) return;
+    
+    const confirmed = window.confirm(
+      'This will update all product sorting codes to the new format.\n\n' +
+      'New format: First letters of brand + First 2 letters of first product word + First letter of other product words + Volume digits\n\n' +
+      'Continue?'
+    );
+    
+    if (!confirmed) return;
+    
+    setMigrating(true);
+    setMigrationProgress(null);
+    setMigrationResult(null);
+    
+    try {
+      const result = await api.normalizeSortingCodes((progress) => {
+        setMigrationProgress(progress);
+      });
+      
+      setMigrationResult({
+        success: true,
+        message: `Updated ${result.updated} products, ${result.skipped} unchanged`
+      });
+    } catch (err) {
+      setMigrationResult({
+        success: false,
+        message: err.message || 'Migration failed'
+      });
+    } finally {
+      setMigrating(false);
     }
   };
 
@@ -234,6 +272,99 @@ const Settings = () => {
               </div>
               <Toggle checked={settings.inventory.autoReorder} onChange={() => handleToggle('inventory', 'autoReorder')} disabled={loading} />
             </div>
+          </div>
+        </div>
+
+        {/* Data Migration */}
+        <div className="card">
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
+            <div style={{
+              width: '40px',
+              height: '40px',
+              borderRadius: '10px',
+              background: 'var(--info-bg)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: 'var(--info-text)'
+            }}>
+              <FiRefreshCw size={20} />
+            </div>
+            <div>
+              <h3 style={{ margin: 0 }}>Data Migration</h3>
+              <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-secondary)' }}>Update existing data to new formats</p>
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 0', flexWrap: 'wrap', gap: '12px' }}>
+              <div style={{ flex: 1, minWidth: '200px' }}>
+                <p style={{ margin: 0, fontWeight: 500 }}>Normalize Sorting Codes</p>
+                <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-tertiary)' }}>
+                  Update all product sorting codes to use the new format (Brand initials + First 2 letters of product + Other initials + Volume)
+                </p>
+              </div>
+              <button
+                onClick={handleNormalizeSortingCodes}
+                disabled={migrating}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  padding: '8px 16px',
+                  fontSize: '13px',
+                  fontWeight: 500,
+                  background: migrating ? '#666' : '#0A0A0A',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  cursor: migrating ? 'not-allowed' : 'pointer',
+                  whiteSpace: 'nowrap'
+                }}
+              >
+                <FiRefreshCw size={14} style={{ animation: migrating ? 'spin 1s linear infinite' : 'none' }} />
+                {migrating ? 'Migrating...' : 'Run Migration'}
+              </button>
+            </div>
+            
+            {migrationProgress && migrating && (
+              <div style={{ 
+                padding: '12px', 
+                background: 'var(--bg-tertiary)', 
+                borderRadius: '8px',
+                fontSize: '13px'
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                  <span>Progress: {migrationProgress.current} / {migrationProgress.total}</span>
+                  <span>{migrationProgress.updated} updated</span>
+                </div>
+                <div style={{ 
+                  height: '4px', 
+                  background: 'var(--border-color)', 
+                  borderRadius: '2px',
+                  overflow: 'hidden'
+                }}>
+                  <div style={{
+                    height: '100%',
+                    width: `${(migrationProgress.current / migrationProgress.total) * 100}%`,
+                    background: 'var(--success-text)',
+                    transition: 'width 0.2s'
+                  }} />
+                </div>
+              </div>
+            )}
+            
+            {migrationResult && (
+              <div style={{ 
+                padding: '12px 16px', 
+                borderRadius: '8px',
+                background: migrationResult.success ? 'var(--success-bg)' : 'var(--danger-bg)',
+                color: migrationResult.success ? 'var(--success-text)' : 'var(--danger-text)',
+                fontSize: '13px'
+              }}>
+                {migrationResult.message}
+              </div>
+            )}
           </div>
         </div>
       </div>

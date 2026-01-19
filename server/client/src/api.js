@@ -652,6 +652,103 @@ const api = {
     }
     
     return count;
+  },
+
+  /**
+   * Generate sorting code from product details:
+   * - First letter of first two words of brand name
+   * - First 2 letters of first word of product name + first letter of each subsequent word
+   * - First number from volume/size (or first 2 numbers if volume >= 1000)
+   */
+  generateSortingCode(brandName, productName, volumeSize) {
+    if (!brandName || !productName) return '';
+
+    // Get first letter of first two words of brand name
+    const brandWords = brandName.trim().split(/\s+/).filter(Boolean);
+    const brandInitials = brandWords
+      .slice(0, 2)
+      .map(word => word.charAt(0).toUpperCase())
+      .join('');
+
+    // Get first 2 letters of first word + first letter of each subsequent word in product name
+    const productWords = productName.trim().split(/\s+/).filter(Boolean);
+    let productInitials = '';
+    productWords.forEach((word, index) => {
+      if (index === 0) {
+        productInitials += word.slice(0, 2).toUpperCase();
+      } else {
+        productInitials += word.charAt(0).toUpperCase();
+      }
+    });
+
+    // Get digits from volume/size
+    const volumeNumberMatch = (volumeSize || '').match(/\d+/);
+    let volumeDigits = '';
+    if (volumeNumberMatch) {
+      const volumeNumber = parseInt(volumeNumberMatch[0], 10);
+      volumeDigits = volumeNumber >= 1000 
+        ? volumeNumberMatch[0].slice(0, 2) 
+        : volumeNumberMatch[0].charAt(0);
+    }
+
+    return `${brandInitials}${productInitials}${volumeDigits}`;
+  },
+
+  /**
+   * Normalize all existing products to use the new sorting code format
+   */
+  async normalizeSortingCodes(progressCallback) {
+    const snapshot = await getDocs(productsRef);
+    const products = snapshot.docs.map(normalizeDoc);
+    
+    let updated = 0;
+    let skipped = 0;
+    const total = products.length;
+    const batch = writeBatch(db);
+    let batchCount = 0;
+    const MAX_BATCH_SIZE = 500; // Firestore batch limit
+
+    for (const product of products) {
+      const { brand_name, product_name, volume_size, sorting_code } = product;
+      
+      // Generate new sorting code
+      const newCode = api.generateSortingCode(brand_name, product_name, volume_size);
+      
+      if (newCode && newCode !== sorting_code) {
+        const productRef = doc(productsRef, product.id);
+        batch.update(productRef, { sorting_code: newCode });
+        updated++;
+        batchCount++;
+
+        // Commit batch if we hit the limit
+        if (batchCount >= MAX_BATCH_SIZE) {
+          await batch.commit();
+          batchCount = 0;
+        }
+      } else {
+        skipped++;
+      }
+
+      // Report progress
+      if (progressCallback) {
+        progressCallback({
+          current: updated + skipped,
+          total,
+          updated,
+          skipped
+        });
+      }
+    }
+
+    // Commit any remaining updates
+    if (batchCount > 0) {
+      await batch.commit();
+    }
+
+    // Log the activity
+    await api.logActivity('migration', 'products', `Normalized sorting codes: ${updated} updated, ${skipped} unchanged`);
+
+    return { updated, skipped, total };
   }
 };
 

@@ -8,11 +8,11 @@ import './AddProduct.css';
 /**
  * Generate sorting code from product details:
  * - First letter of first two words of brand name
- * - First letter of each word in product name
+ * - First 2 letters of first word of product name + first letter of each subsequent word
  * - First number from volume/size (or first 2 numbers if volume >= 1000)
  * 
- * Example: "Dr Vranjes" + "Rosso Nobile Diffuser" + "500ml" = "DVRND5"
- * Example: "Dr Vranjes" + "Rosso Nobile Diffuser" + "2000ml" = "DVRND20"
+ * Example: "Dr Vranjes" + "Rosso Nobile Diffuser" + "500ml" = "DVROND5"
+ * Example: "Dr Vranjes" + "Rosso Nobile Diffuser" + "2000ml" = "DVROND20"
  */
 const generateSortingCode = (brandName, productName, volumeSize) => {
   if (!brandName || !productName) return '';
@@ -24,11 +24,18 @@ const generateSortingCode = (brandName, productName, volumeSize) => {
     .map(word => word.charAt(0).toUpperCase())
     .join('');
 
-  // Get first letter of each word in product name
+  // Get first 2 letters of first word + first letter of each subsequent word in product name
   const productWords = productName.trim().split(/\s+/).filter(Boolean);
-  const productInitials = productWords
-    .map(word => word.charAt(0).toUpperCase())
-    .join('');
+  let productInitials = '';
+  productWords.forEach((word, index) => {
+    if (index === 0) {
+      // First word: take first 2 letters (or 1 if word is single character)
+      productInitials += word.slice(0, 2).toUpperCase();
+    } else {
+      // Subsequent words: take first letter only
+      productInitials += word.charAt(0).toUpperCase();
+    }
+  });
 
   // Get digits from volume/size
   const volumeNumberMatch = (volumeSize || '').match(/\d+/);
