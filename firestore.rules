@@ -23,6 +23,14 @@ service cloud.firestore {
       allow read, write: if true;
     }
 
+    match /customers/{docId} {
+      allow read, write: if true;
+    }
+
+    match /vendors/{docId} {
+      allow read, write: if true;
+    }
+
     match /activity_log/{docId} {
       allow read, write: if true;
     }
