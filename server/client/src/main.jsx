@@ -4,11 +4,14 @@ import './index.css'
 import App from './App.jsx'
 import './firebase'
 import { SettingsProvider } from './contexts/SettingsContext.jsx'
+import { OfflineProvider } from './contexts/OfflineContext.jsx'
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <SettingsProvider>
-      <App />
+      <OfflineProvider>
+        <App />
+      </OfflineProvider>
     </SettingsProvider>
   </StrictMode>,
 )

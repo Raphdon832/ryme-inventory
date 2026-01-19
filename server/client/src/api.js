@@ -15,6 +15,7 @@ import {
   Timestamp
 } from 'firebase/firestore';
 import { db } from './firebase';
+import offlineManager from './utils/offlineManager';
 
 // Re-export db for use in other components
 export { db };
@@ -25,6 +26,38 @@ const activityLogRef = collection(db, 'activity_log');
 const recycleBinRef = collection(db, 'recycle_bin');
 
 const normalizeDoc = (snap) => ({ id: snap.id, ...snap.data() });
+
+// Helper to check if we're online
+const isOnline = () => navigator.onLine;
+
+// Helper to wrap operations with offline support
+const withOfflineSupport = async (method, path, payload, operation) => {
+  if (!isOnline()) {
+    // Queue the operation for later sync
+    await offlineManager.addToQueue({
+      type: path.split('/')[1], // 'products', 'orders', etc.
+      method,
+      path,
+      payload,
+      queuedAt: new Date().toISOString()
+    });
+    
+    // Return a temporary response for optimistic UI
+    return { 
+      data: { 
+        data: { 
+          id: `temp_${Date.now()}`, 
+          ...payload,
+          _offline: true 
+        } 
+      },
+      _queued: true
+    };
+  }
+  
+  // If online, execute the operation normally
+  return operation();
+};
 
 const computePricing = ({ cost_of_production, markup_percentage, markup_amount }) => {
   const cost = Number(cost_of_production || 0);

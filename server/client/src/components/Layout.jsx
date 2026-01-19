@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { FiMenu, FiSearch, FiBell, FiMail } from 'react-icons/fi';
 import Sidebar from './Sidebar';
 import Splash from './Splash';
+import OfflineIndicator from './OfflineIndicator';
 
 const Layout = ({ children }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -49,6 +50,7 @@ const Layout = ({ children }) => {
           </div>
         </header>
         <div className="content-wrapper">{children}</div>
+        <OfflineIndicator />
       </main>
     </div>
   );
