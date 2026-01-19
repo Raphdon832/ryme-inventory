@@ -22,6 +22,8 @@ export { db };
 
 const productsRef = collection(db, 'products');
 const ordersRef = collection(db, 'orders');
+const customersRef = collection(db, 'customers');
+const vendorsRef = collection(db, 'vendors');
 const activityLogRef = collection(db, 'activity_log');
 const recycleBinRef = collection(db, 'recycle_bin');
 
@@ -85,6 +87,28 @@ const computePricing = ({ cost_of_production, markup_percentage, markup_amount }
 
 const api = {
   async get(path) {
+    if (path === '/customers') {
+      const snapshot = await getDocs(query(customersRef, orderBy('created_at', 'desc')));
+      return { data: { data: snapshot.docs.map(normalizeDoc) } };
+    }
+
+    if (path.startsWith('/customers/')) {
+      const id = path.split('/')[2];
+      const snapshot = await getDoc(doc(customersRef, id));
+      return { data: { data: snapshot.exists() ? normalizeDoc(snapshot) : null } };
+    }
+
+    if (path === '/vendors') {
+      const snapshot = await getDocs(query(vendorsRef, orderBy('created_at', 'desc')));
+      return { data: { data: snapshot.docs.map(normalizeDoc) } };
+    }
+
+    if (path.startsWith('/vendors/')) {
+      const id = path.split('/')[2];
+      const snapshot = await getDoc(doc(vendorsRef, id));
+      return { data: { data: snapshot.exists() ? normalizeDoc(snapshot) : null } };
+    }
+
     if (path === '/products') {
       const snapshot = await getDocs(productsRef);
       return { data: { data: snapshot.docs.map(normalizeDoc) } };
@@ -146,6 +170,36 @@ const api = {
   },
 
   subscribe(path, callback) {
+    if (path === '/customers') {
+      return onSnapshot(query(customersRef, orderBy('created_at', 'desc')), (snapshot) => {
+        const data = snapshot.docs.map(normalizeDoc);
+        callback({ data });
+      });
+    }
+
+    if (path.startsWith('/customers/')) {
+      const id = path.split('/')[2];
+      return onSnapshot(doc(customersRef, id), (snapshot) => {
+        const data = snapshot.exists() ? normalizeDoc(snapshot) : null;
+        callback({ data });
+      });
+    }
+
+    if (path === '/vendors') {
+      return onSnapshot(query(vendorsRef, orderBy('created_at', 'desc')), (snapshot) => {
+        const data = snapshot.docs.map(normalizeDoc);
+        callback({ data });
+      });
+    }
+
+    if (path.startsWith('/vendors/')) {
+      const id = path.split('/')[2];
+      return onSnapshot(doc(vendorsRef, id), (snapshot) => {
+        const data = snapshot.exists() ? normalizeDoc(snapshot) : null;
+        callback({ data });
+      });
+    }
+
     if (path === '/products') {
       return onSnapshot(productsRef, (snapshot) => {
         const data = snapshot.docs.map(normalizeDoc);
@@ -217,6 +271,44 @@ const api = {
   },
 
   async post(path, payload) {
+    if (path === '/customers') {
+      const now = new Date().toISOString();
+      const docRef = await addDoc(customersRef, {
+        name: payload.name || '',
+        email: payload.email || '',
+        phone: payload.phone || '',
+        address: payload.address || '',
+        notes: payload.notes || '',
+        created_at: now,
+        updated_at: now
+      });
+
+      const snapshot = await getDoc(docRef);
+      const data = normalizeDoc(snapshot);
+      await api.logActivity('create', 'customer', `Added customer ${data.name}`, data);
+      return { data: { data } };
+    }
+
+    if (path === '/vendors') {
+      const now = new Date().toISOString();
+      const docRef = await addDoc(vendorsRef, {
+        name: payload.name || '',
+        contact_name: payload.contact_name || '',
+        email: payload.email || '',
+        phone: payload.phone || '',
+        website: payload.website || '',
+        address: payload.address || '',
+        notes: payload.notes || '',
+        created_at: now,
+        updated_at: now
+      });
+
+      const snapshot = await getDoc(docRef);
+      const data = normalizeDoc(snapshot);
+      await api.logActivity('create', 'vendor', `Added vendor ${data.name}`, data);
+      return { data: { data } };
+    }
+
     if (path === '/products') {
       const pricing = computePricing(payload);
       const docRef = await addDoc(productsRef, {
@@ -299,6 +391,7 @@ const api = {
 
       const orderDoc = await addDoc(ordersRef, {
         customer_name,
+        customer_id: payload.customer_id || '',
         customer_address: customer_address || '',
         order_date: new Date().toISOString(),
         payment_status: 'Pending', // Default status
@@ -381,7 +474,7 @@ const api = {
        }
 
        // General order update
-       const { customer_name, customer_address, items, discount } = payload;
+      const { customer_name, customer_address, items, discount, customer_id } = payload;
        
        // Get the existing order to compare changes
        const existingOrderSnap = await getDoc(doc(ordersRef, id));
@@ -440,6 +533,7 @@ const api = {
        const orderRef = doc(ordersRef, id);
        await updateDoc(orderRef, {
          customer_name,
+        customer_id: customer_id || '',
          customer_address: customer_address || '',
          subtotal: total_sales_price,
          discount: discount || { type: 'none', value: 0 },
@@ -513,6 +607,44 @@ const api = {
       return { data: { data: normalizeDoc(snapshot) } };
     }
 
+    if (path.startsWith('/customers/')) {
+      const id = path.split('/')[2];
+      const now = new Date().toISOString();
+      const docRef = doc(customersRef, id);
+      await updateDoc(docRef, {
+        name: payload.name || '',
+        email: payload.email || '',
+        phone: payload.phone || '',
+        address: payload.address || '',
+        notes: payload.notes || '',
+        updated_at: now
+      });
+      const snapshot = await getDoc(docRef);
+      const data = normalizeDoc(snapshot);
+      await api.logActivity('update', 'customer', `Updated customer ${data.name}`, data);
+      return { data: { data } };
+    }
+
+    if (path.startsWith('/vendors/')) {
+      const id = path.split('/')[2];
+      const now = new Date().toISOString();
+      const docRef = doc(vendorsRef, id);
+      await updateDoc(docRef, {
+        name: payload.name || '',
+        contact_name: payload.contact_name || '',
+        email: payload.email || '',
+        phone: payload.phone || '',
+        website: payload.website || '',
+        address: payload.address || '',
+        notes: payload.notes || '',
+        updated_at: now
+      });
+      const snapshot = await getDoc(docRef);
+      const data = normalizeDoc(snapshot);
+      await api.logActivity('update', 'vendor', `Updated vendor ${data.name}`, data);
+      return { data: { data } };
+    }
+
     throw new Error(`Unknown PUT endpoint: ${path}`);
   },
 
@@ -531,6 +663,28 @@ const api = {
         await api.logActivity('delete', 'product', productData.name, productData);
       }
       
+      return { data: { data: { id } } };
+    }
+
+    if (path.startsWith('/customers/')) {
+      const id = path.split('/')[2];
+      const customerSnap = await getDoc(doc(customersRef, id));
+      const customerData = customerSnap.exists() ? normalizeDoc(customerSnap) : null;
+      await deleteDoc(doc(customersRef, id));
+      if (customerData) {
+        await api.logActivity('delete', 'customer', `Deleted customer ${customerData.name}`, customerData);
+      }
+      return { data: { data: { id } } };
+    }
+
+    if (path.startsWith('/vendors/')) {
+      const id = path.split('/')[2];
+      const vendorSnap = await getDoc(doc(vendorsRef, id));
+      const vendorData = vendorSnap.exists() ? normalizeDoc(vendorSnap) : null;
+      await deleteDoc(doc(vendorsRef, id));
+      if (vendorData) {
+        await api.logActivity('delete', 'vendor', `Deleted vendor ${vendorData.name}`, vendorData);
+      }
       return { data: { data: { id } } };
     }
 

@@ -7,6 +7,8 @@ import AddProduct from './pages/AddProduct';
 import Orders from './pages/Orders';
 import OrderDetails from './pages/OrderDetails';
 import CreateOrder from './pages/CreateOrder';
+import Customers from './pages/Customers';
+import Vendors from './pages/Vendors';
 import Profile from './pages/Profile';
 import Settings from './pages/Settings';
 import ActivityLog from './pages/ActivityLog';
@@ -30,6 +32,8 @@ function App() {
           <Route path="/orders/new" element={<CreateOrder />} />
           <Route path="/orders/edit/:id" element={<CreateOrder />} />
           <Route path="/orders/:id" element={<OrderDetails />} />
+          <Route path="/customers" element={<Customers />} />
+          <Route path="/vendors" element={<Vendors />} />
           <Route path="/activity-log" element={<ActivityLog />} />
           <Route path="/tasks" element={<Tasks />} />
           <Route path="/calendar" element={<Calendar />} />

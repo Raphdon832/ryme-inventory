@@ -18,6 +18,7 @@ const Inventory = () => {
   const [deletingId, setDeletingId] = useState(null);
   const [bulkDeleting, setBulkDeleting] = useState(false);
   const [bulkUpdating, setBulkUpdating] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
   const [bulkUpdateForm, setBulkUpdateForm] = useState({
     markupType: 'percentage', // percentage or amount
     markupValue: '',
@@ -36,6 +37,16 @@ const Inventory = () => {
 
     return () => unsubscribe();
   }, []);
+
+  useEffect(() => {
+    const totalPages = Math.max(1, Math.ceil(products.length / 10));
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+    if (products.length === 0 && currentPage !== 1) {
+      setCurrentPage(1);
+    }
+  }, [products.length, currentPage]);
 
   const handleDelete = async (productId) => {
     if (window.confirm('Are you sure you want to delete this product?')) {
@@ -130,6 +141,13 @@ const Inventory = () => {
   const lowStockThreshold = Number(settings.inventory.lowStockThreshold || 5);
   const lowStockCount = products.filter(p => p.stock_quantity < lowStockThreshold).length;
   const warningThreshold = Math.max(lowStockThreshold * 2, lowStockThreshold + 1);
+  const pageSize = 10;
+  const totalPages = Math.max(1, Math.ceil(products.length / pageSize));
+  const startIndex = (currentPage - 1) * pageSize;
+  const endIndex = Math.min(startIndex + pageSize, products.length);
+  const paginatedProducts = products.slice(startIndex, startIndex + pageSize);
+  const showingStart = products.length === 0 ? 0 : startIndex + 1;
+  const showingEnd = products.length === 0 ? 0 : endIndex;
 
   return (
     <div>
@@ -191,7 +209,9 @@ const Inventory = () => {
         <div className="flex justify-between" style={{ marginBottom: '20px', alignItems: 'center' }}>
           <div>
             <h3 style={{ margin: 0 }}>Product Catalog</h3>
-            <span style={{ color: 'var(--text-tertiary)', fontSize: '13px' }}>{products.length} items</span>
+            <span style={{ color: 'var(--text-tertiary)', fontSize: '13px' }}>
+              {products.length} items · Showing {showingStart}-{showingEnd}
+            </span>
           </div>
           <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
             {selectionMode ? (
@@ -257,7 +277,7 @@ const Inventory = () => {
                 </tr>
               </thead>
               <tbody>
-                {products.map(product => (
+                {paginatedProducts.map(product => (
                   <tr 
                     key={product.id}
                     onClick={selectionMode ? () => toggleProductSelection(product.id) : undefined}
@@ -356,6 +376,31 @@ const Inventory = () => {
           </table>
         )}
       </div>
+
+      {products.length > 0 && (
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '16px', flexWrap: 'wrap', gap: '12px' }}>
+          <div style={{ fontSize: '13px', color: 'var(--text-tertiary)' }}>
+            Page {currentPage} of {totalPages}
+          </div>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <button
+              className="secondary"
+              onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+              disabled={currentPage <= 1}
+              style={{ padding: '8px 14px', borderRadius: '999px' }}
+            >
+              Previous
+            </button>
+            <button
+              onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+              disabled={currentPage >= totalPages}
+              style={{ padding: '8px 14px', borderRadius: '999px' }}
+            >
+              Next
+            </button>
+          </div>
+        </div>
+      )}
     </div>
 
       {/* Delete Confirmation Modal */}

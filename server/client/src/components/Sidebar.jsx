@@ -10,6 +10,8 @@ import {
   FiCalendar,
   FiBarChart2,
   FiUsers,
+  FiUser,
+  FiTruck,
   FiHelpCircle,
   FiClock
 } from 'react-icons/fi';
@@ -73,6 +75,24 @@ const Sidebar = ({ isOpen, onClose }) => {
         >
           <span className="nav-icon"><FiShoppingCart /></span>
           <span>Orders</span>
+        </NavLink>
+
+        <NavLink
+          to="/customers"
+          className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
+          onClick={() => onClose && onClose()}
+        >
+          <span className="nav-icon"><FiUser /></span>
+          <span>Customers</span>
+        </NavLink>
+
+        <NavLink
+          to="/vendors"
+          className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
+          onClick={() => onClose && onClose()}
+        >
+          <span className="nav-icon"><FiTruck /></span>
+          <span>Vendors</span>
         </NavLink>
 
         <NavLink

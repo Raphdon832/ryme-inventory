@@ -12,13 +12,18 @@ const CreateOrder = () => {
   const isEditing = Boolean(id);
   
   const [products, setProducts] = useState([]);
+  const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [productSearch, setProductSearch] = useState('');
+  const [customerSearch, setCustomerSearch] = useState('');
   const [showProductDropdown, setShowProductDropdown] = useState(false);
+  const [showCustomerDropdown, setShowCustomerDropdown] = useState(false);
   const productSearchRef = useRef(null);
+  const customerSearchRef = useRef(null);
 
   const [orderData, setOrderData] = useState({
+    customer_id: '',
     customer_name: '',
     customer_address: '',
     items: [],
@@ -40,6 +45,14 @@ const CreateOrder = () => {
     return () => unsubscribe();
   }, []);
 
+  // Load customers
+  useEffect(() => {
+    const unsubscribe = api.subscribe('/customers', (response) => {
+      setCustomers(response.data);
+    });
+    return () => unsubscribe();
+  }, []);
+
   // Load order if editing
   useEffect(() => {
     if (isEditing && products.length > 0) {
@@ -48,6 +61,7 @@ const CreateOrder = () => {
           const response = await api.get(`/orders/${id}`);
           const order = response.data;
           setOrderData({
+            customer_id: order.customer_id || '',
             customer_name: order.customer_name,
             customer_address: order.customer_address || '',
             items: order.items.map(item => {
@@ -64,6 +78,7 @@ const CreateOrder = () => {
             }),
             discount: order.discount || { type: 'none', value: 0 }
           });
+          setCustomerSearch(order.customer_name || '');
         } catch (error) {
           console.error('Error fetching order:', error);
           navigate('/orders');
@@ -78,6 +93,9 @@ const CreateOrder = () => {
     const handleClickOutside = (e) => {
       if (productSearchRef.current && !productSearchRef.current.contains(e.target)) {
         setShowProductDropdown(false);
+      }
+      if (customerSearchRef.current && !customerSearchRef.current.contains(e.target)) {
+        setShowCustomerDropdown(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -95,10 +113,30 @@ const CreateOrder = () => {
       return matchesCode || matchesName;
     });
 
+  const filteredCustomers = customers.filter((c) => {
+    if (!customerSearch) return true;
+    const search = customerSearch.toLowerCase();
+    const matchesName = c.name?.toLowerCase().includes(search);
+    const matchesEmail = c.email?.toLowerCase().includes(search);
+    const matchesPhone = c.phone?.toLowerCase().includes(search);
+    return matchesName || matchesEmail || matchesPhone;
+  });
+
   const handleSelectProduct = (product) => {
     setCurrentItem({ ...currentItem, product_id: product.id });
     setProductSearch(product.sorting_code ? `[${product.sorting_code}] ${product.name}` : product.name);
     setShowProductDropdown(false);
+  };
+
+  const handleSelectCustomer = (customer) => {
+    setOrderData({
+      ...orderData,
+      customer_id: customer.id,
+      customer_name: customer.name || '',
+      customer_address: customer.address || orderData.customer_address
+    });
+    setCustomerSearch(customer.name || '');
+    setShowCustomerDropdown(false);
   };
 
   const handleAddItem = () => {
@@ -147,6 +185,7 @@ const CreateOrder = () => {
 
     try {
       const orderPayload = {
+        customer_id: orderData.customer_id || '',
         customer_name: orderData.customer_name,
         customer_address: orderData.customer_address,
         items: orderData.items.map(item => ({ 
@@ -257,13 +296,51 @@ const CreateOrder = () => {
             <div className="form-grid">
               <div className="form-group">
                 <label className="form-label">Customer Name <span className="required">*</span></label>
-                <input 
-                  className="form-input"
-                  type="text" 
-                  placeholder="Enter customer name" 
-                  value={orderData.customer_name} 
-                  onChange={(e) => setOrderData({...orderData, customer_name: e.target.value})} 
-                />
+                <div className="product-search-wrapper" ref={customerSearchRef}>
+                  <div className="search-input-wrapper">
+                    <FiSearch className="search-icon" />
+                    <input 
+                      className="form-input"
+                      type="text" 
+                      placeholder="Search or enter customer name" 
+                      value={customerSearch}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        setCustomerSearch(value);
+                        setOrderData({ ...orderData, customer_name: value, customer_id: '' });
+                        setShowCustomerDropdown(true);
+                      }}
+                      onFocus={() => setShowCustomerDropdown(true)}
+                    />
+                  </div>
+                  {showCustomerDropdown && (
+                    <div className="product-dropdown">
+                      {filteredCustomers.length === 0 ? (
+                        <div className="dropdown-empty">No customers found</div>
+                      ) : (
+                        filteredCustomers.slice(0, 6).map((customer) => (
+                          <div
+                            key={customer.id}
+                            className={`dropdown-item ${orderData.customer_id === customer.id ? 'selected' : ''}`}
+                            onClick={() => handleSelectCustomer(customer)}
+                          >
+                            <div className="dropdown-item-info">
+                              <span className="product-name">{customer.name}</span>
+                            </div>
+                            <div className="dropdown-item-meta">
+                              {customer.email && (
+                                <span className="product-price" style={{ fontWeight: 500 }}>{customer.email}</span>
+                              )}
+                              {customer.phone && (
+                                <span className="product-stock">{customer.phone}</span>
+                              )}
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  )}
+                </div>
               </div>
               <div className="form-group">
                 <label className="form-label">Customer Address</label>
