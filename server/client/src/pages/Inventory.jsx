@@ -15,6 +15,9 @@ const Inventory = () => {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showBulkUpdateModal, setShowBulkUpdateModal] = useState(false);
   const [loadingProducts, setLoadingProducts] = useState(true);
+  const [deletingId, setDeletingId] = useState(null);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
+  const [bulkUpdating, setBulkUpdating] = useState(false);
   const [bulkUpdateForm, setBulkUpdateForm] = useState({
     markupType: 'percentage', // percentage or amount
     markupValue: '',
@@ -36,11 +39,14 @@ const Inventory = () => {
 
   const handleDelete = async (productId) => {
     if (window.confirm('Are you sure you want to delete this product?')) {
+      setDeletingId(productId);
       try {
         await api.delete(`/products/${productId}`);
         // No need to fetchProducts(), snapshot will update automatically
       } catch (error) {
         console.error('Error deleting product:', error);
+      } finally {
+        setDeletingId(null);
       }
     }
   };
@@ -54,6 +60,7 @@ const Inventory = () => {
   };
 
   const handleBulkDelete = async () => {
+    setBulkDeleting(true);
     try {
       for (const productId of selectedProducts) {
         await api.delete(`/products/${productId}`);
@@ -64,13 +71,14 @@ const Inventory = () => {
       // fetchProducts(); Handled by snapshot
     } catch (error) {
       console.error('Error deleting products:', error);
+    } finally {
+      setBulkDeleting(false);
     }
   };
 
   const handleBulkUpdate = async () => {
+    setBulkUpdating(true);
     try {
-      setLoadingProducts(true);
-      
       const updates = selectedProducts.map(async (productId) => {
         const product = products.find(p => p.id === productId);
         if (!product) return;
@@ -105,7 +113,8 @@ const Inventory = () => {
       // fetchProducts(); Handled by snapshot
     } catch (error) {
       console.error('Error bulk updating products:', error);
-      setLoadingProducts(false);
+    } finally {
+      setBulkUpdating(false);
     }
   };
 
@@ -371,8 +380,13 @@ const Inventory = () => {
               <button 
                 onClick={handleBulkDelete}
                 style={{ padding: '10px 24px', borderRadius: '999px', background: '#EF4444' }}
+                disabled={bulkDeleting}
               >
-                Delete
+                {bulkDeleting ? (
+                  <><span className="btn-spinner"></span> Deleting...</>
+                ) : (
+                  'Delete'
+                )}
               </button>
             </div>
           </div>
@@ -450,9 +464,13 @@ const Inventory = () => {
                 <button 
                   onClick={handleBulkUpdate}
                   style={{ flex: 1 }}
-                  disabled={!bulkUpdateForm.costAdjustment && !bulkUpdateForm.markupValue}
+                  disabled={(!bulkUpdateForm.costAdjustment && !bulkUpdateForm.markupValue) || bulkUpdating}
                 >
-                  Apply Changes
+                  {bulkUpdating ? (
+                    <><span className="btn-spinner"></span> Applying...</>
+                  ) : (
+                    'Apply Changes'
+                  )}
                 </button>
               </div>
             </div>

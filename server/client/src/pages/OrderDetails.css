@@ -48,6 +48,7 @@
   justify-content: space-between;
   align-items: center;
   margin-bottom: 1.5rem;
+  margin-top: 0rem;
 }
 
 .back-link {
@@ -83,13 +84,18 @@
   border-radius: 8px;
   color: var(--text-secondary);
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .btn-icon:hover {
   background: var(--primary-color);
   border-color: var(--primary-color);
   color: white;
+  transform: scale(1.05);
+}
+
+.btn-icon:active {
+  transform: scale(0.95);
 }
 
 /* Share Button Container */
@@ -107,7 +113,7 @@
   padding: 8px;
   min-width: 180px;
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
-  z-index: 100;
+  z-index: 1000;
   animation: fadeInDown 0.15s ease;
 }
 
@@ -462,37 +468,65 @@
 @media (max-width: 768px) {
   .order-details-page {
     padding: 0;
+    padding-top: 85px;
   }
 
   .order-details-header {
+    position: fixed;
+    top: var(--header-height, 68px);
+    left: 0;
+    right: 0;
     flex-direction: column;
     align-items: stretch;
-    gap: 10px;
-    margin-bottom: 1rem;
+    gap: 4px;
+    margin-bottom: 0;
+    margin-top: -16px;
+    background: var(--bg-body);
+    padding: 4px 12px 6px;
+    border-bottom: 1px solid var(--border-color);
+    z-index: 35;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
   }
 
   .back-link {
-    padding: 6px 10px;
-    font-size: 13px;
+    padding: 4px 8px;
+    font-size: 12px;
   }
 
   .header-actions {
     width: 100%;
-    flex-wrap: wrap;
-    gap: 8px;
+    flex-wrap: nowrap;
+    gap: 4px;
   }
 
   .header-actions button,
-  .header-actions .btn-primary {
-    flex: 1 1 auto;
+  .header-actions .btn-primary,
+  .header-actions .btn-secondary {
+    flex-shrink: 1;
     justify-content: center;
-    padding: 8px 12px;
-    font-size: 12px;
+    padding: 5px 6px;
+    font-size: 10px;
+    white-space: nowrap;
+    min-width: 32px;
+  }
+
+  .header-actions button span,
+  .header-actions .btn-primary span,
+  .header-actions .btn-secondary span {
+    display: none;
+  }
+
+  .header-actions button svg,
+  .header-actions .btn-primary svg,
+  .header-actions .btn-secondary svg {
+    margin: 0;
+    width: 14px;
+    height: 14px;
   }
 
   .btn-icon {
-    width: 36px;
-    height: 36px;
+    width: 32px;
+    height: 32px;
     flex-shrink: 0;
   }
 
@@ -609,14 +643,16 @@
   }
 
   .header-actions button,
-  .header-actions .btn-primary {
-    padding: 7px 10px;
+  .header-actions .btn-primary,
+  .header-actions .btn-secondary {
+    padding: 8px;
     font-size: 11px;
+    min-width: 36px;
   }
 
   .btn-icon {
-    width: 32px;
-    height: 32px;
+    width: 36px;
+    height: 36px;
   }
 
   .order-info-card {

@@ -10,6 +10,8 @@ const Tasks = () => {
   const [showModal, setShowModal] = useState(false);
   const [editingTask, setEditingTask] = useState(null);
   const [filter, setFilter] = useState('all');
+  const [submitting, setSubmitting] = useState(false);
+  const [deletingId, setDeletingId] = useState(null);
   const [newTask, setNewTask] = useState({
     title: '',
     description: '',
@@ -44,6 +46,7 @@ const Tasks = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!newTask.title.trim()) return;
+    setSubmitting(true);
 
     try {
       const taskData = {
@@ -68,6 +71,8 @@ const Tasks = () => {
       fetchTasks();
     } catch (error) {
       console.error('Error saving task:', error);
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -86,11 +91,14 @@ const Tasks = () => {
 
   const deleteTask = async (taskId) => {
     if (!window.confirm('Are you sure you want to delete this task?')) return;
+    setDeletingId(taskId);
     try {
       await deleteDoc(doc(db, 'tasks', taskId));
       fetchTasks();
     } catch (error) {
       console.error('Error deleting task:', error);
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -263,7 +271,13 @@ const Tasks = () => {
               </div>
               <div className="modal-actions">
                 <button type="button" className="btn-secondary" onClick={() => setShowModal(false)}>Cancel</button>
-                <button type="submit" className="btn-primary">{editingTask ? 'Update' : 'Create'} Task</button>
+                <button type="submit" className="btn-primary" disabled={submitting}>
+                  {submitting ? (
+                    <><span className="btn-spinner"></span> {editingTask ? 'Updating...' : 'Creating...'}</>
+                  ) : (
+                    <>{editingTask ? 'Update' : 'Create'} Task</>
+                  )}
+                </button>
               </div>
             </form>
           </div>

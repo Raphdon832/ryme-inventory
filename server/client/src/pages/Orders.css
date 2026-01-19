@@ -302,11 +302,12 @@ tr.row-selected td {
   font-weight: 600;
   font-size: 12px;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .btn-secondary:hover {
   background: var(--bg-surface-hover);
+  border-color: var(--border-hover);
 }
 
 .btn-danger {
@@ -321,7 +322,7 @@ tr.row-selected td {
   font-weight: 600;
   font-size: 12px;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .btn-danger:hover {
@@ -331,6 +332,8 @@ tr.row-selected td {
 .btn-danger:disabled {
   background: #FECACA;
   cursor: not-allowed;
+  transform: none !important;
+  box-shadow: none !important;
 }
 
 .orders-title h1 {

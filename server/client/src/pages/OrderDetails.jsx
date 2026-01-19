@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { FiArrowLeft, FiUser, FiCalendar, FiPackage, FiTag, FiTrendingUp, FiPrinter, FiShare2, FiDownload, FiCheckCircle, FiAlertCircle, FiCheck, FiCopy } from 'react-icons/fi';
+import { FiArrowLeft, FiUser, FiCalendar, FiPackage, FiTag, FiTrendingUp, FiPrinter, FiShare2, FiDownload, FiCheckCircle, FiAlertCircle, FiCheck, FiCopy, FiEdit2 } from 'react-icons/fi';
 import api from '../api';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -462,15 +462,26 @@ Sent from Ryme Inventory`;
         
         <div className="header-actions">
           {order.payment_status !== 'Paid' && (
-            <button 
-              className="btn-primary" 
-              onClick={handleMarkAsPaid} 
-              style={{ marginRight: '8px', backgroundColor: '#F59E0B' }}
-              title="Mark order as paid and deduct stock"
-            >
-              <FiCheckCircle size={18} />
-              <span>Mark as Paid</span>
-            </button>
+            <>
+              <button 
+                className="btn-secondary" 
+                onClick={() => navigate(`/orders/edit/${order.id}`)}
+                style={{ marginRight: '8px' }}
+                title="Edit Order"
+              >
+                <FiEdit2 size={18} />
+                <span>Edit</span>
+              </button>
+              <button 
+                className="btn-primary" 
+                onClick={handleMarkAsPaid} 
+                style={{ marginRight: '8px', backgroundColor: '#F59E0B' }}
+                title="Mark order as paid and deduct stock"
+              >
+                <FiCheckCircle size={18} />
+                <span>Mark as Paid</span>
+              </button>
+            </>
           )}
           <button className="btn-primary" title="Download Invoice" onClick={handlePrintInvoice} style={{ marginRight: '8px' }}>
             <FiDownload size={18} />

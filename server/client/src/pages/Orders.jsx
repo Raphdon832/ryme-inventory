@@ -1,42 +1,26 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import api from '../api';
 import { SkeletonTable, SkeletonOrderCardList } from '../components/Skeleton.jsx';
-import { Link } from 'react-router-dom';
-import { FiPlus, FiShoppingCart, FiTag, FiTrendingUp, FiX, FiCheck, FiTrash2, FiEye, FiAlertCircle, FiSearch, FiEdit2 } from 'react-icons/fi';
+import { Link, useNavigate } from 'react-router-dom';
+import { FiPlus, FiShoppingCart, FiTag, FiTrendingUp, FiX, FiTrash2, FiEye, FiAlertCircle, FiEdit2 } from 'react-icons/fi';
 import { useSettings } from '../contexts/SettingsContext';
 import useScrollLock from '../hooks/useScrollLock';
 import './Orders.css';
 
 const Orders = () => {
-  const { formatCurrency, currencySymbol } = useSettings();
+  const { formatCurrency } = useSettings();
+  const navigate = useNavigate();
   const [orders, setOrders] = useState([]);
-  const [products, setProducts] = useState([]);
-  const [showModal, setShowModal] = useState(false);
-  const [editingOrderId, setEditingOrderId] = useState(null);
   const [showAllOrders, setShowAllOrders] = useState(false);
   const [statModal, setStatModal] = useState({ open: false, label: '', value: '', footnote: '' });
   const [deleteMode, setDeleteMode] = useState(false);
   const [selectedOrders, setSelectedOrders] = useState([]);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [loadingOrders, setLoadingOrders] = useState(true);
-  const [productSearch, setProductSearch] = useState('');
-  const [showProductDropdown, setShowProductDropdown] = useState(false);
-  const productSearchRef = useRef(null);
+  const [deleting, setDeleting] = useState(false);
 
   // Lock scroll when any modal is open
-  useScrollLock(showModal || showDeleteConfirm || statModal.open);
-
-  const [newOrder, setNewOrder] = useState({
-    customer_name: '',
-    customer_address: '',
-    items: [],
-    discount: { type: 'none', value: 0 }
-  });
-  const [currentItem, setCurrentItem] = useState({
-    product_id: '',
-    quantity: 1,
-    discount: 0
-  });
+  useScrollLock(showDeleteConfirm || statModal.open);
 
   useEffect(() => {
     const unsubscribeOrders = api.subscribe('/orders', (response) => {
@@ -44,25 +28,9 @@ const Orders = () => {
       setLoadingOrders(false);
     });
 
-    const unsubscribeProducts = api.subscribe('/products', (response) => {
-      setProducts(response.data);
-    });
-
     return () => {
       unsubscribeOrders();
-      unsubscribeProducts();
     };
-  }, []);
-
-  // Close dropdown when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (e) => {
-      if (productSearchRef.current && !productSearchRef.current.contains(e.target)) {
-        setShowProductDropdown(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
   const toggleOrderSelection = (orderId) => {
@@ -75,6 +43,7 @@ const Orders = () => {
 
   const handleDeleteSelected = async () => {
     if (selectedOrders.length === 0) return;
+    setDeleting(true);
     
     try {
       await api.deleteMultipleOrders(selectedOrders);
@@ -84,159 +53,14 @@ const Orders = () => {
       fetchOrders();
     } catch (error) {
       console.error('Error deleting orders:', error);
+    } finally {
+      setDeleting(false);
     }
   };
 
   const cancelDeleteMode = () => {
     setDeleteMode(false);
     setSelectedOrders([]);
-  };
-
-  const handleAddItem = () => {
-    if (!currentItem.product_id || currentItem.quantity <= 0) return;
-    
-    const product = products.find(p => p.id === currentItem.product_id);
-    if (!product) return;
-
-    // Check if item already exists in order
-    const existingIndex = newOrder.items.findIndex(i => i.product_id === currentItem.product_id);
-    const discount = Number(currentItem.discount) || 0;
-    
-    if (existingIndex > -1) {
-      // Update quantity and discount
-      const updatedItems = [...newOrder.items];
-      updatedItems[existingIndex].quantity += Number(currentItem.quantity);
-      updatedItems[existingIndex].discount_percentage = discount;
-      setNewOrder({ ...newOrder, items: updatedItems });
-    } else {
-      setNewOrder({
-        ...newOrder,
-        items: [...newOrder.items, { 
-          product_id: currentItem.product_id, 
-          quantity: Number(currentItem.quantity), 
-          product_name: product.name, 
-          sales_price: product.sales_price, 
-          discount_percentage: discount,
-          profit: product.profit,
-          cost: product.cost_of_production,
-          stock: product.stock_quantity,
-          sorting_code: product.sorting_code
-        }]
-      });
-    }
-    setCurrentItem({ product_id: '', quantity: 1, discount: 0 });
-    setProductSearch('');
-    setShowProductDropdown(false);
-  };
-
-  const handleSelectProduct = (product) => {
-    setCurrentItem({ ...currentItem, product_id: product.id });
-    setProductSearch(product.sorting_code ? `[${product.sorting_code}] ${product.name}` : product.name);
-    setShowProductDropdown(false);
-  };
-
-  // Filter products by sorting code or name
-  const filteredProducts = products
-    .filter(p => p.stock_quantity > 0)
-    .filter(p => {
-      if (!productSearch) return true;
-      const search = productSearch.toLowerCase();
-      const matchesCode = p.sorting_code && p.sorting_code.toLowerCase().includes(search);
-      const matchesName = p.name.toLowerCase().includes(search);
-      return matchesCode || matchesName;
-    });
-
-  const handleRemoveItem = (index) => {
-    const updatedItems = newOrder.items.filter((_, i) => i !== index);
-    setNewOrder({ ...newOrder, items: updatedItems });
-  };
-
-  const handleEditOrder = (order) => {
-    setEditingOrderId(order.id);
-    setNewOrder({
-      customer_name: order.customer_name,
-      customer_address: order.customer_address || '',
-      items: order.items.map(item => {
-        const product = products.find(p => p.id === item.product_id);
-        return {
-          ...item,
-          product_name: item.product_name || (product ? product.name : 'Unknown Product'),
-          sales_price: item.sales_price_at_time || (product ? product.sales_price : 0),
-          cost: item.profit_at_time === undefined ? (product ? product.cost_of_production : 0) : (item.sales_price_at_time - item.profit_at_time),
-          stock: product ? product.stock_quantity : 0
-        };
-      }),
-      discount: order.discount || { type: 'none', value: 0 }
-    });
-    setShowModal(true);
-  };
-
-  const handleSubmitOrder = async () => {
-    if (!newOrder.customer_name || newOrder.items.length === 0) return;
-
-    try {
-      const orderPayload = {
-        customer_name: newOrder.customer_name,
-        customer_address: newOrder.customer_address,
-        items: newOrder.items.map(item => ({ 
-          product_id: item.product_id, 
-          quantity: item.quantity,
-          discount_percentage: item.discount_percentage
-        })),
-        discount: newOrder.discount
-      };
-
-      if (editingOrderId) {
-        await api.put(`/orders/${editingOrderId}`, orderPayload);
-      } else {
-        await api.post('/orders', orderPayload);
-      }
-
-      setNewOrder({ customer_name: '', customer_address: '', items: [], discount: { type: 'none', value: 0 } });
-      setEditingOrderId(null);
-      setProductSearch('');
-      setShowProductDropdown(false);
-      setShowModal(false);
-      // fetchOrders(); Handled by snapshot
-      // fetchProducts(); Handled by snapshot
-    } catch (error) {
-      console.error('Error saving order:', error);
-    }
-  };
-
-  const calculateSubtotal = () => {
-    return newOrder.items.reduce((acc, item) => {
-      const discount = Number(item.discount_percentage) || 0;
-      const effectivePrice = item.sales_price * (1 - discount / 100);
-      return acc + (effectivePrice * item.quantity);
-    }, 0);
-  };
-
-  const calculateCost = () => {
-    return newOrder.items.reduce((acc, item) => acc + (item.cost * item.quantity), 0);
-  };
-
-  const calculateDiscountAmount = () => {
-    const subtotal = calculateSubtotal();
-    if (newOrder.discount && newOrder.discount.value > 0) {
-      if (newOrder.discount.type === 'percentage') {
-        return subtotal * (newOrder.discount.value / 100);
-      } else if (newOrder.discount.type === 'fixed') {
-        return Number(newOrder.discount.value);
-      }
-    }
-    return 0;
-  };
-
-  const calculateTotal = () => {
-    return Math.max(0, calculateSubtotal() - calculateDiscountAmount());
-  };
-
-  const calculateProfit = () => {
-    const totalSales = calculateSubtotal();
-    const totalCost = calculateCost();
-    // Profit = (Sales - Cost) - Global Discount
-    return (totalSales - totalCost) - calculateDiscountAmount();
   };
 
   // Stats (only count paid orders for revenue and profit)
@@ -254,9 +78,9 @@ const Orders = () => {
           <p>Create and manage customer orders</p>
         </div>
         <div className="orders-header-actions">
-          <button className="btn-primary" onClick={() => setShowModal(true)}>
+          <Link to="/orders/new" className="btn-primary">
             <FiPlus size={16} /> New Order
-          </button>
+          </Link>
         </div>
       </div>
 
@@ -459,14 +283,14 @@ const Orders = () => {
                           <FiEye size={18} />
                         </Link>
                         {order.payment_status !== 'Paid' && (
-                          <button
+                          <Link
+                            to={`/orders/edit/${order.id}`}
                             className="table-action-btn edit-btn"
                             title="Edit Order"
-                            onClick={() => handleEditOrder(order)}
                             style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--primary-color)' }}
                           >
                             <FiEdit2 size={16} />
-                          </button>
+                          </Link>
                         )}
                       </div>
                     </td>
@@ -585,13 +409,14 @@ const Orders = () => {
                         </div>
                         <div style={{ display: 'flex', gap: '12px', alignItems: 'center', marginLeft: 'auto' }}>
                           {order.payment_status !== 'Paid' && (
-                            <button
+                            <Link
+                              to={`/orders/edit/${order.id}`}
                               className="order-card-edit-btn"
-                              onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleEditOrder(order); }}
+                              onClick={(e) => { e.stopPropagation(); }}
                               style={{ background: 'none', border: 'none', color: 'var(--primary-color)', padding: '4px', display: 'flex' }}
                             >
                               <FiEdit2 size={16} />
-                            </button>
+                            </Link>
                           )}
                           <FiEye className="order-card-arrow" style={{ margin: 0 }} />
                         </div>
@@ -649,264 +474,12 @@ const Orders = () => {
               <button className="btn-secondary" onClick={() => setShowDeleteConfirm(false)}>
                 Cancel
               </button>
-              <button className="btn-danger" onClick={handleDeleteSelected}>
-                <FiTrash2 size={16} /> Delete
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {showModal && (
-        <div className="modal-overlay" onMouseDown={(e) => { if (e.target === e.currentTarget) { setShowModal(false); setEditingOrderId(null); setNewOrder({ customer_name: '', customer_address: '', items: [], discount: { type: 'none', value: 0 } }); setProductSearch(''); } }}>
-          <div className="modal-content">
-            <div className="modal-header">
-              <h3 style={{ margin: 0 }}>{editingOrderId ? 'Edit Order' : 'Create New Order'}</h3>
-              <button 
-                className="secondary" 
-                style={{ padding: '8px', width: '36px', height: '36px' }}
-                onClick={() => { setShowModal(false); setEditingOrderId(null); setNewOrder({ customer_name: '', customer_address: '', items: [], discount: { type: 'none', value: 0 } }); setProductSearch(''); setShowProductDropdown(false); }}
-              >
-                <FiX size={18} />
-              </button>
-            </div>
-
-            <div className="modal-body">
-              {/* Customer Name */}
-              <div className="form-group grid-col-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-                <div>
-                  <label className="form-label">Customer Name</label>
-                  <input 
-                    className="form-input"
-                    type="text" 
-                    placeholder="Enter customer name" 
-                    value={newOrder.customer_name} 
-                    onChange={(e) => setNewOrder({...newOrder, customer_name: e.target.value})} 
-                  />
-                </div>
-                <div>
-                  <label className="form-label">Customer Address</label>
-                  <input 
-                    className="form-input"
-                    type="text" 
-                    placeholder="Enter address" 
-                    value={newOrder.customer_address} 
-                    onChange={(e) => setNewOrder({...newOrder, customer_address: e.target.value})} 
-                  />
-                </div>
-              </div>
-
-              {/* Add Product */}
-              <div className="item-row">
-                <div style={{ position: 'relative' }} ref={productSearchRef}>
-                  <label className="form-label">Select Product</label>
-                  <div style={{ position: 'relative' }}>
-                    <FiSearch size={16} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-tertiary)', pointerEvents: 'none' }} />
-                    <input 
-                      className="form-input"
-                      type="text"
-                      placeholder="Search by code or name..."
-                      value={productSearch}
-                      onChange={(e) => {
-                        setProductSearch(e.target.value);
-                        setShowProductDropdown(true);
-                        if (!e.target.value) setCurrentItem({ ...currentItem, product_id: '' });
-                      }}
-                      onFocus={() => setShowProductDropdown(true)}
-                      style={{ paddingLeft: 36 }}
-                    />
-                  </div>
-                  {showProductDropdown && (
-                    <div className="product-search-dropdown">
-                      {filteredProducts.length === 0 ? (
-                        <div className="product-search-empty">No products found</div>
-                      ) : (
-                        filteredProducts.slice(0, 8).map(p => (
-                          <div 
-                            key={p.id} 
-                            className={`product-search-item ${currentItem.product_id === p.id ? 'selected' : ''}`}
-                            onClick={() => handleSelectProduct(p)}
-                          >
-                            <div className="product-search-info">
-                              {p.sorting_code && (
-                                <span className="product-search-code">{p.sorting_code}</span>
-                              )}
-                              <span className="product-search-name">{p.name}</span>
-                            </div>
-                            <div className="product-search-meta">
-                              <span>{formatCurrency(p.sales_price)}</span>
-                              <span className="product-search-stock">Stock: {p.stock_quantity}</span>
-                            </div>
-                          </div>
-                        ))
-                      )}
-                    </div>
-                  )}
-                </div>
-                <div>
-                  <label className="form-label">Qty</label>
-                  <input 
-                    className="form-input"
-                    type="number" 
-                    min="1" 
-                    value={currentItem.quantity || ''} 
-                    onChange={(e) => setCurrentItem({...currentItem, quantity: e.target.value === '' ? '' : Number(e.target.value)})} 
-                  />
-                </div>
-                <div>
-                  <label className="form-label">Discount %</label>
-                  <input 
-                    className="form-input"
-                    type="number" 
-                    min="0" 
-                    max="100"
-                    placeholder="0"
-                    value={currentItem.discount || ''} 
-                    onChange={(e) => setCurrentItem({...currentItem, discount: e.target.value === '' ? '' : Number(e.target.value)})} 
-                  />
-                </div>
-                <div>
-                  <div style={{ height: '24px' }}></div> {/* Spacer */}
-                  <button className="btn-primary" onClick={handleAddItem} type="button" style={{ width: '100%', justifyContent: 'center' }}>
-                    <FiPlus size={16} /> Add Item
-                  </button>
-                </div>
-              </div>
-
-              {/* Order Items */}
-              {newOrder.items.length > 0 && (
-                <div style={{ marginBottom: '24px' }}>
-                  <label className="form-label">Order Items ({newOrder.items.length})</label>
-                  <div className="table-container">
-                    <table className="order-items-table">
-                      <thead>
-                        <tr>
-                          <th>Product</th>
-                          <th>Qty</th>
-                          <th>Unit Price</th>
-                          <th>Disc.</th>
-                          <th>Subtotal</th>
-                          <th>Profit</th>
-                          <th></th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {newOrder.items.map((item, index) => {
-                          const discount = item.discount_percentage || 0;
-                          const effectivePrice = item.sales_price * (1 - discount / 100);
-                          const subtotal = effectivePrice * item.quantity;
-                          const profit = (effectivePrice - item.cost) * item.quantity;
-                          
-                          return (
-                          <tr key={index}>
-                            <td style={{ fontWeight: 600 }}>{item.product_name}</td>
-                            <td>{item.quantity}</td>
-                            <td>{formatCurrency(item.sales_price)}</td>
-                            <td>{discount > 0 ? <span className="badge badge-warning">{discount}%</span> : '-'}</td>
-                            <td style={{ fontWeight: 600 }}>{formatCurrency(subtotal)}</td>
-                            <td style={{ color: profit >= 0 ? 'var(--success-text)' : 'var(--danger-text)', fontWeight: 600 }}>
-                              {formatCurrency(profit, { showSign: true })}
-                            </td>
-                            <td style={{ textAlign: 'right' }}>
-                              <button 
-                                className="table-action-btn"
-                                onClick={() => handleRemoveItem(index)}
-                              >
-                                <FiTrash2 size={14} />
-                              </button>
-                            </td>
-                          </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              )}
-
-              {/* Order Summary & Discount */}
-              {newOrder.items.length > 0 && (
-                <div className="summary-section">
-                  <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '16px' }}>
-                    Order Summary
-                  </div>
-                  
-                  <div className="summary-row">
-                    <span>Subtotal:</span>
-                    <span style={{ fontWeight: 600 }}>{formatCurrency(calculateSubtotal())}</span>
-                  </div>
-
-                  <div className="summary-row">
-                    <span>Cost of Goods:</span>
-                    <span style={{ fontWeight: 600 }}>{formatCurrency(calculateCost())}</span>
-                  </div>
-
-                  {/* Discount Controls */}
-                  <div style={{ marginTop: '12px', marginBottom: '12px', padding: '12px', background: 'var(--bg-surface)', borderRadius: '8px', border: '1px dashed var(--border-color)' }}>
-                    <label className="form-label" style={{ marginBottom: '8px' }}>Discount</label>
-                    <div className="discount-controls">
-                      <select 
-                        className="form-select" 
-                        style={{ width: '140px' }}
-                        value={newOrder.discount.type}
-                        onChange={(e) => setNewOrder({...newOrder, discount: { ...newOrder.discount, type: e.target.value, value: 0 }})}
-                      >
-                        <option value="none">No Discount</option>
-                        <option value="percentage">Percentage (%)</option>
-                        <option value="fixed">Fixed Amount ({currencySymbol})</option>
-                      </select>
-                      
-                      {newOrder.discount.type !== 'none' && (
-                        <input 
-                          type="number" 
-                          className="form-input"
-                          style={{ width: '120px' }}
-                          placeholder={newOrder.discount.type === 'percentage' ? 'Percent' : 'Amount'}
-                          value={newOrder.discount.value === 0 ? '' : newOrder.discount.value}
-                          onChange={(e) => {
-                            const val = e.target.value === '' ? 0 : Number(e.target.value);
-                            setNewOrder({...newOrder, discount: { ...newOrder.discount, value: val }});
-                          }}
-                        />
-                      )}
-                    </div>
-                  </div>
-                  
-                  {newOrder.discount.type !== 'none' && calculateDiscountAmount() > 0 && (
-                     <div className="summary-row" style={{ color: 'var(--success-text)' }}>
-                       <span>Discount:</span>
-                       <span>-{formatCurrency(calculateDiscountAmount())}</span>
-                     </div>
-                  )}
-
-                  <div className="summary-row total">
-                    <span>Total Sales Price:</span>
-                    <span style={{ color: 'var(--primary-color)' }}>{formatCurrency(calculateTotal())}</span>
-                  </div>
-                  <div className="summary-row" style={{ marginTop: '4px' }}>
-                    <span>Estimated Profit:</span>
-                    <span style={{ color: calculateProfit() >= 0 ? 'var(--success-text)' : 'var(--danger-text)', fontWeight: 600 }}>
-                      {formatCurrency(calculateProfit(), { showSign: true })}
-                    </span>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            <div className="modal-footer">
-              <button 
-                type="button" 
-                className="secondary" 
-                onClick={() => { setShowModal(false); setEditingOrderId(null); setNewOrder({ customer_name: '', customer_address: '', items: [], discount: { type: 'none', value: 0 } }); setProductSearch(''); setShowProductDropdown(false); }} 
-              >
-                Cancel
-              </button>
-              <button 
-                className="btn-primary"
-                onClick={handleSubmitOrder}
-                disabled={!newOrder.customer_name || newOrder.items.length === 0}
-              >
-                <FiCheck size={16} /> {editingOrderId ? 'Update Order' : 'Complete Order'}
+              <button className="btn-danger" onClick={handleDeleteSelected} disabled={deleting}>
+                {deleting ? (
+                  <><span className="btn-spinner"></span> Deleting...</>
+                ) : (
+                  <><FiTrash2 size={16} /> Delete</>
+                )}
               </button>
             </div>
           </div>

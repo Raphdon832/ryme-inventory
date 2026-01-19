@@ -10,6 +10,8 @@ const Calendar = () => {
   const [showModal, setShowModal] = useState(false);
   const [selectedDate, setSelectedDate] = useState(null);
   const [editingEvent, setEditingEvent] = useState(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [deletingId, setDeletingId] = useState(null);
   const [newEvent, setNewEvent] = useState({
     title: '',
     description: '',
@@ -44,6 +46,7 @@ const Calendar = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!newEvent.title.trim() || !newEvent.date) return;
+    setSubmitting(true);
 
     try {
       const eventDate = new Date(newEvent.date);
@@ -73,16 +76,21 @@ const Calendar = () => {
       fetchEvents();
     } catch (error) {
       console.error('Error saving event:', error);
+    } finally {
+      setSubmitting(false);
     }
   };
 
   const deleteEvent = async (eventId) => {
     if (!window.confirm('Delete this event?')) return;
+    setDeletingId(eventId);
     try {
       await deleteDoc(doc(db, 'events', eventId));
       fetchEvents();
     } catch (error) {
       console.error('Error deleting event:', error);
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -324,7 +332,13 @@ const Calendar = () => {
               </div>
               <div className="modal-actions">
                 <button type="button" className="btn-secondary" onClick={() => setShowModal(false)}>Cancel</button>
-                <button type="submit" className="btn-primary">{editingEvent ? 'Update' : 'Create'} Event</button>
+                <button type="submit" className="btn-primary" disabled={submitting}>
+                  {submitting ? (
+                    <><span className="btn-spinner"></span> {editingEvent ? 'Updating...' : 'Creating...'}</>
+                  ) : (
+                    <>{editingEvent ? 'Update' : 'Create'} Event</>
+                  )}
+                </button>
               </div>
             </form>
           </div>

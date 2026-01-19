@@ -18,6 +18,8 @@ const ActivityLog = () => {
   const [selectedActivity, setSelectedActivity] = useState(null);
   const [expandedDates, setExpandedDates] = useState({});
   const [visibleCount, setVisibleCount] = useState(INITIAL_VISIBLE_COUNT);
+  const [restoring, setRestoring] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   // Lock scroll when any confirmation modal is open
   useScrollLock(showDeleteConfirm !== null || showRestoreConfirm !== null || selectedActivity !== null);
@@ -96,22 +98,28 @@ const ActivityLog = () => {
   const hasMoreActivities = visibleCount < totalActivities;
 
   const handleRestore = async (id) => {
+    setRestoring(true);
     try {
       await api.restoreFromRecycleBin(id);
       setShowRestoreConfirm(null);
       fetchData();
     } catch (error) {
       console.error('Error restoring item:', error);
+    } finally {
+      setRestoring(false);
     }
   };
 
   const handlePermanentDelete = async (id) => {
+    setDeleting(true);
     try {
       await api.delete(`/recycle-bin/${id}`);
       setShowDeleteConfirm(null);
       fetchData();
     } catch (error) {
       console.error('Error deleting item:', error);
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -369,8 +377,12 @@ const ActivityLog = () => {
             </div>
             <div className="modal-footer">
               <button className="btn-secondary" onClick={() => setShowRestoreConfirm(null)}>Cancel</button>
-              <button className="btn-primary" onClick={() => handleRestore(showRestoreConfirm)}>
-                <FiCheck size={16} /> Restore
+              <button className="btn-primary" onClick={() => handleRestore(showRestoreConfirm)} disabled={restoring}>
+                {restoring ? (
+                  <><span className="btn-spinner"></span> Restoring...</>
+                ) : (
+                  <><FiCheck size={16} /> Restore</>
+                )}
               </button>
             </div>
           </div>
@@ -392,8 +404,12 @@ const ActivityLog = () => {
             </div>
             <div className="modal-footer">
               <button className="btn-secondary" onClick={() => setShowDeleteConfirm(null)}>Cancel</button>
-              <button className="btn-danger" onClick={() => handlePermanentDelete(showDeleteConfirm)}>
-                <FiTrash2 size={16} /> Delete Permanently
+              <button className="btn-danger" onClick={() => handlePermanentDelete(showDeleteConfirm)} disabled={deleting}>
+                {deleting ? (
+                  <><span className="btn-spinner"></span> Deleting...</>
+                ) : (
+                  <><FiTrash2 size={16} /> Delete Permanently</>
+                )}
               </button>
             </div>
           </div>

@@ -6,6 +6,7 @@ import Inventory from './pages/Inventory';
 import AddProduct from './pages/AddProduct';
 import Orders from './pages/Orders';
 import OrderDetails from './pages/OrderDetails';
+import CreateOrder from './pages/CreateOrder';
 import Profile from './pages/Profile';
 import Settings from './pages/Settings';
 import ActivityLog from './pages/ActivityLog';
@@ -26,6 +27,8 @@ function App() {
           <Route path="/inventory/add" element={<AddProduct />} />
           <Route path="/inventory/edit/:id" element={<AddProduct />} />
           <Route path="/orders" element={<Orders />} />
+          <Route path="/orders/new" element={<CreateOrder />} />
+          <Route path="/orders/edit/:id" element={<CreateOrder />} />
           <Route path="/orders/:id" element={<OrderDetails />} />
           <Route path="/activity-log" element={<ActivityLog />} />
           <Route path="/tasks" element={<Tasks />} />

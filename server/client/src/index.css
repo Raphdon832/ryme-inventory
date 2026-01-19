@@ -661,45 +661,115 @@ p, span, a, button, input, select, th, td {
   100% { background-position: -200% 0; }
 }
 
-/* Button micro-interaction */
-button, .btn-primary, .btn-secondary, .add-btn-bordered, .icon-button {
+/* ===== BUTTON MICROINTERACTIONS ===== */
+
+/* Base button transitions */
+button, 
+.btn-primary, 
+.btn-secondary, 
+.btn-danger,
+.btn-icon,
+.add-btn-bordered, 
+.icon-button {
   position: relative;
   overflow: hidden;
-  transition: transform 0.1s ease, box-shadow 0.15s ease;
+  transition: 
+    transform 0.15s cubic-bezier(0.4, 0, 0.2, 1),
+    box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+    background-color 0.2s ease,
+    border-color 0.2s ease;
 }
 
-button:active,
-.btn-primary:active,
-.btn-secondary:active,
-.add-btn-bordered:active,
-.icon-button:active {
-  transform: scale(0.97);
+/* Hover lift effect for primary buttons (create/update actions) */
+.btn-primary:not(:disabled):hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.35);
 }
 
-button:active::after,
-.btn-primary:active::after,
-.btn-secondary:active::after,
-.add-btn-bordered:active::after,
-.icon-button:active::after {
+/* Hover effect for secondary buttons */
+.btn-secondary:not(:disabled):hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+/* Hover effect for danger buttons (delete actions) */
+.btn-danger:not(:disabled):hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.35);
+}
+
+/* Hover effect for icon buttons */
+.btn-icon:not(:disabled):hover {
+  transform: scale(1.08);
+  background: var(--bg-surface-hover);
+}
+
+/* Active press effect - all buttons */
+button:not(:disabled):active,
+.btn-primary:not(:disabled):active,
+.btn-secondary:not(:disabled):active,
+.btn-danger:not(:disabled):active,
+.btn-icon:not(:disabled):active,
+.add-btn-bordered:not(:disabled):active,
+.icon-button:not(:disabled):active {
+  transform: scale(0.95) translateY(0);
+  box-shadow: none;
+}
+
+/* Focus ring for accessibility */
+button:focus-visible,
+.btn-primary:focus-visible,
+.btn-secondary:focus-visible,
+.btn-danger:focus-visible,
+.btn-icon:focus-visible,
+.add-btn-bordered:focus-visible,
+.icon-button:focus-visible {
+  outline: 2px solid var(--primary-color);
+  outline-offset: 2px;
+}
+
+/* Ripple effect on click */
+button:not(:disabled)::after,
+.btn-primary:not(:disabled)::after,
+.btn-secondary:not(:disabled)::after,
+.btn-danger:not(:disabled)::after,
+.add-btn-bordered:not(:disabled)::after,
+.icon-button:not(:disabled)::after {
   content: '';
   position: absolute;
   left: 50%;
   top: 50%;
   width: 6px;
   height: 6px;
-  background: rgba(37, 99, 235, 0.3);
+  background: rgba(37, 99, 235, 0.25);
   border-radius: 50%;
-  transform: translate(-50%, -50%) scale(1);
-  animation: ripple 500ms cubic-bezier(0.4, 0, 0.2, 1);
+  transform: translate(-50%, -50%) scale(0);
+  opacity: 0;
   pointer-events: none;
 }
 
-.btn-primary:active::after {
+button:not(:disabled):active::after,
+.btn-primary:not(:disabled):active::after,
+.btn-secondary:not(:disabled):active::after,
+.btn-danger:not(:disabled):active::after,
+.add-btn-bordered:not(:disabled):active::after,
+.icon-button:not(:disabled):active::after {
+  animation: ripple 500ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Primary button ripple - white */
+.btn-primary:not(:disabled):active::after {
+  background: rgba(255, 255, 255, 0.4);
+}
+
+/* Danger button ripple - white */
+.btn-danger:not(:disabled):active::after {
   background: rgba(255, 255, 255, 0.35);
 }
 
-.btn-danger:active::after {
-  background: rgba(255, 255, 255, 0.3);
+/* Secondary button ripple - blue */
+.btn-secondary:not(:disabled):active::after {
+  background: rgba(37, 99, 235, 0.2);
 }
 
 @keyframes ripple {
@@ -708,9 +778,128 @@ button:active::after,
     opacity: 1;
   }
   100% {
-    transform: translate(-50%, -50%) scale(28);
+    transform: translate(-50%, -50%) scale(32);
     opacity: 0;
   }
+}
+
+/* Loading state for buttons */
+.btn-loading {
+  pointer-events: none;
+  opacity: 0.8;
+}
+
+.btn-loading::before {
+  content: '';
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  border: 2px solid transparent;
+  border-top-color: currentColor;
+  border-radius: 50%;
+  animation: btn-spin 0.6s linear infinite;
+}
+
+.btn-primary.btn-loading::before {
+  border-top-color: white;
+}
+
+.btn-danger.btn-loading::before {
+  border-top-color: white;
+}
+
+@keyframes btn-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Success flash animation for completed actions */
+@keyframes btn-success-flash {
+  0% {
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.5);
+  }
+  50% {
+    box-shadow: 0 0 0 8px rgba(16, 185, 129, 0);
+  }
+  100% {
+    box-shadow: none;
+  }
+}
+
+.btn-success-flash {
+  animation: btn-success-flash 0.6s ease-out;
+}
+
+/* Delete/danger action shake animation */
+@keyframes btn-shake {
+  0%, 100% { transform: translateX(0); }
+  10%, 30%, 50%, 70%, 90% { transform: translateX(-2px); }
+  20%, 40%, 60%, 80% { transform: translateX(2px); }
+}
+
+.btn-danger:hover .icon,
+.btn-danger:hover svg {
+  animation: btn-shake 0.5s ease-in-out;
+}
+
+/* Icon bounce on hover for action buttons */
+.btn-primary:hover .icon,
+.btn-primary:hover svg,
+.btn-secondary:hover .icon,
+.btn-secondary:hover svg {
+  animation: icon-bounce 0.3s ease;
+}
+
+@keyframes icon-bounce {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.15); }
+}
+
+/* Pulse animation for important actions */
+@keyframes btn-pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.4);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(37, 99, 235, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(37, 99, 235, 0);
+  }
+}
+
+.btn-pulse {
+  animation: btn-pulse 1.5s infinite;
+}
+
+/* Button spinner for loading states */
+.btn-spinner {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid transparent;
+  border-top-color: currentColor;
+  border-radius: 50%;
+  animation: btn-spin 0.6s linear infinite;
+  margin-right: 2px;
+}
+
+@keyframes btn-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Smooth icon rotation for toggle buttons */
+.btn-icon svg,
+.btn-icon .icon {
+  transition: transform 0.2s ease;
+}
+
+.btn-icon:active svg,
+.btn-icon:active .icon {
+  transform: rotate(15deg);
 }
 
 .stat-widget.highlight .stat-label,

@@ -8,6 +8,8 @@ const Team = () => {
   const [members, setMembers] = useState([]);
   const [showModal, setShowModal] = useState(false);
   const [editingMember, setEditingMember] = useState(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [deletingId, setDeletingId] = useState(null);
   const [newMember, setNewMember] = useState({
     name: '',
     email: '',
@@ -40,6 +42,7 @@ const Team = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!newMember.name.trim() || !newMember.email.trim()) return;
+    setSubmitting(true);
 
     try {
       const memberData = {
@@ -63,16 +66,21 @@ const Team = () => {
       fetchMembers();
     } catch (error) {
       console.error('Error saving member:', error);
+    } finally {
+      setSubmitting(false);
     }
   };
 
   const deleteMember = async (memberId) => {
     if (!window.confirm('Are you sure you want to remove this team member?')) return;
+    setDeletingId(memberId);
     try {
       await deleteDoc(doc(db, 'team_members', memberId));
       fetchMembers();
     } catch (error) {
       console.error('Error deleting member:', error);
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -255,7 +263,13 @@ const Team = () => {
               </div>
               <div className="modal-actions">
                 <button type="button" className="btn-secondary" onClick={() => setShowModal(false)}>Cancel</button>
-                <button type="submit" className="btn-primary">{editingMember ? 'Update' : 'Add'} Member</button>
+                <button type="submit" className="btn-primary" disabled={submitting}>
+                  {submitting ? (
+                    <><span className="btn-spinner"></span> {editingMember ? 'Updating...' : 'Adding...'}</>
+                  ) : (
+                    <>{editingMember ? 'Update' : 'Add'} Member</>
+                  )}
+                </button>
               </div>
             </form>
           </div>
