@@ -554,8 +554,9 @@ tr.row-selected td {
   position: fixed;
   top: 0;
   left: 0;
-  right: 0;
-  bottom: 0;
+  width: 100vw;
+  height: 100vh;
+  height: 100dvh;
   background: rgba(0, 0, 0, 0.5);
   backdrop-filter: blur(4px);
   display: flex;
@@ -563,6 +564,8 @@ tr.row-selected td {
   justify-content: center;
   z-index: 1000;
   padding: 20px;
+  box-sizing: border-box;
+  transform: none !important;
 }
 
 .modal-content {

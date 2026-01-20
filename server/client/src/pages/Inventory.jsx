@@ -443,7 +443,7 @@ const Inventory = () => {
 
       {/* Delete Confirmation Modal */}
       {showDeleteConfirm && (
-        <div className="modal-overlay" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+        <div className="modal-overlay" style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100dvh', background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px', boxSizing: 'border-box', transform: 'none' }}>
           <div style={{ background: 'var(--bg-surface)', borderRadius: '16px', padding: '24px', maxWidth: '400px', width: '90%', textAlign: 'center' }}>
             <div style={{ width: '56px', height: '56px', borderRadius: '50%', background: 'rgba(239, 68, 68, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px', color: '#EF4444' }}>
               <FiTrash2 size={24} />
@@ -478,7 +478,7 @@ const Inventory = () => {
 
       {/* Bulk Update Modal */}
       {showBulkUpdateModal && (
-        <div className="modal-overlay" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+        <div className="modal-overlay" style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100dvh', background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px', boxSizing: 'border-box', transform: 'none' }}>
           <div style={{ background: 'var(--bg-surface)', borderRadius: '16px', padding: '24px', maxWidth: '400px', width: '95%', maxHeight: '90vh', overflowY: 'auto' }}>
             <h3 style={{ margin: '0 0 8px' }}>Bulk Price Update</h3>
             <p style={{ margin: '0 0 24px', color: 'var(--text-secondary)', fontSize: '14px' }}>

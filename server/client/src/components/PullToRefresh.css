@@ -54,7 +54,7 @@
 }
 
 .pull-content {
-  will-change: transform;
+  /* will-change removed to prevent modal positioning issues */
 }
 
 @keyframes spin {
