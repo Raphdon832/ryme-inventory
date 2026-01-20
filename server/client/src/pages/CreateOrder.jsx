@@ -4,6 +4,7 @@ import { FiArrowLeft, FiPlus, FiCheck, FiTrash2, FiSearch, FiShoppingCart, FiUse
 import api from '../api';
 import { useSettings } from '../contexts/SettingsContext';
 import offlineManager from '../utils/offlineManager';
+import soundManager from '../utils/soundManager';
 import './CreateOrder.css';
 
 const CreateOrder = () => {
@@ -345,6 +346,7 @@ const CreateOrder = () => {
           setSuccessMessage('Order saved offline. Will sync when online.');
         }
         
+        soundManager.playSuccess();
         setHasUnsavedChanges(false);
         setTimeout(() => navigate('/orders'), 1500);
         return;
@@ -364,10 +366,12 @@ const CreateOrder = () => {
         await api.post('/orders', orderPayload);
       }
 
+      soundManager.playSuccess();
       setHasUnsavedChanges(false);
       navigate('/orders');
     } catch (error) {
       console.error('Error saving order:', error);
+      soundManager.playError();
       
       // If online save failed, offer to save offline
       if (isOnline) {
@@ -410,10 +414,12 @@ const CreateOrder = () => {
         await offlineManager.saveOfflineOrder(orderPayload);
       }
       
+      soundManager.playSuccess();
       setSuccessMessage('Order saved offline successfully!');
       setHasUnsavedChanges(false);
       setTimeout(() => navigate('/orders'), 1500);
     } catch (err) {
+      soundManager.playError();
       setError('Failed to save offline. Please try again.');
     } finally {
       setSubmitting(false);

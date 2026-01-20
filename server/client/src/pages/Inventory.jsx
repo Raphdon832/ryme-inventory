@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../api';
 import { SkeletonTable } from '../components/Skeleton.jsx';
 import { FiPlus, FiEdit2, FiTrash2, FiPackage, FiTag, FiTrendingUp, FiX, FiCheck, FiPercent, FiDollarSign } from 'react-icons/fi';
 import { useSettings } from '../contexts/SettingsContext';
 import useScrollLock from '../hooks/useScrollLock';
+import soundManager from '../utils/soundManager';
 
 const Inventory = () => {
   const navigate = useNavigate();
@@ -28,6 +29,10 @@ const Inventory = () => {
 
   // Lock scroll when modals are open
   useScrollLock(showDeleteConfirm || showBulkUpdateModal);
+  
+  // Track previous low stock count for alerting
+  const prevLowStockCount = useRef(null);
+  const hasAlertedOnLoad = useRef(false);
 
   useEffect(() => {
     const unsubscribe = api.subscribe('/products', (response) => {
@@ -37,6 +42,26 @@ const Inventory = () => {
 
     return () => unsubscribe();
   }, []);
+
+  // Play low stock alert when new low stock items are detected
+  useEffect(() => {
+    if (loadingProducts || products.length === 0) return;
+    
+    const lowStockThreshold = Number(settings.inventory?.lowStockThreshold || 5);
+    const currentLowStockCount = products.filter(p => p.stock_quantity < lowStockThreshold).length;
+    
+    // Alert on initial load if there are low stock items (only once)
+    if (!hasAlertedOnLoad.current && currentLowStockCount > 0) {
+      soundManager.playLowStockAlert();
+      hasAlertedOnLoad.current = true;
+    }
+    // Alert when low stock count increases (new items fell below threshold)
+    else if (prevLowStockCount.current !== null && currentLowStockCount > prevLowStockCount.current) {
+      soundManager.playLowStockAlert();
+    }
+    
+    prevLowStockCount.current = currentLowStockCount;
+  }, [products, loadingProducts, settings.inventory?.lowStockThreshold]);
 
   useEffect(() => {
     const totalPages = Math.max(1, Math.ceil(products.length / 10));

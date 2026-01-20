@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
-import { FiBell, FiDatabase, FiSave, FiMoon, FiRefreshCw } from 'react-icons/fi';
+import React, { useState, useEffect } from 'react';
+import { FiBell, FiDatabase, FiSave, FiMoon, FiRefreshCw, FiVolume2, FiPlay } from 'react-icons/fi';
 import { useSettings } from '../contexts/SettingsContext';
 import api from '../api';
+import soundManager from '../utils/soundManager';
 
 const Settings = () => {
   const {
@@ -17,6 +18,50 @@ const Settings = () => {
   const [migrating, setMigrating] = useState(false);
   const [migrationProgress, setMigrationProgress] = useState(null);
   const [migrationResult, setMigrationResult] = useState(null);
+  
+  // Sound settings state
+  const [soundEnabled, setSoundEnabled] = useState(soundManager.enabled);
+  const [soundVolume, setSoundVolume] = useState(soundManager.volume);
+
+  // Sync sound settings on mount
+  useEffect(() => {
+    setSoundEnabled(soundManager.enabled);
+    setSoundVolume(soundManager.volume);
+  }, []);
+
+  const handleSoundToggle = () => {
+    const newValue = !soundEnabled;
+    setSoundEnabled(newValue);
+    soundManager.setEnabled(newValue);
+    if (newValue) {
+      soundManager.playNotification();
+    }
+  };
+
+  const handleVolumeChange = (e) => {
+    const newVolume = parseFloat(e.target.value);
+    setSoundVolume(newVolume);
+    soundManager.setVolume(newVolume);
+  };
+
+  const testSound = (type) => {
+    switch (type) {
+      case 'success':
+        soundManager.playSuccess();
+        break;
+      case 'sync':
+        soundManager.playSync();
+        break;
+      case 'error':
+        soundManager.playError();
+        break;
+      case 'lowStock':
+        soundManager.playLowStockAlert();
+        break;
+      default:
+        soundManager.playNotification();
+    }
+  };
 
   const handleToggle = (category, setting) => {
     updateSettings({
@@ -271,6 +316,150 @@ const Settings = () => {
                 <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-tertiary)' }}>Automatically create reorder requests</p>
               </div>
               <Toggle checked={settings.inventory.autoReorder} onChange={() => handleToggle('inventory', 'autoReorder')} disabled={loading} />
+            </div>
+          </div>
+        </div>
+
+        {/* Sound Settings */}
+        <div className="card">
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
+            <div style={{
+              width: '40px',
+              height: '40px',
+              borderRadius: '10px',
+              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: 'white'
+            }}>
+              <FiVolume2 size={20} />
+            </div>
+            <div>
+              <h3 style={{ margin: 0 }}>Sound Notifications</h3>
+              <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-secondary)' }}>Configure audio feedback for app events</p>
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 0', borderBottom: '1px solid var(--border-color)' }}>
+              <div>
+                <p style={{ margin: 0, fontWeight: 500 }}>Enable Sounds</p>
+                <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-tertiary)' }}>Play audio notifications for app events</p>
+              </div>
+              <Toggle checked={soundEnabled} onChange={handleSoundToggle} disabled={loading} />
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 0', borderBottom: '1px solid var(--border-color)' }}>
+              <div>
+                <p style={{ margin: 0, fontWeight: 500 }}>Volume</p>
+                <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-tertiary)' }}>Adjust notification sound volume</p>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <input
+                  type="range"
+                  min="0"
+                  max="1"
+                  step="0.1"
+                  value={soundVolume}
+                  onChange={handleVolumeChange}
+                  disabled={!soundEnabled}
+                  style={{ 
+                    width: '100px',
+                    accentColor: '#0A0A0A',
+                    opacity: soundEnabled ? 1 : 0.5
+                  }}
+                />
+                <span style={{ 
+                  fontSize: '13px', 
+                  color: 'var(--text-tertiary)',
+                  minWidth: '35px'
+                }}>
+                  {Math.round(soundVolume * 100)}%
+                </span>
+              </div>
+            </div>
+
+            <div style={{ padding: '12px 0' }}>
+              <p style={{ margin: '0 0 12px 0', fontWeight: 500 }}>Test Sounds</p>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                <button
+                  onClick={() => testSound('success')}
+                  disabled={!soundEnabled}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '6px 12px',
+                    fontSize: '12px',
+                    background: soundEnabled ? '#00B074' : '#888',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '6px',
+                    cursor: soundEnabled ? 'pointer' : 'not-allowed',
+                    opacity: soundEnabled ? 1 : 0.5
+                  }}
+                >
+                  <FiPlay size={12} /> Success
+                </button>
+                <button
+                  onClick={() => testSound('sync')}
+                  disabled={!soundEnabled}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '6px 12px',
+                    fontSize: '12px',
+                    background: soundEnabled ? '#3B82F6' : '#888',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '6px',
+                    cursor: soundEnabled ? 'pointer' : 'not-allowed',
+                    opacity: soundEnabled ? 1 : 0.5
+                  }}
+                >
+                  <FiPlay size={12} /> Sync Complete
+                </button>
+                <button
+                  onClick={() => testSound('error')}
+                  disabled={!soundEnabled}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '6px 12px',
+                    fontSize: '12px',
+                    background: soundEnabled ? '#EF4444' : '#888',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '6px',
+                    cursor: soundEnabled ? 'pointer' : 'not-allowed',
+                    opacity: soundEnabled ? 1 : 0.5
+                  }}
+                >
+                  <FiPlay size={12} /> Error
+                </button>
+                <button
+                  onClick={() => testSound('lowStock')}
+                  disabled={!soundEnabled}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '6px 12px',
+                    fontSize: '12px',
+                    background: soundEnabled ? '#F59E0B' : '#888',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '6px',
+                    cursor: soundEnabled ? 'pointer' : 'not-allowed',
+                    opacity: soundEnabled ? 1 : 0.5
+                  }}
+                >
+                  <FiPlay size={12} /> Low Stock
+                </button>
+              </div>
             </div>
           </div>
         </div>

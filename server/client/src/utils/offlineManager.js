@@ -2,6 +2,8 @@
  * Offline Manager - Handles offline queue and sync operations
  */
 
+import soundManager from './soundManager';
+
 const DB_NAME = 'RymeOfflineDB';
 const DB_VERSION = 2;
 const STORE_NAME = 'pendingOperations';
@@ -296,6 +298,7 @@ class OfflineManager {
   handleOnline() {
     this.isOnline = true;
     this.notifyListeners();
+    // Play notification that we're back online and about to sync
     this.syncPendingOperations();
   }
 
@@ -333,9 +336,13 @@ class OfflineManager {
     this.syncInProgress = true;
     this.notifyListeners();
     
+    let syncedCount = 0;
+    let failedCount = 0;
+    
     try {
       // First, sync offline orders
-      await this.syncOfflineOrders();
+      const ordersSynced = await this.syncOfflineOrders();
+      syncedCount += ordersSynced;
       
       // Then sync other pending operations
       const pending = await this.getPendingOperations();
@@ -347,10 +354,19 @@ class OfflineManager {
         try {
           await this.executeOperation(operation);
           await this.markCompleted(operation.id);
+          syncedCount++;
         } catch (error) {
           console.error('Failed to sync operation:', error);
           await this.markFailed(operation.id, error.message);
+          failedCount++;
         }
+      }
+      
+      // Play appropriate sound based on results
+      if (syncedCount > 0 && failedCount === 0) {
+        soundManager.playSync();
+      } else if (failedCount > 0) {
+        soundManager.playError();
       }
     } finally {
       this.syncInProgress = false;
@@ -362,6 +378,7 @@ class OfflineManager {
   async syncOfflineOrders() {
     const offlineOrders = await this.getOfflineOrders();
     const pendingOrders = offlineOrders.filter(o => o.status === 'pending_sync');
+    let syncedCount = 0;
     
     for (const order of pendingOrders) {
       try {
@@ -383,6 +400,7 @@ class OfflineManager {
         // Mark as synced and delete
         await this.deleteOfflineOrder(order.tempId);
         console.log(`Synced offline order: ${order.tempId}`);
+        syncedCount++;
       } catch (error) {
         console.error(`Failed to sync offline order ${order.tempId}:`, error);
         // Update status to failed after retries
@@ -392,6 +410,8 @@ class OfflineManager {
         });
       }
     }
+    
+    return syncedCount;
   }
 
   // Execute a single operation
