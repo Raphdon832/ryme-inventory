@@ -1,0 +1,127 @@
+/* Settings Page Styles */
+
+/* Custom Range Slider - Full Reset and Restyle */
+.settings-volume-slider {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  width: 120px;
+  height: 6px;
+  border-radius: 3px;
+  outline: none;
+  cursor: pointer;
+  background: transparent;
+  margin: 0;
+  padding: 0;
+}
+
+/* Webkit (Chrome, Safari, Edge) Track */
+.settings-volume-slider::-webkit-slider-runnable-track {
+  width: 100%;
+  height: 6px;
+  border-radius: 3px;
+  background: #E5E5E5;
+}
+
+/* Webkit Thumb */
+.settings-volume-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #0A0A0A;
+  cursor: pointer;
+  border: 2px solid white;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  margin-top: -6px;
+  position: relative;
+}
+
+/* Firefox Track */
+.settings-volume-slider::-moz-range-track {
+  width: 100%;
+  height: 6px;
+  border-radius: 3px;
+  background: #E5E5E5;
+  border: none;
+}
+
+/* Firefox Thumb */
+.settings-volume-slider::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #0A0A0A;
+  cursor: pointer;
+  border: 2px solid white;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+/* Firefox Progress (filled portion) */
+.settings-volume-slider::-moz-range-progress {
+  height: 6px;
+  border-radius: 3px;
+  background: #0A0A0A;
+}
+
+/* Disabled State */
+.settings-volume-slider:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.settings-volume-slider:disabled::-webkit-slider-thumb {
+  cursor: not-allowed;
+  background: #888;
+}
+
+.settings-volume-slider:disabled::-moz-range-thumb {
+  cursor: not-allowed;
+  background: #888;
+}
+
+/* Focus State */
+.settings-volume-slider:focus::-webkit-slider-thumb {
+  box-shadow: 0 0 0 3px rgba(10, 10, 10, 0.2);
+}
+
+.settings-volume-slider:focus::-moz-range-thumb {
+  box-shadow: 0 0 0 3px rgba(10, 10, 10, 0.2);
+}
+
+/* Toggle Switch - Additional support */
+.settings-toggle {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  width: 44px;
+  height: 24px;
+  border-radius: 12px;
+  background: #E5E5E5;
+  border: none;
+  padding: 2px;
+  cursor: pointer;
+  transition: background 0.2s, justify-content 0.2s;
+  flex-shrink: 0;
+}
+
+.settings-toggle.active {
+  background: #0A0A0A;
+  justify-content: flex-end;
+}
+
+.settings-toggle .toggle-knob {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: white;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  flex-shrink: 0;
+}
+
+.settings-toggle:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}

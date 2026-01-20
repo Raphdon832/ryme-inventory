@@ -2,9 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { FiPlus, FiEdit2, FiTrash2, FiMail, FiPhone, FiUser, FiX, FiUsers, FiUserCheck, FiUserX } from 'react-icons/fi';
 import { collection, addDoc, getDocs, updateDoc, deleteDoc, doc, query, orderBy, Timestamp } from 'firebase/firestore';
 import { db } from '../api';
+import { useToast } from '../components/Toast';
+import soundManager from '../utils/soundManager';
 import './Team.css';
 
 const Team = () => {
+  const toast = useToast();
   const [members, setMembers] = useState([]);
   const [showModal, setShowModal] = useState(false);
   const [editingMember, setEditingMember] = useState(null);
@@ -56,9 +59,12 @@ const Team = () => {
           ...memberData,
           createdAt: editingMember.createdAt
         });
+        toast.success(`Team member "${newMember.name}" updated successfully`);
       } else {
         await addDoc(collection(db, 'team_members'), memberData);
+        toast.success(`Team member "${newMember.name}" added successfully`);
       }
+      soundManager.playSuccess();
 
       setNewMember({ name: '', email: '', phone: '', role: 'Staff', status: 'active' });
       setEditingMember(null);
@@ -66,6 +72,8 @@ const Team = () => {
       fetchMembers();
     } catch (error) {
       console.error('Error saving member:', error);
+      toast.error('Failed to save team member. Please try again.');
+      soundManager.playError();
     } finally {
       setSubmitting(false);
     }
@@ -76,9 +84,13 @@ const Team = () => {
     setDeletingId(memberId);
     try {
       await deleteDoc(doc(db, 'team_members', memberId));
+      toast.success('Team member removed successfully');
+      soundManager.playSuccess();
       fetchMembers();
     } catch (error) {
       console.error('Error deleting member:', error);
+      toast.error('Failed to remove team member. Please try again.');
+      soundManager.playError();
     } finally {
       setDeletingId(null);
     }

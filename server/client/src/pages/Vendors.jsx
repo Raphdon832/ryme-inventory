@@ -1,8 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { FiPlus, FiEdit2, FiTrash2, FiGlobe, FiMail, FiPhone, FiBriefcase } from 'react-icons/fi';
 import api from '../api';
+import { useToast } from '../components/Toast';
+import soundManager from '../utils/soundManager';
 
 const Vendors = () => {
+  const toast = useToast();
   const [vendors, setVendors] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -59,14 +62,19 @@ const Vendors = () => {
     try {
       if (editingVendor) {
         await api.put(`/vendors/${editingVendor.id}`, formData);
+        toast.success(`Vendor "${formData.name}" updated successfully`);
       } else {
         await api.post('/vendors', formData);
+        toast.success(`Vendor "${formData.name}" added successfully`);
       }
+      soundManager.playSuccess();
       setShowModal(false);
       setEditingVendor(null);
       resetForm();
     } catch (error) {
       console.error('Error saving vendor:', error);
+      toast.error('Failed to save vendor. Please try again.');
+      soundManager.playError();
     } finally {
       setSubmitting(false);
     }
@@ -77,8 +85,12 @@ const Vendors = () => {
     setDeletingId(vendor.id);
     try {
       await api.delete(`/vendors/${vendor.id}`);
+      toast.success(`Vendor "${vendor.name}" deleted successfully`);
+      soundManager.playSuccess();
     } catch (error) {
       console.error('Error deleting vendor:', error);
+      toast.error('Failed to delete vendor. Please try again.');
+      soundManager.playError();
     } finally {
       setDeletingId(null);
     }

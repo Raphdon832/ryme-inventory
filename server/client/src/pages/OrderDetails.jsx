@@ -5,12 +5,15 @@ import api from '../api';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { useSettings } from '../contexts/SettingsContext';
+import { useToast } from '../components/Toast';
+import soundManager from '../utils/soundManager';
 import './OrderDetails.css';
 
 const OrderDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { formatCurrency } = useSettings();
+  const toast = useToast();
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showShareMenu, setShowShareMenu] = useState(false);
@@ -41,11 +44,12 @@ const OrderDetails = () => {
         try {
             setLoading(true);
             await api.put(`/orders/${id}`, { action: 'mark_paid' });
-            // State update handled by snapshot
-            alert('Order marked as paid successfully!');
+            toast.success('Order marked as paid successfully!');
+            soundManager.playSuccess();
         } catch (error) {
             console.error('Error marking order as paid:', error);
-            alert(error.response?.data?.message || 'Failed to mark order as paid');
+            toast.error(error.response?.data?.message || 'Failed to mark order as paid');
+            soundManager.playError();
         } finally {
             setLoading(false);
         }
@@ -82,24 +86,187 @@ Sent from Ryme Inventory`;
     }
   };
 
-  const handleShare = async () => {
-    const shareData = {
-      title: `Order #${order?.id?.slice(0, 8).toUpperCase()}`,
-      text: getShareText(),
+  const generatePDFBlob = async () => {
+    if (!order) return null;
+    
+    // Load Logo
+    const loadImage = (url) => {
+        return new Promise((resolve, reject) => {
+            const img = new Image();
+            img.src = url;
+            img.onload = () => resolve(img);
+            img.onerror = reject;
+        });
     };
 
-    if (navigator.share && navigator.canShare && navigator.canShare(shareData)) {
+    let logoImg = null;
+    try {
+        logoImg = await loadImage('/RymeLogoPDF.png');
+    } catch (error) {
+        console.error("Failed to load logo", error);
+    }
+
+    const doc = new jsPDF();
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+    
+    const primaryColor = [20, 20, 20];
+    const secondaryColor = [100, 100, 100];
+    const lightGray = [248, 249, 250];
+    const textGray = [156, 163, 175];
+    
+    const config = { companyName: "Ryme Interiors" };
+
+    if (logoImg) {
+        const logoWidth = 40; 
+        const logoHeight = (logoImg.height * logoWidth) / logoImg.width;
+        doc.addImage(logoImg, 'PNG', 20, 12, logoWidth, logoHeight);
+    } else {
+        doc.setFontSize(18);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(...primaryColor);
+        doc.text(config.companyName, 20, 26);
+    }
+
+    const isPaid = order.payment_status === 'Paid';
+    const invoicePrefix = isPaid ? 'Sales Invoice' : 'Invoice';
+    let invoiceNum = `${invoicePrefix} 000`;
+    if (order.id) {
+        const datePart = new Date(order.order_date).toISOString().slice(0, 7).replace('-', '');
+        const idHash = order.id.slice(0, 2).toUpperCase() + order.id.slice(-2).toUpperCase();
+        invoiceNum = `${invoicePrefix} ${datePart}-00-${idHash}`;
+    }
+    
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(...primaryColor);
+    doc.text(invoiceNum, pageWidth - 20, 26, { align: 'right' });
+
+    doc.setDrawColor(240, 240, 240);
+    doc.setLineWidth(0.5);
+    doc.line(20, 35, pageWidth - 20, 35);
+
+    const startY = 50;
+    const col2X = pageWidth / 2 + 10;
+    
+    doc.setFontSize(9);
+    doc.setTextColor(...textGray);
+    doc.text('Date', 20, startY);
+    doc.setTextColor(...primaryColor);
+    doc.setFont('helvetica', 'bold');
+    const orderDate = new Date(order.order_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+    doc.text(orderDate, 20, startY + 6);
+
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(...textGray);
+    doc.text('Currency', col2X, startY);
+    doc.setTextColor(...primaryColor);
+    doc.setFont('helvetica', 'bold');
+    doc.text('NGN - Nigerian Naira', col2X, startY + 6);
+
+    const row2Y = startY + 20;
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(...textGray);
+    doc.text('Billed To', 20, row2Y);
+    doc.setTextColor(...primaryColor);
+    doc.setFont('helvetica', 'bold');
+    doc.text(order.customer_name || 'Guest', 20, row2Y + 6);
+    
+    if (order.customer_address) {
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(8);
+        doc.setTextColor(...secondaryColor);
+        const splitAddress = doc.splitTextToSize(order.customer_address, 70);
+        doc.text(splitAddress, 20, row2Y + 11);
+        doc.setFontSize(9);
+    }
+
+    const tableStartY = row2Y + 30;
+    const hasItemDiscounts = order.items.some(item => (item.discount_percentage || 0) > 0);
+    
+    const tableColumn = hasItemDiscounts 
+        ? ["S/N", "ITEM", "QTY", "RATE", "DISC.", "AMOUNT"]
+        : ["S/N", "ITEM", "QTY", "RATE", "AMOUNT"];
+        
+    const tableRows = [];
+    const safeCurrency = (val) => formatCurrency(val).replace(/[^\x00-\x7F]/g, "N");
+
+    order.items.forEach((item, index) => {
+      const discount = item.discount_percentage || 0;
+      const effectiveTotal = (item.sales_price_at_time * (1 - discount / 100)) * item.quantity;
+      const itemData = [index + 1, item.product_name, item.quantity, safeCurrency(item.sales_price_at_time)];
+      if (hasItemDiscounts) itemData.push(discount > 0 ? `-${discount}%` : "-");
+      itemData.push(safeCurrency(effectiveTotal));
+      tableRows.push(itemData);
+    });
+
+    autoTable(doc, {
+      startY: tableStartY,
+      head: [tableColumn],
+      body: tableRows,
+      theme: 'plain',
+      margin: { left: 15, right: 15 },
+      styles: { fontSize: 9, cellPadding: 2, textColor: primaryColor, font: 'helvetica', valign: 'middle' },
+      headStyles: { fillColor: lightGray, textColor: textGray, fontSize: 8, fontStyle: 'bold' },
+    });
+    
+    const totalsRightMargin = pageWidth - 20;
+    const totalsLabelX = totalsRightMargin - 50;
+    let currentY = doc.lastAutoTable.finalY + 15;
+    
+    const subtotal = order.subtotal || order.total_sales_price;
+    doc.setFontSize(9);
+    doc.setTextColor(...secondaryColor);
+    doc.text('Sub total', totalsLabelX, currentY, { align: 'right' });
+    doc.setTextColor(...primaryColor);
+    doc.text(safeCurrency(subtotal), totalsRightMargin, currentY, { align: 'right' });
+    currentY += 8;
+    
+    doc.setFont('helvetica', 'bold');
+    doc.text('Total', totalsLabelX, currentY, { align: 'right' });
+    doc.text(safeCurrency(order.total_sales_price), totalsRightMargin, currentY, { align: 'right' });
+
+    return doc.output('blob');
+  };
+
+  const handleShare = async () => {
+    if (!order) return;
+    
+    // Try to share PDF file if Web Share API supports files
+    if (navigator.share && navigator.canShare) {
       try {
-        await navigator.share(shareData);
+        const pdfBlob = await generatePDFBlob();
+        if (pdfBlob) {
+          const isPaid = order.payment_status === 'Paid';
+          const invoicePrefix = isPaid ? 'Sales_Invoice' : 'Invoice';
+          const datePart = new Date(order.order_date).toISOString().slice(0, 7).replace('-', '');
+          const idHash = order.id.slice(0, 2).toUpperCase() + order.id.slice(-2).toUpperCase();
+          const fileName = `${invoicePrefix}_${datePart}-00-${idHash}.pdf`;
+          
+          const file = new File([pdfBlob], fileName, { type: 'application/pdf' });
+          
+          const shareData = {
+            title: `Order #${order?.id?.slice(0, 8).toUpperCase()}`,
+            text: `Invoice for ${order.customer_name}`,
+            files: [file]
+          };
+          
+          if (navigator.canShare(shareData)) {
+            await navigator.share(shareData);
+            return;
+          }
+        }
       } catch (err) {
         if (err.name !== 'AbortError') {
-          console.error('Share failed:', err);
+          console.error('PDF share failed:', err);
+        } else {
+          return; // User cancelled
         }
       }
-    } else {
-      // Fallback: show share menu
-      setShowShareMenu(!showShareMenu);
     }
+    
+    // Fallback: show share menu for text-based sharing
+    setShowShareMenu(!showShareMenu);
   };
 
   const handleWhatsAppShare = () => {

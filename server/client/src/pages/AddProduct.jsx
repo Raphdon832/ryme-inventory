@@ -3,6 +3,8 @@ import { useNavigate, useParams, Link } from 'react-router-dom';
 import api from '../api';
 import { FiArrowLeft, FiPlus, FiX, FiSave, FiPackage, FiTag, FiCopy, FiCheck, FiLayers, FiTrash2 } from 'react-icons/fi';
 import { useSettings } from '../contexts/SettingsContext';
+import { useToast } from '../components/Toast';
+import soundManager from '../utils/soundManager';
 import './AddProduct.css';
 
 /**
@@ -64,6 +66,7 @@ const AddProduct = () => {
   const { id } = useParams();
   const isEditing = Boolean(id);
   const { currencySymbol, formatCurrency } = useSettings();
+  const toast = useToast();
 
   // Mode: 'single' or 'bulk'
   const [mode, setMode] = useState('single');
@@ -266,14 +269,18 @@ const AddProduct = () => {
       
       if (isEditing) {
         await api.put(`/products/${id}`, productData);
+        toast.success(`Product "${fullName}" updated successfully`);
       } else {
         await api.post('/products', productData);
+        toast.success(`Product "${fullName}" added successfully`);
       }
+      soundManager.playSuccess();
       
       navigate('/inventory');
     } catch (error) {
       console.error('Error saving product:', error);
-      alert('Error saving product. Please try again.');
+      toast.error('Failed to save product. Please try again.');
+      soundManager.playError();
     } finally {
       setLoading(false);
     }

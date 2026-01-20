@@ -1,8 +1,11 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { FiPlus, FiEdit2, FiTrash2, FiUser, FiMail, FiPhone } from 'react-icons/fi';
 import api from '../api';
+import { useToast } from '../components/Toast';
+import soundManager from '../utils/soundManager';
 
 const Customers = () => {
+  const toast = useToast();
   const [customers, setCustomers] = useState([]);
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -63,14 +66,19 @@ const Customers = () => {
     try {
       if (editingCustomer) {
         await api.put(`/customers/${editingCustomer.id}`, formData);
+        toast.success(`Customer "${formData.name}" updated successfully`);
       } else {
         await api.post('/customers', formData);
+        toast.success(`Customer "${formData.name}" added successfully`);
       }
+      soundManager.playSuccess();
       setShowModal(false);
       setEditingCustomer(null);
       resetForm();
     } catch (error) {
       console.error('Error saving customer:', error);
+      toast.error('Failed to save customer. Please try again.');
+      soundManager.playError();
     } finally {
       setSubmitting(false);
     }
@@ -81,8 +89,12 @@ const Customers = () => {
     setDeletingId(customer.id);
     try {
       await api.delete(`/customers/${customer.id}`);
+      toast.success(`Customer "${customer.name}" deleted successfully`);
+      soundManager.playSuccess();
     } catch (error) {
       console.error('Error deleting customer:', error);
+      toast.error('Failed to delete customer. Please try again.');
+      soundManager.playError();
     } finally {
       setDeletingId(null);
     }

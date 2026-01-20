@@ -1,6 +1,7 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Layout from './components/Layout';
+import { ToastProvider } from './components/Toast';
 import Dashboard from './pages/Dashboard';
 import Inventory from './pages/Inventory';
 import AddProduct from './pages/AddProduct';
@@ -21,30 +22,32 @@ import './App.css';
 
 function App() {
   return (
-    <Router>
-      <Layout>
-        <Routes>
-          <Route path="/" element={<Dashboard />} />
-          <Route path="/inventory" element={<Inventory />} />
-          <Route path="/inventory/add" element={<AddProduct />} />
-          <Route path="/inventory/edit/:id" element={<AddProduct />} />
-          <Route path="/orders" element={<Orders />} />
-          <Route path="/orders/new" element={<CreateOrder />} />
-          <Route path="/orders/edit/:id" element={<CreateOrder />} />
-          <Route path="/orders/:id" element={<OrderDetails />} />
-          <Route path="/customers" element={<Customers />} />
-          <Route path="/vendors" element={<Vendors />} />
-          <Route path="/activity-log" element={<ActivityLog />} />
-          <Route path="/tasks" element={<Tasks />} />
-          <Route path="/calendar" element={<Calendar />} />
-          <Route path="/analytics" element={<Analytics />} />
-          <Route path="/team" element={<Team />} />
-          <Route path="/help" element={<Help />} />
-          <Route path="/profile" element={<Profile />} />
-          <Route path="/settings" element={<Settings />} />
-        </Routes>
-      </Layout>
-    </Router>
+    <ToastProvider>
+      <Router>
+        <Layout>
+          <Routes>
+            <Route path="/" element={<Dashboard />} />
+            <Route path="/inventory" element={<Inventory />} />
+            <Route path="/inventory/add" element={<AddProduct />} />
+            <Route path="/inventory/edit/:id" element={<AddProduct />} />
+            <Route path="/orders" element={<Orders />} />
+            <Route path="/orders/new" element={<CreateOrder />} />
+            <Route path="/orders/edit/:id" element={<CreateOrder />} />
+            <Route path="/orders/:id" element={<OrderDetails />} />
+            <Route path="/customers" element={<Customers />} />
+            <Route path="/vendors" element={<Vendors />} />
+            <Route path="/activity-log" element={<ActivityLog />} />
+            <Route path="/tasks" element={<Tasks />} />
+            <Route path="/calendar" element={<Calendar />} />
+            <Route path="/analytics" element={<Analytics />} />
+            <Route path="/team" element={<Team />} />
+            <Route path="/help" element={<Help />} />
+            <Route path="/profile" element={<Profile />} />
+            <Route path="/settings" element={<Settings />} />
+          </Routes>
+        </Layout>
+      </Router>
+    </ToastProvider>
   );
 }
 

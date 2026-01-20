@@ -5,11 +5,13 @@ import api from '../api';
 import { useSettings } from '../contexts/SettingsContext';
 import offlineManager from '../utils/offlineManager';
 import soundManager from '../utils/soundManager';
+import { useToast } from '../components/Toast';
 import './CreateOrder.css';
 
 const CreateOrder = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const toast = useToast();
   const { formatCurrency, currencySymbol } = useSettings();
   const isEditing = Boolean(id);
   const isOfflineOrder = id?.startsWith('offline_');
@@ -330,7 +332,7 @@ const CreateOrder = () => {
           if (isOfflineOrder) {
             // Update existing offline order
             await offlineManager.updateOfflineOrder(id, orderPayload);
-            setSuccessMessage('Order updated offline. Will sync when online.');
+            toast.info('Order updated offline. Will sync when online.');
           } else {
             // Create offline update for existing server order
             await offlineManager.saveOfflineOrder({
@@ -338,12 +340,12 @@ const CreateOrder = () => {
               isEdit: true,
               originalId: id
             });
-            setSuccessMessage('Order update saved offline. Will sync when online.');
+            toast.info('Order update saved offline. Will sync when online.');
           }
         } else {
           // Create new offline order
           await offlineManager.saveOfflineOrder(orderPayload);
-          setSuccessMessage('Order saved offline. Will sync when online.');
+          toast.info('Order saved offline. Will sync when online.');
         }
         
         soundManager.playSuccess();
@@ -359,11 +361,14 @@ const CreateOrder = () => {
           const { _offline, status: offlineStatus, createdAt, updatedAt, tempId, ...cleanPayload } = orderPayload;
           await api.post('/orders', cleanPayload);
           await offlineManager.deleteOfflineOrder(id);
+          toast.success('Offline order synced and saved successfully');
         } else {
           await api.put(`/orders/${id}`, orderPayload);
+          toast.success('Order updated successfully');
         }
       } else {
         await api.post('/orders', orderPayload);
+        toast.success(`Order for ${orderData.customer_name} created successfully`);
       }
 
       soundManager.playSuccess();
@@ -372,6 +377,7 @@ const CreateOrder = () => {
     } catch (error) {
       console.error('Error saving order:', error);
       soundManager.playError();
+      toast.error(error.message || 'Failed to save order');
       
       // If online save failed, offer to save offline
       if (isOnline) {
@@ -415,12 +421,12 @@ const CreateOrder = () => {
       }
       
       soundManager.playSuccess();
-      setSuccessMessage('Order saved offline successfully!');
+      toast.success('Order saved offline successfully!');
       setHasUnsavedChanges(false);
       setTimeout(() => navigate('/orders'), 1500);
     } catch (err) {
       soundManager.playError();
-      setError('Failed to save offline. Please try again.');
+      toast.error('Failed to save offline. Please try again.');
     } finally {
       setSubmitting(false);
     }

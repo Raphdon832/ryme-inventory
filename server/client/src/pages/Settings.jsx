@@ -3,6 +3,7 @@ import { FiBell, FiDatabase, FiSave, FiMoon, FiRefreshCw, FiVolume2, FiPlay } fr
 import { useSettings } from '../contexts/SettingsContext';
 import api from '../api';
 import soundManager from '../utils/soundManager';
+import './Settings.css';
 
 const Settings = () => {
   const {
@@ -127,7 +128,12 @@ const Settings = () => {
         padding: '2px',
         cursor: disabled ? 'not-allowed' : 'pointer',
         opacity: disabled ? 0.6 : 1,
-        transition: 'background 0.2s'
+        transition: 'background 0.2s',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: checked ? 'flex-end' : 'flex-start',
+        boxSizing: 'border-box',
+        flexShrink: 0
       }}
     >
       <div style={{
@@ -135,8 +141,9 @@ const Settings = () => {
         height: '20px',
         borderRadius: '50%',
         background: 'white',
-        transform: checked ? 'translateX(20px)' : 'translateX(0)',
-        transition: 'transform 0.2s'
+        boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+        transition: 'all 0.2s',
+        flexShrink: 0
       }} />
     </button>
   );
@@ -363,12 +370,10 @@ const Settings = () => {
                   step="0.1"
                   value={soundVolume}
                   onChange={handleVolumeChange}
+                  onMouseUp={() => soundManager.playNotification()}
+                  onTouchEnd={() => soundManager.playNotification()}
                   disabled={!soundEnabled}
-                  style={{ 
-                    width: '100px',
-                    accentColor: '#0A0A0A',
-                    opacity: soundEnabled ? 1 : 0.5
-                  }}
+                  className="settings-volume-slider"
                 />
                 <span style={{ 
                   fontSize: '13px', 

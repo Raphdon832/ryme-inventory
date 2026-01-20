@@ -6,9 +6,11 @@ import { FiPlus, FiEdit2, FiTrash2, FiPackage, FiTag, FiTrendingUp, FiX, FiCheck
 import { useSettings } from '../contexts/SettingsContext';
 import useScrollLock from '../hooks/useScrollLock';
 import soundManager from '../utils/soundManager';
+import { useToast } from '../components/Toast';
 
 const Inventory = () => {
   const navigate = useNavigate();
+  const toast = useToast();
   const { formatCurrency, settings, currencySymbol } = useSettings();
   const [products, setProducts] = useState([]);
   const [selectionMode, setSelectionMode] = useState(false);
@@ -75,12 +77,16 @@ const Inventory = () => {
 
   const handleDelete = async (productId) => {
     if (window.confirm('Are you sure you want to delete this product?')) {
+      const product = products.find(p => p.id === productId);
       setDeletingId(productId);
       try {
         await api.delete(`/products/${productId}`);
-        // No need to fetchProducts(), snapshot will update automatically
+        toast.success(`Product deleted successfully`);
+        soundManager.playSuccess();
       } catch (error) {
         console.error('Error deleting product:', error);
+        toast.error('Failed to delete product. Please try again.');
+        soundManager.playError();
       } finally {
         setDeletingId(null);
       }
@@ -97,16 +103,20 @@ const Inventory = () => {
 
   const handleBulkDelete = async () => {
     setBulkDeleting(true);
+    const count = selectedProducts.length;
     try {
       for (const productId of selectedProducts) {
         await api.delete(`/products/${productId}`);
       }
+      toast.success(`${count} product${count > 1 ? 's' : ''} deleted successfully`);
+      soundManager.playSuccess();
       setSelectedProducts([]);
       setSelectionMode(false);
       setShowDeleteConfirm(false);
-      // fetchProducts(); Handled by snapshot
     } catch (error) {
       console.error('Error deleting products:', error);
+      toast.error('Failed to delete some products. Please try again.');
+      soundManager.playError();
     } finally {
       setBulkDeleting(false);
     }
@@ -143,12 +153,15 @@ const Inventory = () => {
 
       await Promise.all(updates);
       
+      toast.success(`${selectedProducts.length} product${selectedProducts.length > 1 ? 's' : ''} updated successfully`);
+      soundManager.playSuccess();
       setSelectedProducts([]);
       setSelectionMode(false);
       setShowBulkUpdateModal(false);
-      // fetchProducts(); Handled by snapshot
     } catch (error) {
       console.error('Error bulk updating products:', error);
+      toast.error('Failed to update some products. Please try again.');
+      soundManager.playError();
     } finally {
       setBulkUpdating(false);
     }
