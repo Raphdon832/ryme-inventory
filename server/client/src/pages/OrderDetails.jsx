@@ -505,26 +505,27 @@ Sent from Ryme Inventory`;
             const item = order.items[data.row.index];
             if (item && item.discount_percentage > 0) {
                  const badgeText = `-${item.discount_percentage}%`;
-                 const fontSize = 4; 
+                 const fontSize = 5; 
                  doc.setFontSize(fontSize);
                  doc.setFont('helvetica', 'bold');
                  
                  const textWidth = doc.getTextWidth(badgeText);
-                 const paddingX = 1; 
-                 const badgeWidth = textWidth + (paddingX * 2);
-                 const badgeHeight = fontSize + 1.5; 
-                 const radius = badgeHeight / 2; 
+                 const padding = 0.3; 
+                 // Make badge perfectly circular by using the larger dimension
+                 const minSize = Math.max(textWidth + (padding * 2), fontSize + 1);
+                 const badgeSize = minSize; // Use same width and height for circle
+                 const radius = badgeSize / 1.0; 
                  
                  // Center in cell
-                 const badgeX = data.cell.x + (data.cell.width / 2) - (badgeWidth / 2);
-                 const badgeY = data.cell.y + (data.cell.height / 2) - (badgeHeight / 2);
+                 const badgeX = data.cell.x + (data.cell.width / 2) - (badgeSize / 2);
+                 const badgeY = data.cell.y + (data.cell.height / 2) - (badgeSize / 2);
                  
                  doc.setFillColor(16, 185, 129); // Green background
-                 doc.roundedRect(badgeX, badgeY, badgeWidth, badgeHeight, radius, radius, 'F');
+                 doc.roundedRect(badgeX, badgeY, badgeSize, badgeSize, radius, radius, 'F');
                  
                  doc.setTextColor(255, 255, 255); // White text
-                 const textX = badgeX + (badgeWidth / 2);
-                 const textY = badgeY + (badgeHeight / 2);
+                 const textX = badgeX + (badgeSize / 2);
+                 const textY = badgeY + (badgeSize / 2);
                  doc.text(badgeText, textX, textY, { align: 'center', baseline: 'middle' });
             } else {
                 // Optional: Draw a subtle dash for items without discount
