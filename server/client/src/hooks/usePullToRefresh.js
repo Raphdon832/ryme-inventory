@@ -1,6 +1,13 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 
 /**
+ * Check if any modal is currently open in the DOM
+ */
+const isModalOpen = () => {
+  return !!document.querySelector('.modal-overlay, .stat-modal-overlay, [class*="modal"][class*="overlay"]');
+};
+
+/**
  * Custom hook for pull-to-refresh functionality on iOS/mobile devices
  * @param {Function} onRefresh - Async function to call when refresh is triggered
  * @param {Object} options - Configuration options
@@ -24,16 +31,16 @@ const usePullToRefresh = (onRefresh, options = {}) => {
   const isPullingRef = useRef(false);
 
   const handleTouchStart = useCallback((e) => {
-    // Only enable pull-to-refresh when scrolled to top and not disabled
+    // Only enable pull-to-refresh when scrolled to top, not disabled, and no modal is open
     const scrollTop = window.scrollY || document.documentElement.scrollTop;
-    if (scrollTop > 5 || isRefreshing || disabled) return;
+    if (scrollTop > 5 || isRefreshing || disabled || isModalOpen()) return;
     
     startYRef.current = e.touches[0].clientY;
     isPullingRef.current = true;
   }, [isRefreshing, disabled]);
 
   const handleTouchMove = useCallback((e) => {
-    if (!isPullingRef.current || isRefreshing || disabled) return;
+    if (!isPullingRef.current || isRefreshing || disabled || isModalOpen()) return;
     
     const scrollTop = window.scrollY || document.documentElement.scrollTop;
     if (scrollTop > 5) {

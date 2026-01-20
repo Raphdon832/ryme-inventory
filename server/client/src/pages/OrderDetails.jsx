@@ -762,13 +762,14 @@ Sent from Ryme Inventory`;
         </div>
       </div>
 
-      {/* Order Items Table */}
+      {/* Order Items Section */}
       <div className="order-items-card">
         <div className="card-header">
           <h2>Order Items</h2>
         </div>
         
-        <div className="table-container">
+        {/* Desktop View Table */}
+        <div className="table-container desktop-only">
           <table className="order-items-table">
             <thead>
               <tr>
@@ -793,7 +794,12 @@ Sent from Ryme Inventory`;
                         <div className="product-avatar">
                           {item.product_name?.charAt(0) || 'P'}
                         </div>
-                        <span className="product-name">{item.product_name}</span>
+                        <span className="product-name">
+                          {item.product_name}
+                          {item.discount_percentage > 0 && (
+                            <span className="item-discount-badge">-{item.discount_percentage}%</span>
+                          )}
+                        </span>
                       </div>
                     </td>
                     <td>
@@ -816,6 +822,53 @@ Sent from Ryme Inventory`;
               })}
             </tbody>
           </table>
+        </div>
+
+        {/* Mobile View List */}
+        <div className="mobile-only order-items-list">
+          {order.items?.map((item, index) => {
+            const totalPrice = item.sales_price_at_time * item.quantity;
+            const totalProfit = item.profit_at_time * item.quantity;
+            const costPerUnit = item.sales_price_at_time - item.profit_at_time;
+            
+            return (
+              <div key={item.id || index} className="mobile-item-card">
+                 <div className="mobile-item-header">
+                    <div className="product-cell">
+                        <div className="product-avatar">
+                          {item.product_name?.charAt(0) || 'P'}
+                        </div>
+                        <div className="product-info">
+                           <span className="product-name">
+                             {item.product_name}
+                             {item.discount_percentage > 0 && (
+                               <span className="item-discount-badge">-{item.discount_percentage}%</span>
+                             )}
+                           </span>
+                           <span className="product-quantity">Qty: {item.quantity}</span>
+                        </div>
+                    </div>
+                    <div className="item-price-main">
+                       {formatCurrency(totalPrice)}
+                    </div>
+                 </div>
+                 <div className="mobile-item-details">
+                    <div className="detail-row">
+                       <span className="detail-label">Unit Price</span>
+                       <span className="detail-value">{formatCurrency(item.sales_price_at_time || 0)}</span>
+                    </div>
+                    <div className="detail-row">
+                       <span className="detail-label">Cost of Prod.</span>
+                       <span className="detail-value text-muted">{formatCurrency(costPerUnit)}</span>
+                    </div>
+                    <div className="detail-row profit-row">
+                       <span className="detail-label">Profit</span>
+                       <span className="detail-value profit-value">{formatCurrency(totalProfit, { showSign: true })}</span>
+                    </div>
+                 </div>
+              </div>
+            );
+          })}
         </div>
 
         {/* Order Totals */}
