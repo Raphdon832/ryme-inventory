@@ -1,8 +1,8 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../api';
 import { SkeletonTable } from '../components/Skeleton.jsx';
-import { FiPlus, FiEdit2, FiTrash2, FiPackage, FiTag, FiTrendingUp, FiX, FiCheck, FiPercent, FiDollarSign } from 'react-icons/fi';
+import { FiPlus, FiEdit2, FiTrash2, FiPackage, FiTag, FiTrendingUp, FiX, FiCheck, FiPercent, FiDollarSign, FiFilter, FiChevronDown, FiChevronUp, FiChevronRight } from 'react-icons/fi';
 import { useSettings } from '../contexts/SettingsContext';
 import useScrollLock from '../hooks/useScrollLock';
 import soundManager from '../utils/soundManager';
@@ -28,6 +28,43 @@ const Inventory = () => {
     costType: 'percentage', // percentage or fixed
     costAdjustment: ''
   });
+
+  // Filter/Sort state
+  const [showFilterDropdown, setShowFilterDropdown] = useState(false);
+  const [sortBy, setSortBy] = useState('name_asc'); // default sort
+  const [expandedBrands, setExpandedBrands] = useState({}); // for grouped view
+  const filterDropdownRef = useRef(null);
+
+  // Sort options
+  const sortOptions = [
+    { value: 'grouped', label: 'Grouped by Brand' },
+    { value: 'name_asc', label: 'Product Name (A-Z)' },
+    { value: 'name_desc', label: 'Product Name (Z-A)' },
+    { value: 'brand_asc', label: 'Brand Name (A-Z)' },
+    { value: 'brand_desc', label: 'Brand Name (Z-A)' },
+    { value: 'price_asc', label: 'Price (Low to High)' },
+    { value: 'price_desc', label: 'Price (High to Low)' },
+    { value: 'stock_asc', label: 'Units Left (Low to High)' },
+    { value: 'stock_desc', label: 'Units Left (High to Low)' },
+    { value: 'cost_asc', label: 'Cost (Low to High)' },
+    { value: 'cost_desc', label: 'Cost (High to Low)' },
+    { value: 'date_asc', label: 'Date Added (Oldest First)' },
+    { value: 'date_desc', label: 'Date Added (Newest First)' },
+    { value: 'volume_asc', label: 'Volume (Low to High)' },
+    { value: 'volume_desc', label: 'Volume (High to Low)' },
+  ];
+
+  // Close filter dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (filterDropdownRef.current && !filterDropdownRef.current.contains(event.target)) {
+        setShowFilterDropdown(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   // Lock scroll when modals are open
   useScrollLock(showDeleteConfirm || showBulkUpdateModal);
@@ -172,6 +209,101 @@ const Inventory = () => {
     setSelectedProducts([]);
   };
 
+  // Helper function to extract numeric volume from volume_size string
+  const extractVolume = (volumeSize) => {
+    if (!volumeSize) return 0;
+    const match = volumeSize.match(/[\d.]+/);
+    return match ? parseFloat(match[0]) : 0;
+  };
+
+  // Sorted products
+  const sortedProducts = useMemo(() => {
+    const sorted = [...products];
+    
+    sorted.sort((a, b) => {
+      switch (sortBy) {
+        case 'name_asc':
+          return (a.name || a.product_name || '').localeCompare(b.name || b.product_name || '');
+        case 'name_desc':
+          return (b.name || b.product_name || '').localeCompare(a.name || a.product_name || '');
+        case 'brand_asc':
+          return (a.brand_name || '').localeCompare(b.brand_name || '');
+        case 'brand_desc':
+          return (b.brand_name || '').localeCompare(a.brand_name || '');
+        case 'price_asc':
+          return (a.sales_price || 0) - (b.sales_price || 0);
+        case 'price_desc':
+          return (b.sales_price || 0) - (a.sales_price || 0);
+        case 'stock_asc':
+          return (a.stock_quantity || 0) - (b.stock_quantity || 0);
+        case 'stock_desc':
+          return (b.stock_quantity || 0) - (a.stock_quantity || 0);
+        case 'cost_asc':
+          return (a.cost_of_production || 0) - (b.cost_of_production || 0);
+        case 'cost_desc':
+          return (b.cost_of_production || 0) - (a.cost_of_production || 0);
+        case 'date_asc':
+          return new Date(a.created_at || a.createdAt || 0) - new Date(b.created_at || b.createdAt || 0);
+        case 'date_desc':
+          return new Date(b.created_at || b.createdAt || 0) - new Date(a.created_at || a.createdAt || 0);
+        case 'volume_asc':
+          return extractVolume(a.volume_size) - extractVolume(b.volume_size);
+        case 'volume_desc':
+          return extractVolume(b.volume_size) - extractVolume(a.volume_size);
+        default:
+          return 0;
+      }
+    });
+    
+    return sorted;
+  }, [products, sortBy]);
+
+  // Group products by brand for grouped view
+  const groupedByBrand = useMemo(() => {
+    if (sortBy !== 'grouped') return {};
+    
+    const groups = {};
+    products.forEach(product => {
+      const brandName = product.brand_name || 'No Brand';
+      if (!groups[brandName]) {
+        groups[brandName] = [];
+      }
+      groups[brandName].push(product);
+    });
+    
+    // Sort brand names alphabetically
+    const sortedGroups = {};
+    Object.keys(groups).sort((a, b) => a.localeCompare(b)).forEach(key => {
+      // Sort products within each brand by name
+      sortedGroups[key] = groups[key].sort((a, b) => 
+        (a.name || a.product_name || '').localeCompare(b.name || b.product_name || '')
+      );
+    });
+    
+    return sortedGroups;
+  }, [products, sortBy]);
+
+  // Toggle brand accordion
+  const toggleBrandAccordion = (brandName) => {
+    setExpandedBrands(prev => ({
+      ...prev,
+      [brandName]: !prev[brandName]
+    }));
+  };
+
+  // Expand/collapse all brands
+  const expandAllBrands = () => {
+    const allExpanded = {};
+    Object.keys(groupedByBrand).forEach(brand => {
+      allExpanded[brand] = true;
+    });
+    setExpandedBrands(allExpanded);
+  };
+
+  const collapseAllBrands = () => {
+    setExpandedBrands({});
+  };
+
   // Stats calculations
   const totalProducts = products.length;
   const totalStockValue = products.reduce((acc, p) => acc + (p.cost_of_production * p.stock_quantity), 0);
@@ -180,12 +312,12 @@ const Inventory = () => {
   const lowStockCount = products.filter(p => p.stock_quantity < lowStockThreshold).length;
   const warningThreshold = Math.max(lowStockThreshold * 2, lowStockThreshold + 1);
   const pageSize = 10;
-  const totalPages = Math.max(1, Math.ceil(products.length / pageSize));
+  const totalPages = Math.max(1, Math.ceil(sortedProducts.length / pageSize));
   const startIndex = (currentPage - 1) * pageSize;
-  const endIndex = Math.min(startIndex + pageSize, products.length);
-  const paginatedProducts = products.slice(startIndex, startIndex + pageSize);
-  const showingStart = products.length === 0 ? 0 : startIndex + 1;
-  const showingEnd = products.length === 0 ? 0 : endIndex;
+  const endIndex = Math.min(startIndex + pageSize, sortedProducts.length);
+  const paginatedProducts = sortedProducts.slice(startIndex, startIndex + pageSize);
+  const showingStart = sortedProducts.length === 0 ? 0 : startIndex + 1;
+  const showingEnd = sortedProducts.length === 0 ? 0 : endIndex;
 
   return (
     <div>
@@ -252,6 +384,78 @@ const Inventory = () => {
             </span>
           </div>
           <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            {/* Filter/Sort Button */}
+            <div style={{ position: 'relative' }} ref={filterDropdownRef}>
+              <button 
+                onClick={() => setShowFilterDropdown(!showFilterDropdown)}
+                title="Sort products"
+                style={{ 
+                  width: '40px', 
+                  height: '40px', 
+                  borderRadius: '50%', 
+                  padding: 0, 
+                  background: showFilterDropdown || sortBy !== 'name_asc' ? 'rgba(79, 106, 245, 0.1)' : 'var(--bg-surface)', 
+                  border: '1px solid var(--border-color)', 
+                  color: showFilterDropdown || sortBy !== 'name_asc' ? 'var(--primary-color)' : 'var(--text-secondary)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer'
+                }}
+              >
+                <FiFilter size={18} />
+              </button>
+              
+              {/* Filter Dropdown */}
+              {showFilterDropdown && (
+                <div style={{
+                  position: 'absolute',
+                  top: '48px',
+                  right: 0,
+                  background: 'var(--bg-surface)',
+                  border: '1px solid var(--border-color)',
+                  borderRadius: '12px',
+                  boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
+                  zIndex: 100,
+                  minWidth: '220px',
+                  padding: '8px 0',
+                  maxHeight: '400px',
+                  overflowY: 'auto'
+                }}>
+                  <div style={{ padding: '8px 16px', fontSize: '12px', fontWeight: 600, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                    Sort By
+                  </div>
+                  {sortOptions.map((option) => (
+                    <button
+                      key={option.value}
+                      onClick={() => {
+                        setSortBy(option.value);
+                        setShowFilterDropdown(false);
+                        setCurrentPage(1); // Reset to first page on sort change
+                      }}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        width: '100%',
+                        padding: '10px 16px',
+                        background: sortBy === option.value ? 'rgba(79, 106, 245, 0.1)' : 'transparent',
+                        border: 'none',
+                        cursor: 'pointer',
+                        color: sortBy === option.value ? 'var(--primary-color)' : 'var(--text-primary)',
+                        fontSize: '14px',
+                        textAlign: 'left',
+                        fontWeight: sortBy === option.value ? 600 : 400
+                      }}
+                    >
+                      <span>{option.label}</span>
+                      {sortBy === option.value && <FiCheck size={16} />}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
             {selectionMode ? (
               <>
                 <button 
@@ -296,149 +500,352 @@ const Inventory = () => {
           </div>
         </div>
         
-        <div className="table-container">
-          {loadingProducts ? (
-            <SkeletonTable rows={8} cols={6} />
-          ) : (
-            <table>
-              <thead>
-                <tr>
-                  {selectionMode && <th style={{ width: '40px' }}></th>}
-                  <th>Code</th>
-                  <th>Product</th>
-                  <th>Cost of Production</th>
-                  <th>Markup</th>
-                  <th>Sales Price</th>
-                  <th>Profit/Unit</th>
-                  <th>Stock</th>
-                  {!selectionMode && <th>Actions</th>}
-                </tr>
-              </thead>
-              <tbody>
-                {paginatedProducts.map(product => (
-                  <tr 
-                    key={product.id}
-                    onClick={selectionMode ? () => toggleProductSelection(product.id) : undefined}
-                    style={{ cursor: selectionMode ? 'pointer' : 'default', background: selectedProducts.includes(product.id) ? 'rgba(79, 106, 245, 0.05)' : undefined }}
+        {/* Grouped View by Brand */}
+        {sortBy === 'grouped' ? (
+          <div>
+            {/* Expand/Collapse All buttons */}
+            {Object.keys(groupedByBrand).length > 0 && (
+              <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
+                <button
+                  className="secondary"
+                  onClick={expandAllBrands}
+                  style={{ padding: '6px 12px', fontSize: '12px', borderRadius: '999px' }}
+                >
+                  Expand All
+                </button>
+                <button
+                  className="secondary"
+                  onClick={collapseAllBrands}
+                  style={{ padding: '6px 12px', fontSize: '12px', borderRadius: '999px' }}
+                >
+                  Collapse All
+                </button>
+              </div>
+            )}
+            
+            {loadingProducts ? (
+              <SkeletonTable rows={8} cols={6} />
+            ) : products.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '48px', color: 'var(--text-secondary)' }}>
+                <FiPackage size={40} style={{ opacity: 0.3, marginBottom: '12px' }} />
+                <p style={{ margin: 0, fontWeight: 500 }}>No products yet</p>
+                <p style={{ margin: '4px 0 0 0', fontSize: '13px' }}>Add your first product to get started</p>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                {Object.entries(groupedByBrand).map(([brandName, brandProducts]) => (
+                  <div 
+                    key={brandName} 
+                    style={{ 
+                      border: '1px solid var(--border-color)', 
+                      borderRadius: '12px', 
+                      overflow: 'hidden',
+                      background: 'var(--bg-surface)'
+                    }}
                   >
-                    {selectionMode && (
-                      <td>
-                        <div style={{ 
-                          width: '20px', 
-                          height: '20px', 
-                          borderRadius: '50%', 
-                          border: selectedProducts.includes(product.id) ? 'none' : '2px solid var(--border-color)',
-                          background: selectedProducts.includes(product.id) ? 'var(--primary-color)' : 'transparent',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          color: 'white'
+                    {/* Accordion Header */}
+                    <button
+                      onClick={() => toggleBrandAccordion(brandName)}
+                      style={{
+                        width: '100%',
+                        padding: '16px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        background: expandedBrands[brandName] ? 'rgba(79, 106, 245, 0.05)' : 'transparent',
+                        border: 'none',
+                        cursor: 'pointer',
+                        transition: 'background 0.2s'
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <div style={{
+                          transform: expandedBrands[brandName] ? 'rotate(90deg)' : 'rotate(0deg)',
+                          transition: 'transform 0.2s',
+                          color: 'var(--text-secondary)'
                         }}>
-                          {selectedProducts.includes(product.id) && <FiCheck size={12} />}
+                          <FiChevronRight size={18} />
+                        </div>
+                        <div style={{ textAlign: 'left' }}>
+                          <div style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: '15px' }}>
+                            {brandName}
+                          </div>
+                          <div style={{ fontSize: '12px', color: 'var(--text-tertiary)', marginTop: '2px' }}>
+                            {brandProducts.length} product{brandProducts.length !== 1 ? 's' : ''}
+                          </div>
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                        <div style={{ textAlign: 'right' }}>
+                          <div style={{ fontSize: '12px', color: 'var(--text-tertiary)' }}>Total Stock Value</div>
+                          <div style={{ fontWeight: 600, color: 'var(--primary-color)', fontSize: '14px' }}>
+                            {formatCurrency(brandProducts.reduce((sum, p) => sum + (p.sales_price * p.stock_quantity), 0))}
+                          </div>
+                        </div>
+                      </div>
+                    </button>
+                    
+                    {/* Accordion Content */}
+                    {expandedBrands[brandName] && (
+                      <div className="table-container" style={{ borderTop: '1px solid var(--border-color)' }}>
+                        <table>
+                          <thead>
+                            <tr>
+                              {selectionMode && <th style={{ width: '40px' }}></th>}
+                              <th>Code</th>
+                              <th>Product</th>
+                              <th>Cost of Production</th>
+                              <th>Markup</th>
+                              <th>Sales Price</th>
+                              <th>Profit/Unit</th>
+                              <th>Stock</th>
+                              {!selectionMode && <th>Actions</th>}
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {brandProducts.map(product => (
+                              <tr 
+                                key={product.id}
+                                onClick={selectionMode ? () => toggleProductSelection(product.id) : undefined}
+                                style={{ cursor: selectionMode ? 'pointer' : 'default', background: selectedProducts.includes(product.id) ? 'rgba(79, 106, 245, 0.05)' : undefined }}
+                              >
+                                {selectionMode && (
+                                  <td>
+                                    <div style={{ 
+                                      width: '20px', 
+                                      height: '20px', 
+                                      borderRadius: '50%', 
+                                      border: selectedProducts.includes(product.id) ? 'none' : '2px solid var(--border-color)',
+                                      background: selectedProducts.includes(product.id) ? 'var(--primary-color)' : 'transparent',
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      justifyContent: 'center',
+                                      color: 'white'
+                                    }}>
+                                      {selectedProducts.includes(product.id) && <FiCheck size={12} />}
+                                    </div>
+                                  </td>
+                                )}
+                                <td>
+                                  {product.sorting_code ? (
+                                    <span style={{ 
+                                      fontFamily: "'JetBrains Mono', monospace", 
+                                      fontWeight: 600, 
+                                      fontSize: '12px',
+                                      letterSpacing: '0.5px',
+                                      background: 'rgba(79, 106, 245, 0.1)',
+                                      color: 'var(--primary-color)',
+                                      padding: '4px 8px',
+                                      borderRadius: '4px'
+                                    }}>
+                                      {product.sorting_code}
+                                    </span>
+                                  ) : (
+                                    <span style={{ color: 'var(--text-tertiary)', fontSize: '12px' }}>—</span>
+                                  )}
+                                </td>
+                                <td>
+                                  <div>
+                                    <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{product.name}</div>
+                                    {product.description && (
+                                      <div style={{ fontSize: '12px', color: 'var(--text-tertiary)', marginTop: '2px' }}>{product.description}</div>
+                                    )}
+                                  </div>
+                                </td>
+                                <td style={{ fontWeight: 500 }}>{formatCurrency(product.cost_of_production)}</td>
+                                <td>
+                                  <span className="badge badge-info">
+                                    {product.markup_amount && Number(product.markup_amount) > 0
+                                      ? formatCurrency(Number(product.markup_amount))
+                                      : `${product.markup_percentage}%`}
+                                  </span>
+                                </td>
+                                <td style={{ fontWeight: 700, color: 'var(--primary-color)' }}>{formatCurrency(product.sales_price)}</td>
+                                <td style={{ fontWeight: 600, color: 'var(--success-text)' }}>{formatCurrency(product.profit, { showSign: true })}</td>
+                                <td>
+                                  <span className={`badge ${product.stock_quantity < lowStockThreshold ? 'badge-danger' : product.stock_quantity < warningThreshold ? 'badge-warning' : 'badge-success'}`}>
+                                    {product.stock_quantity} units
+                                  </span>
+                                </td>
+                                {!selectionMode && (
+                                  <td>
+                                    <div style={{ display: 'flex', gap: '8px' }}>
+                                      <button 
+                                        className="secondary" 
+                                        style={{ padding: '8px', width: '36px', height: '36px', borderRadius: '50%' }}
+                                        onClick={() => navigate(`/inventory/edit/${product.id}`)}
+                                      >
+                                        <FiEdit2 size={16} />
+                                      </button>
+                                      <button 
+                                        className="secondary" 
+                                        style={{ padding: '8px', width: '36px', height: '36px', borderRadius: '50%', color: 'var(--danger-text)' }}
+                                        onClick={() => handleDelete(product.id)}
+                                      >
+                                        <FiTrash2 size={16} />
+                                      </button>
+                                    </div>
+                                  </td>
+                                )}
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        ) : (
+          /* Normal Table View */
+          <>
+            <div className="table-container">
+              {loadingProducts ? (
+                <SkeletonTable rows={8} cols={6} />
+              ) : (
+                <table>
+                  <thead>
+                    <tr>
+                      {selectionMode && <th style={{ width: '40px' }}></th>}
+                      <th>Code</th>
+                      <th>Product</th>
+                      <th>Cost of Production</th>
+                      <th>Markup</th>
+                      <th>Sales Price</th>
+                      <th>Profit/Unit</th>
+                      <th>Stock</th>
+                      {!selectionMode && <th>Actions</th>}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {paginatedProducts.map(product => (
+                      <tr 
+                        key={product.id}
+                        onClick={selectionMode ? () => toggleProductSelection(product.id) : undefined}
+                        style={{ cursor: selectionMode ? 'pointer' : 'default', background: selectedProducts.includes(product.id) ? 'rgba(79, 106, 245, 0.05)' : undefined }}
+                      >
+                        {selectionMode && (
+                          <td>
+                            <div style={{ 
+                              width: '20px', 
+                              height: '20px', 
+                              borderRadius: '50%', 
+                              border: selectedProducts.includes(product.id) ? 'none' : '2px solid var(--border-color)',
+                              background: selectedProducts.includes(product.id) ? 'var(--primary-color)' : 'transparent',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              color: 'white'
+                            }}>
+                              {selectedProducts.includes(product.id) && <FiCheck size={12} />}
+                            </div>
+                          </td>
+                        )}
+                      <td>
+                        {product.sorting_code ? (
+                          <span style={{ 
+                            fontFamily: "'JetBrains Mono', monospace", 
+                            fontWeight: 600, 
+                            fontSize: '12px',
+                            letterSpacing: '0.5px',
+                            background: 'rgba(79, 106, 245, 0.1)',
+                            color: 'var(--primary-color)',
+                            padding: '4px 8px',
+                            borderRadius: '4px'
+                          }}>
+                            {product.sorting_code}
+                          </span>
+                        ) : (
+                          <span style={{ color: 'var(--text-tertiary)', fontSize: '12px' }}>—</span>
+                        )}
+                      </td>
+                      <td>
+                        <div>
+                          <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{product.name}</div>
+                          {product.description && (
+                            <div style={{ fontSize: '12px', color: 'var(--text-tertiary)', marginTop: '2px' }}>{product.description}</div>
+                          )}
                         </div>
                       </td>
-                    )}
-                  <td>
-                    {product.sorting_code ? (
-                      <span style={{ 
-                        fontFamily: "'JetBrains Mono', monospace", 
-                        fontWeight: 600, 
-                        fontSize: '12px',
-                        letterSpacing: '0.5px',
-                        background: 'rgba(79, 106, 245, 0.1)',
-                        color: 'var(--primary-color)',
-                        padding: '4px 8px',
-                        borderRadius: '4px'
-                      }}>
-                        {product.sorting_code}
-                      </span>
-                    ) : (
-                      <span style={{ color: 'var(--text-tertiary)', fontSize: '12px' }}>—</span>
-                    )}
-                  </td>
-                  <td>
-                    <div>
-                      <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{product.name}</div>
-                      {product.description && (
-                        <div style={{ fontSize: '12px', color: 'var(--text-tertiary)', marginTop: '2px' }}>{product.description}</div>
+                      <td style={{ fontWeight: 500 }}>{formatCurrency(product.cost_of_production)}</td>
+                      <td>
+                        <span className="badge badge-info">
+                          {product.markup_amount && Number(product.markup_amount) > 0
+                            ? formatCurrency(Number(product.markup_amount))
+                            : `${product.markup_percentage}%`}
+                        </span>
+                      </td>
+                      <td style={{ fontWeight: 700, color: 'var(--primary-color)' }}>{formatCurrency(product.sales_price)}</td>
+                      <td style={{ fontWeight: 600, color: 'var(--success-text)' }}>{formatCurrency(product.profit, { showSign: true })}</td>
+                      <td>
+                        <span className={`badge ${product.stock_quantity < lowStockThreshold ? 'badge-danger' : product.stock_quantity < warningThreshold ? 'badge-warning' : 'badge-success'}`}>
+                          {product.stock_quantity} units
+                        </span>
+                      </td>
+                      {!selectionMode && (
+                        <td>
+                          <div style={{ display: 'flex', gap: '8px' }}>
+                            <button 
+                              className="secondary" 
+                              style={{ padding: '8px', width: '36px', height: '36px', borderRadius: '50%' }}
+                              onClick={() => navigate(`/inventory/edit/${product.id}`)}
+                            >
+                              <FiEdit2 size={16} />
+                            </button>
+                            <button 
+                              className="secondary" 
+                              style={{ padding: '8px', width: '36px', height: '36px', borderRadius: '50%', color: 'var(--danger-text)' }}
+                              onClick={() => handleDelete(product.id)}
+                            >
+                              <FiTrash2 size={16} />
+                            </button>
+                          </div>
+                        </td>
                       )}
-                    </div>
-                  </td>
-                  <td style={{ fontWeight: 500 }}>{formatCurrency(product.cost_of_production)}</td>
-                  <td>
-                    <span className="badge badge-info">
-                      {product.markup_amount && Number(product.markup_amount) > 0
-                        ? formatCurrency(Number(product.markup_amount))
-                        : `${product.markup_percentage}%`}
-                    </span>
-                  </td>
-                  <td style={{ fontWeight: 700, color: 'var(--primary-color)' }}>{formatCurrency(product.sales_price)}</td>
-                  <td style={{ fontWeight: 600, color: 'var(--success-text)' }}>{formatCurrency(product.profit, { showSign: true })}</td>
-                  <td>
-                    <span className={`badge ${product.stock_quantity < lowStockThreshold ? 'badge-danger' : product.stock_quantity < warningThreshold ? 'badge-warning' : 'badge-success'}`}>
-                      {product.stock_quantity} units
-                    </span>
-                  </td>
-                  {!selectionMode && (
-                    <td>
-                      <div style={{ display: 'flex', gap: '8px' }}>
-                        <button 
-                          className="secondary" 
-                          style={{ padding: '8px', width: '36px', height: '36px', borderRadius: '50%' }}
-                          onClick={() => navigate(`/inventory/edit/${product.id}`)}
-                        >
-                          <FiEdit2 size={16} />
-                        </button>
-                        <button 
-                          className="secondary" 
-                          style={{ padding: '8px', width: '36px', height: '36px', borderRadius: '50%', color: 'var(--danger-text)' }}
-                          onClick={() => handleDelete(product.id)}
-                        >
-                          <FiTrash2 size={16} />
-                        </button>
-                      </div>
-                    </td>
+                    </tr>
+                  ))}
+                  {products.length === 0 && (
+                    <tr>
+                      <td colSpan="9" style={{ textAlign: 'center', padding: '48px', color: 'var(--text-secondary)' }}>
+                        <FiPackage size={40} style={{ opacity: 0.3, marginBottom: '12px' }} />
+                        <p style={{ margin: 0, fontWeight: 500 }}>No products yet</p>
+                        <p style={{ margin: '4px 0 0 0', fontSize: '13px' }}>Add your first product to get started</p>
+                      </td>
+                    </tr>
                   )}
-                </tr>
-              ))}
-              {products.length === 0 && (
-                <tr>
-                  <td colSpan="9" style={{ textAlign: 'center', padding: '48px', color: 'var(--text-secondary)' }}>
-                    <FiPackage size={40} style={{ opacity: 0.3, marginBottom: '12px' }} />
-                    <p style={{ margin: 0, fontWeight: 500 }}>No products yet</p>
-                    <p style={{ margin: '4px 0 0 0', fontSize: '13px' }}>Add your first product to get started</p>
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        )}
-      </div>
+                </tbody>
+              </table>
+            )}
+          </div>
 
-      {products.length > 0 && (
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '16px', flexWrap: 'wrap', gap: '12px' }}>
-          <div style={{ fontSize: '13px', color: 'var(--text-tertiary)' }}>
-            Page {currentPage} of {totalPages}
-          </div>
-          <div style={{ display: 'flex', gap: '8px' }}>
-            <button
-              className="secondary"
-              onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
-              disabled={currentPage <= 1}
-              style={{ padding: '8px 14px', borderRadius: '999px' }}
-            >
-              Previous
-            </button>
-            <button
-              onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
-              disabled={currentPage >= totalPages}
-              style={{ padding: '8px 14px', borderRadius: '999px' }}
-            >
-              Next
-            </button>
-          </div>
-        </div>
-      )}
+          {products.length > 0 && (
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '16px', flexWrap: 'wrap', gap: '12px' }}>
+              <div style={{ fontSize: '13px', color: 'var(--text-tertiary)' }}>
+                Page {currentPage} of {totalPages}
+              </div>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <button
+                  className="secondary"
+                  onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                  disabled={currentPage <= 1}
+                  style={{ padding: '8px 14px', borderRadius: '999px' }}
+                >
+                  Previous
+                </button>
+                <button
+                  onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+                  disabled={currentPage >= totalPages}
+                  style={{ padding: '8px 14px', borderRadius: '999px' }}
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+          )}
+        </>
+        )}
     </div>
 
       {/* Delete Confirmation Modal */}
