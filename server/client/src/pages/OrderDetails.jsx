@@ -184,8 +184,9 @@ Sent from Ryme Inventory`;
     const tableStartY = row2Y + 30;
     const hasItemDiscounts = order.items.some(item => (item.discount_percentage || 0) > 0);
     
+    // Updated: Added SUBTOTAL column to show original price before discount
     const tableColumn = hasItemDiscounts 
-        ? ["S/N", "ITEM", "QTY", "RATE", "DISC.", "AMOUNT"]
+        ? ["S/N", "ITEM", "QTY", "RATE", "SUBTOTAL", "DISC.", "FINAL"]
         : ["S/N", "ITEM", "QTY", "RATE", "AMOUNT"];
         
     const tableRows = [];
@@ -193,9 +194,13 @@ Sent from Ryme Inventory`;
 
     order.items.forEach((item, index) => {
       const discount = item.discount_percentage || 0;
+      const originalTotal = item.sales_price_at_time * item.quantity;
       const effectiveTotal = (item.sales_price_at_time * (1 - discount / 100)) * item.quantity;
       const itemData = [index + 1, item.product_name, item.quantity, safeCurrency(item.sales_price_at_time)];
-      if (hasItemDiscounts) itemData.push(discount > 0 ? `-${discount}%` : "-");
+      if (hasItemDiscounts) {
+        itemData.push(safeCurrency(originalTotal)); // Subtotal before discount
+        itemData.push(discount > 0 ? `-${discount}%` : "-");
+      }
       itemData.push(safeCurrency(effectiveTotal));
       tableRows.push(itemData);
     });
@@ -407,9 +412,9 @@ Sent from Ryme Inventory`;
     // Check if any item has a discount to dynamically add column
     const hasItemDiscounts = order.items.some(item => (item.discount_percentage || 0) > 0);
     
-    // Updated: Added S/N column and Discount column if needed
+    // Updated: Added S/N column, SUBTOTAL column (before discount), Discount column if needed
     const tableColumn = hasItemDiscounts 
-        ? ["S/N", "ITEM", "QTY", "RATE", "DISC.", "AMOUNT"]
+        ? ["S/N", "ITEM", "QTY", "RATE", "SUBTOTAL", "DISC.", "FINAL"]
         : ["S/N", "ITEM", "QTY", "RATE", "AMOUNT"];
         
     const tableRows = [];
@@ -422,17 +427,19 @@ Sent from Ryme Inventory`;
 
     order.items.forEach((item, index) => {
       const discount = item.discount_percentage || 0;
+      const originalTotal = item.sales_price_at_time * item.quantity;
       const effectiveTotal = (item.sales_price_at_time * (1 - discount / 100)) * item.quantity;
       
       const itemData = [
         index + 1, // S/N
-        item.product_name, // Removed sorting code from invoice name
+        item.product_name,
         item.quantity,
         safeCurrency(item.sales_price_at_time),
       ];
 
       if (hasItemDiscounts) {
-          itemData.push(""); // Placeholder for Disc column (drawn manually)
+          itemData.push(safeCurrency(originalTotal)); // Subtotal before discount
+          itemData.push(""); // Placeholder for Disc column (drawn manually as badge)
       }
 
       itemData.push(safeCurrency(effectiveTotal));
@@ -468,10 +475,11 @@ Sent from Ryme Inventory`;
       columnStyles: hasItemDiscounts ? {
         0: { cellWidth: 8, halign: 'center', textColor: secondaryColor }, // S/N
         1: { cellWidth: 'auto', fontStyle: 'bold' }, // Item
-        2: { cellWidth: 12, halign: 'center', textColor: secondaryColor }, // Qty
-        3: { cellWidth: 30, halign: 'right', textColor: secondaryColor }, // Rate
-        4: { cellWidth: 15, halign: 'center' }, // Disc
-        5: { cellWidth: 35, halign: 'right', fontStyle: 'bold' }, // Amount
+        2: { cellWidth: 10, halign: 'center', textColor: secondaryColor }, // Qty
+        3: { cellWidth: 22, halign: 'right', textColor: secondaryColor }, // Rate
+        4: { cellWidth: 28, halign: 'right', textColor: secondaryColor }, // Subtotal (before discount)
+        5: { cellWidth: 14, halign: 'center' }, // Disc
+        6: { cellWidth: 28, halign: 'right', fontStyle: 'bold' }, // Final (after discount)
       } : {
         0: { cellWidth: 10, halign: 'center', textColor: secondaryColor }, // S/N
         1: { cellWidth: 'auto', fontStyle: 'bold' }, // Item
@@ -484,16 +492,16 @@ Sent from Ryme Inventory`;
         if (data.section === 'head') {
             if (data.column.index === 0 || data.column.index === 2) data.cell.styles.halign = 'center';
             if (hasItemDiscounts) {
-                 if (data.column.index === 3 || data.column.index === 5) data.cell.styles.halign = 'right';
-                 if (data.column.index === 4) data.cell.styles.halign = 'center';
+                 if (data.column.index === 3 || data.column.index === 4 || data.column.index === 6) data.cell.styles.halign = 'right';
+                 if (data.column.index === 5) data.cell.styles.halign = 'center';
             } else {
                  if (data.column.index === 3 || data.column.index === 4) data.cell.styles.halign = 'right';
             }
         }
       },
       didDrawCell: (data) => {
-        // Draw badge in Discount column if applicable
-        if (hasItemDiscounts && data.section === 'body' && data.column.index === 4) {
+        // Draw badge in Discount column if applicable (now index 5 with SUBTOTAL column)
+        if (hasItemDiscounts && data.section === 'body' && data.column.index === 5) {
             const item = order.items[data.row.index];
             if (item && item.discount_percentage > 0) {
                  const badgeText = `-${item.discount_percentage}%`;
