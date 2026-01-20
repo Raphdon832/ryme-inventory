@@ -1,8 +1,9 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { FiArrowLeft, FiPlus, FiCheck, FiTrash2, FiSearch, FiShoppingCart, FiUser, FiMapPin } from 'react-icons/fi';
+import { FiArrowLeft, FiPlus, FiCheck, FiTrash2, FiSearch, FiShoppingCart, FiUser, FiMapPin, FiAlertCircle, FiEdit2, FiMinus, FiPackage, FiClock, FiWifiOff, FiRefreshCw } from 'react-icons/fi';
 import api from '../api';
 import { useSettings } from '../contexts/SettingsContext';
+import offlineManager from '../utils/offlineManager';
 import './CreateOrder.css';
 
 const CreateOrder = () => {
@@ -10,15 +11,24 @@ const CreateOrder = () => {
   const navigate = useNavigate();
   const { formatCurrency, currencySymbol } = useSettings();
   const isEditing = Boolean(id);
+  const isOfflineOrder = id?.startsWith('offline_');
   
   const [products, setProducts] = useState([]);
   const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [orderLoading, setOrderLoading] = useState(isEditing);
   const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState(null);
+  const [successMessage, setSuccessMessage] = useState(null);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const [offlineStatus, setOfflineStatus] = useState({ pendingCount: 0, offlineOrdersCount: 0 });
   const [productSearch, setProductSearch] = useState('');
   const [customerSearch, setCustomerSearch] = useState('');
   const [showProductDropdown, setShowProductDropdown] = useState(false);
   const [showCustomerDropdown, setShowCustomerDropdown] = useState(false);
+  const [editingItemIndex, setEditingItemIndex] = useState(null);
+  const [originalOrder, setOriginalOrder] = useState(null);
   const productSearchRef = useRef(null);
   const customerSearchRef = useRef(null);
 
@@ -27,7 +37,9 @@ const CreateOrder = () => {
     customer_name: '',
     customer_address: '',
     items: [],
-    discount: { type: 'none', value: 0 }
+    discount: { type: 'none', value: 0 },
+    status: 'pending',
+    order_number: ''
   });
 
   const [currentItem, setCurrentItem] = useState({
@@ -35,6 +47,19 @@ const CreateOrder = () => {
     quantity: 1,
     discount: 0
   });
+
+  // Subscribe to offline status
+  useEffect(() => {
+    const unsubscribe = offlineManager.subscribe((status) => {
+      setIsOnline(status.isOnline);
+      setOfflineStatus(status);
+    });
+    
+    // Get initial status
+    offlineManager.getStatus().then(setOfflineStatus);
+    
+    return () => unsubscribe();
+  }, []);
 
   // Load products
   useEffect(() => {
@@ -57,36 +82,91 @@ const CreateOrder = () => {
   useEffect(() => {
     if (isEditing && products.length > 0) {
       const fetchOrder = async () => {
+        setOrderLoading(true);
+        setError(null);
         try {
-          const response = await api.get(`/orders/${id}`);
-          const order = response.data;
-          setOrderData({
+          let order;
+          
+          // Check if this is an offline order
+          if (isOfflineOrder) {
+            order = await offlineManager.getOfflineOrder(id);
+            if (!order) {
+              setError('Offline order not found');
+              setTimeout(() => navigate('/orders'), 2000);
+              return;
+            }
+          } else {
+            const response = await api.get(`/orders/${id}`);
+            order = response.data?.data || response.data;
+            if (!order) {
+              setError('Order not found');
+              setTimeout(() => navigate('/orders'), 2000);
+              return;
+            }
+          }
+          
+          const orderItems = order.items || [];
+          const loadedOrderData = {
             customer_id: order.customer_id || '',
-            customer_name: order.customer_name,
+            customer_name: order.customer_name || '',
             customer_address: order.customer_address || '',
-            items: order.items.map(item => {
+            items: orderItems.map(item => {
               const product = products.find(p => p.id === item.product_id);
               return {
                 ...item,
                 product_name: item.product_name || (product ? product.name : 'Unknown Product'),
-                sales_price: item.sales_price_at_time || (product ? product.sales_price : 0),
+                sales_price: item.sales_price_at_time || item.sales_price || (product ? product.sales_price : 0),
                 cost: item.profit_at_time === undefined 
-                  ? (product ? product.cost_of_production : 0) 
+                  ? (item.cost || (product ? product.cost_of_production : 0))
                   : (item.sales_price_at_time - item.profit_at_time),
-                stock: product ? product.stock_quantity : 0
+                stock: product ? product.stock_quantity : 0,
+                original_quantity: item.quantity,
+                discount_percentage: item.discount_percentage || 0
               };
             }),
-            discount: order.discount || { type: 'none', value: 0 }
-          });
+            discount: order.discount || { type: 'none', value: 0 },
+            status: order.status || 'pending',
+            order_number: order.order_number || '',
+            _offline: order._offline || false
+          };
+          setOrderData(loadedOrderData);
+          setOriginalOrder(loadedOrderData);
           setCustomerSearch(order.customer_name || '');
         } catch (error) {
           console.error('Error fetching order:', error);
-          navigate('/orders');
+          setError('Failed to load order. Redirecting...');
+          setTimeout(() => navigate('/orders'), 2000);
+        } finally {
+          setOrderLoading(false);
         }
       };
       fetchOrder();
     }
-  }, [id, isEditing, products, navigate]);
+  }, [id, isEditing, isOfflineOrder, products, navigate]);
+
+  // Track unsaved changes
+  useEffect(() => {
+    if (isEditing && originalOrder) {
+      const hasChanges = JSON.stringify(orderData) !== JSON.stringify(originalOrder);
+      setHasUnsavedChanges(hasChanges);
+    } else if (!isEditing && (orderData.customer_name || orderData.items.length > 0)) {
+      setHasUnsavedChanges(true);
+    } else {
+      setHasUnsavedChanges(false);
+    }
+  }, [orderData, originalOrder, isEditing]);
+
+  // Warn before leaving with unsaved changes
+  useEffect(() => {
+    const handleBeforeUnload = (e) => {
+      if (hasUnsavedChanges) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [hasUnsavedChanges]);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -145,6 +225,17 @@ const CreateOrder = () => {
     const product = products.find(p => p.id === currentItem.product_id);
     if (!product) return;
 
+    // Validate stock
+    const existingItem = orderData.items.find(i => i.product_id === currentItem.product_id);
+    const currentQtyInOrder = existingItem ? existingItem.quantity : 0;
+    const availableStock = product.stock_quantity + (existingItem?.original_quantity || 0);
+    
+    if (currentQtyInOrder + Number(currentItem.quantity) > availableStock) {
+      setError(`Cannot add more than ${availableStock} units of ${product.name} (${availableStock - currentQtyInOrder} available)`);
+      setTimeout(() => setError(null), 3000);
+      return;
+    }
+
     const existingIndex = orderData.items.findIndex(i => i.product_id === currentItem.product_id);
     const discount = Number(currentItem.discount) || 0;
     
@@ -165,13 +256,42 @@ const CreateOrder = () => {
           profit: product.profit,
           cost: product.cost_of_production,
           stock: product.stock_quantity,
-          sorting_code: product.sorting_code
+          sorting_code: product.sorting_code,
+          original_quantity: 0
         }]
       });
     }
     setCurrentItem({ product_id: '', quantity: 1, discount: 0 });
     setProductSearch('');
     setShowProductDropdown(false);
+  };
+
+  const handleUpdateItemQuantity = (index, newQuantity) => {
+    const item = orderData.items[index];
+    const product = products.find(p => p.id === item.product_id);
+    const availableStock = (product?.stock_quantity || 0) + (item.original_quantity || 0);
+    
+    if (newQuantity > availableStock) {
+      setError(`Maximum available: ${availableStock} units`);
+      setTimeout(() => setError(null), 3000);
+      return;
+    }
+    
+    if (newQuantity < 1) {
+      handleRemoveItem(index);
+      return;
+    }
+    
+    const updatedItems = [...orderData.items];
+    updatedItems[index].quantity = newQuantity;
+    setOrderData({ ...orderData, items: updatedItems });
+    setEditingItemIndex(null);
+  };
+
+  const handleUpdateItemDiscount = (index, newDiscount) => {
+    const updatedItems = [...orderData.items];
+    updatedItems[index].discount_percentage = Math.min(100, Math.max(0, newDiscount));
+    setOrderData({ ...orderData, items: updatedItems });
   };
 
   const handleRemoveItem = (index) => {
@@ -182,32 +302,136 @@ const CreateOrder = () => {
   const handleSubmit = async () => {
     if (!orderData.customer_name || orderData.items.length === 0) return;
     setSubmitting(true);
+    setError(null);
+    setSuccessMessage(null);
 
+    try {
+      // Prepare order payload with full item details for offline storage
+      const orderPayload = {
+        customer_id: orderData.customer_id || '',
+        customer_name: orderData.customer_name,
+        customer_address: orderData.customer_address,
+        items: orderData.items.map(item => ({ 
+          product_id: item.product_id,
+          product_name: item.product_name,
+          quantity: item.quantity,
+          discount_percentage: item.discount_percentage || 0,
+          sales_price: item.sales_price,
+          cost: item.cost
+        })),
+        discount: orderData.discount
+      };
+
+      // Check if we're online
+      if (!isOnline) {
+        // Save offline
+        if (isEditing) {
+          if (isOfflineOrder) {
+            // Update existing offline order
+            await offlineManager.updateOfflineOrder(id, orderPayload);
+            setSuccessMessage('Order updated offline. Will sync when online.');
+          } else {
+            // Create offline update for existing server order
+            await offlineManager.saveOfflineOrder({
+              ...orderPayload,
+              isEdit: true,
+              originalId: id
+            });
+            setSuccessMessage('Order update saved offline. Will sync when online.');
+          }
+        } else {
+          // Create new offline order
+          await offlineManager.saveOfflineOrder(orderPayload);
+          setSuccessMessage('Order saved offline. Will sync when online.');
+        }
+        
+        setHasUnsavedChanges(false);
+        setTimeout(() => navigate('/orders'), 1500);
+        return;
+      }
+
+      // Online mode - normal save
+      if (isEditing) {
+        if (isOfflineOrder) {
+          // Sync the offline order to server first
+          const { _offline, status: offlineStatus, createdAt, updatedAt, tempId, ...cleanPayload } = orderPayload;
+          await api.post('/orders', cleanPayload);
+          await offlineManager.deleteOfflineOrder(id);
+        } else {
+          await api.put(`/orders/${id}`, orderPayload);
+        }
+      } else {
+        await api.post('/orders', orderPayload);
+      }
+
+      setHasUnsavedChanges(false);
+      navigate('/orders');
+    } catch (error) {
+      console.error('Error saving order:', error);
+      
+      // If online save failed, offer to save offline
+      if (isOnline) {
+        setError(`${error.message || 'Failed to save order.'} Would you like to save offline?`);
+      } else {
+        setError(error.message || 'Failed to save order. Please try again.');
+      }
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleSaveOffline = async () => {
+    setSubmitting(true);
+    setError(null);
+    
     try {
       const orderPayload = {
         customer_id: orderData.customer_id || '',
         customer_name: orderData.customer_name,
         customer_address: orderData.customer_address,
         items: orderData.items.map(item => ({ 
-          product_id: item.product_id, 
+          product_id: item.product_id,
+          product_name: item.product_name,
           quantity: item.quantity,
-          discount_percentage: item.discount_percentage
+          discount_percentage: item.discount_percentage || 0,
+          sales_price: item.sales_price,
+          cost: item.cost
         })),
         discount: orderData.discount
       };
 
-      if (isEditing) {
-        await api.put(`/orders/${id}`, orderPayload);
+      if (isEditing && !isOfflineOrder) {
+        await offlineManager.saveOfflineOrder({
+          ...orderPayload,
+          isEdit: true,
+          originalId: id
+        });
       } else {
-        await api.post('/orders', orderPayload);
+        await offlineManager.saveOfflineOrder(orderPayload);
       }
-
-      navigate('/orders');
-    } catch (error) {
-      console.error('Error saving order:', error);
+      
+      setSuccessMessage('Order saved offline successfully!');
+      setHasUnsavedChanges(false);
+      setTimeout(() => navigate('/orders'), 1500);
+    } catch (err) {
+      setError('Failed to save offline. Please try again.');
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const handleCancel = () => {
+    if (hasUnsavedChanges) {
+      if (window.confirm('You have unsaved changes. Are you sure you want to leave?')) {
+        navigate('/orders');
+      }
+    } else {
+      navigate('/orders');
+    }
+  };
+
+  const getTotalItems = () => {
+    return orderData.items.reduce((acc, item) => acc + item.quantity, 0);
   };
 
   const calculateSubtotal = () => {
@@ -244,30 +468,111 @@ const CreateOrder = () => {
     return (totalSales - totalCost) - calculateDiscountAmount();
   };
 
-  if (loading) {
+  if (loading || orderLoading) {
     return (
-      <div className="create-order-loading">
-        <div className="loading-spinner"></div>
-        <p>Loading...</p>
+      <div className="create-order-page">
+        <div className="create-order-loading">
+          <div className="loading-spinner"></div>
+          <p>{orderLoading ? 'Loading order data...' : 'Loading products...'}</p>
+        </div>
       </div>
     );
   }
 
+  if (error && !orderData.customer_name && isEditing) {
+    return (
+      <div className="create-order-page">
+        <div className="create-order-loading">
+          <FiAlertCircle size={48} className="error-icon" />
+          <p className="error-message">{error}</p>
+        </div>
+      </div>
+    );
+  }
+
+  const getStatusBadgeClass = (status) => {
+    const statusMap = {
+      pending: 'status-pending',
+      processing: 'status-processing',
+      completed: 'status-completed',
+      cancelled: 'status-cancelled'
+    };
+    return statusMap[status] || 'status-pending';
+  };
+
   return (
     <div className="create-order-page">
+      {/* Offline Banner */}
+      {!isOnline && (
+        <div className="offline-banner">
+          <FiWifiOff size={16} />
+          <span>You're offline. Orders will be saved locally and synced when you're back online.</span>
+        </div>
+      )}
+
+      {/* Success Toast */}
+      {successMessage && (
+        <div className="success-toast">
+          <FiCheck size={18} />
+          <span>{successMessage}</span>
+          <button onClick={() => setSuccessMessage(null)}>&times;</button>
+        </div>
+      )}
+
+      {/* Error Toast */}
+      {error && (
+        <div className="error-toast">
+          <FiAlertCircle size={18} />
+          <span>{error}</span>
+          {error.includes('save offline') && (
+            <button className="save-offline-btn" onClick={handleSaveOffline}>
+              Save Offline
+            </button>
+          )}
+          <button onClick={() => setError(null)}>&times;</button>
+        </div>
+      )}
+
       {/* Header */}
       <div className="create-order-header">
         <div className="header-left">
-          <h1 className="create-order-title">{isEditing ? 'Edit Order' : 'Create Order'}</h1>
-          <Link to="/orders" className="back-link">
+          <h1 className="create-order-title">
+            {isEditing ? 'Edit Order' : 'Create Order'}
+            {isEditing && orderData.order_number && (
+              <span className="order-number-badge">#{orderData.order_number}</span>
+            )}
+            {isOfflineOrder && (
+              <span className="offline-order-badge">
+                <FiWifiOff size={12} /> Offline
+              </span>
+            )}
+          </h1>
+          <Link to="/orders" className="back-link" onClick={(e) => { if (hasUnsavedChanges && !window.confirm('You have unsaved changes. Are you sure you want to leave?')) e.preventDefault(); }}>
             <FiArrowLeft />
             <span>Back to Orders</span>
           </Link>
         </div>
+        {isEditing && (
+          <div className="order-meta-info">
+            <span className={`status-badge ${getStatusBadgeClass(orderData.status)}`}>
+              {orderData.status?.charAt(0).toUpperCase() + orderData.status?.slice(1)}
+            </span>
+            {hasUnsavedChanges && (
+              <span className="unsaved-badge">
+                <FiEdit2 size={12} /> Unsaved changes
+              </span>
+            )}
+          </div>
+        )}
         <div className="header-actions">
+          {!isOnline && (
+            <span className="offline-indicator">
+              <FiWifiOff size={14} />
+            </span>
+          )}
           <button 
             className="btn-secondary"
-            onClick={() => navigate('/orders')}
+            onClick={handleCancel}
           >
             Cancel
           </button>
@@ -277,9 +582,9 @@ const CreateOrder = () => {
             disabled={!orderData.customer_name || orderData.items.length === 0 || submitting}
           >
             {submitting ? (
-              <><span className="btn-spinner"></span> {isEditing ? 'Updating...' : 'Creating...'}</>
+              <><span className="btn-spinner"></span> {isOnline ? (isEditing ? 'Updating...' : 'Creating...') : 'Saving...'}</>
             ) : (
-              <><FiCheck size={16} /> {isEditing ? 'Update Order' : 'Create Order'}</>
+              <><FiCheck size={16} /> {isOnline ? (isEditing ? 'Update Order' : 'Create Order') : 'Save Offline'}</>
             )}
           </button>
         </div>
@@ -441,7 +746,8 @@ const CreateOrder = () => {
             {orderData.items.length > 0 && (
               <div className="items-table-wrapper">
                 <div className="items-count">
-                  <span>{orderData.items.length} item{orderData.items.length !== 1 ? 's' : ''} in order</span>
+                  <FiPackage size={14} />
+                  <span>{orderData.items.length} product{orderData.items.length !== 1 ? 's' : ''} ({getTotalItems()} items total)</span>
                 </div>
                 <div className="table-container">
                   <table className="items-table">
@@ -462,13 +768,69 @@ const CreateOrder = () => {
                         const effectivePrice = item.sales_price * (1 - discount / 100);
                         const subtotal = effectivePrice * item.quantity;
                         const profit = (effectivePrice - item.cost) * item.quantity;
+                        const product = products.find(p => p.id === item.product_id);
+                        const availableStock = (product?.stock_quantity || 0) + (item.original_quantity || 0);
                         
                         return (
-                          <tr key={index}>
-                            <td className="product-cell">{item.product_name}</td>
-                            <td>{item.quantity}</td>
+                          <tr key={index} className={editingItemIndex === index ? 'editing' : ''}>
+                            <td className="product-cell">
+                              <div className="product-cell-content">
+                                <span className="product-name-text">{item.product_name}</span>
+                                {item.sorting_code && <span className="product-code-small">{item.sorting_code}</span>}
+                              </div>
+                            </td>
+                            <td className="quantity-cell">
+                              <div className="quantity-controls">
+                                <button 
+                                  className="qty-btn"
+                                  onClick={() => handleUpdateItemQuantity(index, item.quantity - 1)}
+                                  disabled={item.quantity <= 1}
+                                >
+                                  <FiMinus size={12} />
+                                </button>
+                                <input
+                                  type="number"
+                                  className="qty-input"
+                                  value={item.quantity}
+                                  min="1"
+                                  max={availableStock}
+                                  onChange={(e) => handleUpdateItemQuantity(index, parseInt(e.target.value) || 1)}
+                                />
+                                <button 
+                                  className="qty-btn"
+                                  onClick={() => handleUpdateItemQuantity(index, item.quantity + 1)}
+                                  disabled={item.quantity >= availableStock}
+                                >
+                                  <FiPlus size={12} />
+                                </button>
+                              </div>
+                              {availableStock < 10 && (
+                                <span className="stock-warning">{availableStock} left</span>
+                              )}
+                            </td>
                             <td>{formatCurrency(item.sales_price)}</td>
-                            <td>{discount > 0 ? <span className="badge badge-warning">{discount}%</span> : '-'}</td>
+                            <td>
+                              {editingItemIndex === index ? (
+                                <input
+                                  type="number"
+                                  className="discount-edit-input"
+                                  value={discount}
+                                  min="0"
+                                  max="100"
+                                  onChange={(e) => handleUpdateItemDiscount(index, parseInt(e.target.value) || 0)}
+                                  onBlur={() => setEditingItemIndex(null)}
+                                  autoFocus
+                                />
+                              ) : (
+                                <span 
+                                  className={`discount-display ${discount > 0 ? 'has-discount' : ''}`}
+                                  onClick={() => setEditingItemIndex(index)}
+                                  title="Click to edit discount"
+                                >
+                                  {discount > 0 ? <span className="badge badge-warning">{discount}%</span> : '-'}
+                                </span>
+                              )}
+                            </td>
                             <td className="subtotal-cell">{formatCurrency(subtotal)}</td>
                             <td className={`profit-cell ${profit >= 0 ? 'positive' : 'negative'}`}>
                               {formatCurrency(profit, { showSign: true })}
@@ -477,6 +839,7 @@ const CreateOrder = () => {
                               <button 
                                 className="remove-item-btn"
                                 onClick={() => handleRemoveItem(index)}
+                                title="Remove item"
                               >
                                 <FiTrash2 size={14} />
                               </button>

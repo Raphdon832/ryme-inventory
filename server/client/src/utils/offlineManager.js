@@ -3,8 +3,9 @@
  */
 
 const DB_NAME = 'RymeOfflineDB';
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 const STORE_NAME = 'pendingOperations';
+const OFFLINE_ORDERS_STORE = 'offlineOrders';
 
 class OfflineManager {
   constructor() {
@@ -47,6 +48,15 @@ class OfflineManager {
           store.createIndex('timestamp', 'timestamp', { unique: false });
           store.createIndex('type', 'type', { unique: false });
           store.createIndex('status', 'status', { unique: false });
+        }
+
+        // Store for offline-created orders (for optimistic UI)
+        if (!db.objectStoreNames.contains(OFFLINE_ORDERS_STORE)) {
+          const ordersStore = db.createObjectStore(OFFLINE_ORDERS_STORE, { 
+            keyPath: 'tempId'
+          });
+          ordersStore.createIndex('status', 'status', { unique: false });
+          ordersStore.createIndex('createdAt', 'createdAt', { unique: false });
         }
       };
     });
@@ -149,6 +159,113 @@ class OfflineManager {
     });
   }
 
+  // Save an offline order for optimistic UI
+  async saveOfflineOrder(orderData) {
+    const db = await this.ensureDB();
+    const tempId = `offline_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction([OFFLINE_ORDERS_STORE], 'readwrite');
+      const store = transaction.objectStore(OFFLINE_ORDERS_STORE);
+      
+      const offlineOrder = {
+        tempId,
+        ...orderData,
+        _offline: true,
+        status: 'pending_sync',
+        createdAt: new Date().toISOString()
+      };
+      
+      const request = store.add(offlineOrder);
+      
+      request.onsuccess = () => {
+        this.notifyListeners();
+        resolve(offlineOrder);
+      };
+      
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  // Get all offline orders
+  async getOfflineOrders() {
+    const db = await this.ensureDB();
+    
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction([OFFLINE_ORDERS_STORE], 'readonly');
+      const store = transaction.objectStore(OFFLINE_ORDERS_STORE);
+      const request = store.getAll();
+      
+      request.onsuccess = () => resolve(request.result || []);
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  // Get a specific offline order by tempId
+  async getOfflineOrder(tempId) {
+    const db = await this.ensureDB();
+    
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction([OFFLINE_ORDERS_STORE], 'readonly');
+      const store = transaction.objectStore(OFFLINE_ORDERS_STORE);
+      const request = store.get(tempId);
+      
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  // Update an offline order
+  async updateOfflineOrder(tempId, updates) {
+    const db = await this.ensureDB();
+    
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction([OFFLINE_ORDERS_STORE], 'readwrite');
+      const store = transaction.objectStore(OFFLINE_ORDERS_STORE);
+      const getRequest = store.get(tempId);
+      
+      getRequest.onsuccess = () => {
+        const order = getRequest.result;
+        if (order) {
+          const updated = { ...order, ...updates, updatedAt: new Date().toISOString() };
+          const putRequest = store.put(updated);
+          putRequest.onsuccess = () => {
+            this.notifyListeners();
+            resolve(updated);
+          };
+          putRequest.onerror = () => reject(putRequest.error);
+        } else {
+          reject(new Error('Offline order not found'));
+        }
+      };
+      
+      getRequest.onerror = () => reject(getRequest.error);
+    });
+  }
+
+  // Delete an offline order (after successful sync)
+  async deleteOfflineOrder(tempId) {
+    const db = await this.ensureDB();
+    
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction([OFFLINE_ORDERS_STORE], 'readwrite');
+      const store = transaction.objectStore(OFFLINE_ORDERS_STORE);
+      const request = store.delete(tempId);
+      
+      request.onsuccess = () => {
+        this.notifyListeners();
+        resolve();
+      };
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  // Get count of offline orders pending sync
+  async getOfflineOrdersCount() {
+    const orders = await this.getOfflineOrders();
+    return orders.filter(o => o.status === 'pending_sync').length;
+  }
+
   // Clear all completed/failed operations
   async clearCompleted() {
     const db = await this.ensureDB();
@@ -197,9 +314,12 @@ class OfflineManager {
   // Notify all listeners
   async notifyListeners() {
     const pendingCount = await this.getPendingCount();
+    const offlineOrdersCount = await this.getOfflineOrdersCount();
     const status = {
       isOnline: this.isOnline,
       pendingCount,
+      offlineOrdersCount,
+      totalPending: pendingCount + offlineOrdersCount,
       syncInProgress: this.syncInProgress
     };
     
@@ -214,6 +334,10 @@ class OfflineManager {
     this.notifyListeners();
     
     try {
+      // First, sync offline orders
+      await this.syncOfflineOrders();
+      
+      // Then sync other pending operations
       const pending = await this.getPendingOperations();
       
       // Sort by timestamp to maintain order
@@ -231,6 +355,42 @@ class OfflineManager {
     } finally {
       this.syncInProgress = false;
       this.notifyListeners();
+    }
+  }
+
+  // Sync offline orders specifically
+  async syncOfflineOrders() {
+    const offlineOrders = await this.getOfflineOrders();
+    const pendingOrders = offlineOrders.filter(o => o.status === 'pending_sync');
+    
+    for (const order of pendingOrders) {
+      try {
+        // Import api module for sync
+        const apiModule = await import('../api.js');
+        const api = apiModule.default;
+        
+        // Prepare order payload (remove offline-specific fields)
+        const { tempId, _offline, status, createdAt, updatedAt, ...orderPayload } = order;
+        
+        if (order.isEdit && order.originalId) {
+          // This was an edit to an existing order
+          await api.put(`/orders/${order.originalId}`, orderPayload);
+        } else {
+          // This was a new order
+          await api.post('/orders', orderPayload);
+        }
+        
+        // Mark as synced and delete
+        await this.deleteOfflineOrder(order.tempId);
+        console.log(`Synced offline order: ${order.tempId}`);
+      } catch (error) {
+        console.error(`Failed to sync offline order ${order.tempId}:`, error);
+        // Update status to failed after retries
+        await this.updateOfflineOrder(order.tempId, { 
+          status: 'sync_failed', 
+          lastError: error.message 
+        });
+      }
     }
   }
 
@@ -258,9 +418,12 @@ class OfflineManager {
   // Get current status
   async getStatus() {
     const pendingCount = await this.getPendingCount();
+    const offlineOrdersCount = await this.getOfflineOrdersCount();
     return {
       isOnline: this.isOnline,
       pendingCount,
+      offlineOrdersCount,
+      totalPending: pendingCount + offlineOrdersCount,
       syncInProgress: this.syncInProgress
     };
   }

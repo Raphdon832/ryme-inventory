@@ -2,15 +2,17 @@ import React, { useState, useEffect } from 'react';
 import api from '../api';
 import { SkeletonTable, SkeletonOrderCardList } from '../components/Skeleton.jsx';
 import { Link, useNavigate } from 'react-router-dom';
-import { FiPlus, FiShoppingCart, FiTag, FiTrendingUp, FiX, FiTrash2, FiEye, FiAlertCircle, FiEdit2 } from 'react-icons/fi';
+import { FiPlus, FiShoppingCart, FiTag, FiTrendingUp, FiX, FiTrash2, FiEye, FiAlertCircle, FiEdit2, FiWifiOff, FiRefreshCw, FiCheck } from 'react-icons/fi';
 import { useSettings } from '../contexts/SettingsContext';
 import useScrollLock from '../hooks/useScrollLock';
+import offlineManager from '../utils/offlineManager';
 import './Orders.css';
 
 const Orders = () => {
   const { formatCurrency } = useSettings();
   const navigate = useNavigate();
   const [orders, setOrders] = useState([]);
+  const [offlineOrders, setOfflineOrders] = useState([]);
   const [showAllOrders, setShowAllOrders] = useState(false);
   const [statModal, setStatModal] = useState({ open: false, label: '', value: '', footnote: '' });
   const [deleteMode, setDeleteMode] = useState(false);
@@ -18,9 +20,37 @@ const Orders = () => {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [loadingOrders, setLoadingOrders] = useState(true);
   const [deleting, setDeleting] = useState(false);
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const [syncing, setSyncing] = useState(false);
 
   // Lock scroll when any modal is open
   useScrollLock(showDeleteConfirm || statModal.open);
+
+  // Subscribe to offline status
+  useEffect(() => {
+    const unsubscribe = offlineManager.subscribe((status) => {
+      setIsOnline(status.isOnline);
+      setSyncing(status.syncInProgress);
+      // Reload offline orders when status changes
+      loadOfflineOrders();
+    });
+    
+    return () => unsubscribe();
+  }, []);
+
+  // Load offline orders
+  const loadOfflineOrders = async () => {
+    try {
+      const offline = await offlineManager.getOfflineOrders();
+      setOfflineOrders(offline);
+    } catch (err) {
+      console.error('Error loading offline orders:', err);
+    }
+  };
+
+  useEffect(() => {
+    loadOfflineOrders();
+  }, []);
 
   useEffect(() => {
     const unsubscribeOrders = api.subscribe('/orders', (response) => {
@@ -32,6 +62,27 @@ const Orders = () => {
       unsubscribeOrders();
     };
   }, []);
+
+  // Combine server orders with offline orders
+  const allOrders = [
+    ...offlineOrders.map(o => ({
+      id: o.tempId,
+      customer_name: o.customer_name,
+      customer_address: o.customer_address,
+      order_date: o.createdAt,
+      payment_status: 'Pending',
+      total_sales_price: o.items?.reduce((acc, item) => {
+        const discount = item.discount_percentage || 0;
+        const effectivePrice = (item.sales_price || 0) * (1 - discount / 100);
+        return acc + (effectivePrice * item.quantity);
+      }, 0) || 0,
+      total_profit: 0,
+      items: o.items || [],
+      _offline: true,
+      _syncStatus: o.status
+    })),
+    ...orders
+  ];
 
   const toggleOrderSelection = (orderId) => {
     setSelectedOrders(prev => 
@@ -46,15 +97,41 @@ const Orders = () => {
     setDeleting(true);
     
     try {
-      await api.deleteMultipleOrders(selectedOrders);
+      // Separate offline and server orders
+      const offlineIds = selectedOrders.filter(id => id.toString().startsWith('offline_'));
+      const serverIds = selectedOrders.filter(id => !id.toString().startsWith('offline_'));
+      
+      // Delete offline orders
+      for (const id of offlineIds) {
+        await offlineManager.deleteOfflineOrder(id);
+      }
+      
+      // Delete server orders
+      if (serverIds.length > 0) {
+        await api.deleteMultipleOrders(serverIds);
+      }
+      
       setSelectedOrders([]);
       setDeleteMode(false);
       setShowDeleteConfirm(false);
-      fetchOrders();
+      loadOfflineOrders();
     } catch (error) {
       console.error('Error deleting orders:', error);
     } finally {
       setDeleting(false);
+    }
+  };
+
+  const handleSyncNow = async () => {
+    if (!isOnline || syncing) return;
+    setSyncing(true);
+    try {
+      await offlineManager.syncPendingOperations();
+      loadOfflineOrders();
+    } catch (err) {
+      console.error('Sync error:', err);
+    } finally {
+      setSyncing(false);
     }
   };
 
@@ -160,9 +237,26 @@ const Orders = () => {
         <div className="flex justify-between" style={{ marginBottom: '20px', alignItems: 'center' }}>
           <div>
             <h3 style={{ margin: 0 }}>Order History</h3>
-            <span style={{ color: 'var(--text-tertiary)', fontSize: '13px' }}>{orders.length} orders</span>
+            <span style={{ color: 'var(--text-tertiary)', fontSize: '13px' }}>
+              {allOrders.length} orders
+              {offlineOrders.length > 0 && (
+                <span className="offline-count-badge">
+                  <FiWifiOff size={10} /> {offlineOrders.length} offline
+                </span>
+              )}
+            </span>
           </div>
           <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            {offlineOrders.length > 0 && isOnline && (
+              <button 
+                className="icon-btn-circle sync-btn"
+                onClick={handleSyncNow}
+                disabled={syncing}
+                title="Sync offline orders"
+              >
+                <FiRefreshCw size={18} className={syncing ? 'spinning' : ''} />
+              </button>
+            )}
             {deleteMode ? (
               <>
                 <button 
@@ -215,12 +309,13 @@ const Orders = () => {
               </tr>
             </thead>
             <tbody>
-              {orders.map(order => {
+              {allOrders.map(order => {
                 const isSelected = selectedOrders.includes(order.id);
+                const isOffline = order._offline;
                 return (
                 <tr 
                   key={order.id} 
-                  className={deleteMode && isSelected ? 'row-selected' : ''}
+                  className={`${deleteMode && isSelected ? 'row-selected' : ''} ${isOffline ? 'offline-row' : ''}`}
                   onClick={deleteMode ? () => toggleOrderSelection(order.id) : undefined}
                   style={deleteMode ? { cursor: 'pointer' } : undefined}
                 >
@@ -232,8 +327,12 @@ const Orders = () => {
                     </td>
                   )}
                   <td>
-                    <span className="badge badge-info">
-                      #{String(order.id).slice(0, 8)}...
+                    <span className={`badge ${isOffline ? 'badge-offline' : 'badge-info'}`}>
+                      {isOffline ? (
+                        <><FiWifiOff size={10} /> Offline</>
+                      ) : (
+                        <>#{String(order.id).slice(0, 8)}...</>
+                      )}
                     </span>
                   </td>
                   <td style={{ fontWeight: 600 }}>{order.customer_name}</td>
@@ -253,7 +352,12 @@ const Orders = () => {
                     </span>
                   </td>
                   <td>
-                    {(() => {
+                    {isOffline ? (
+                      <span className="badge badge-offline-status">
+                        <FiWifiOff size={10} /> Pending Sync
+                      </span>
+                    ) : (
+                    (() => {
                         const status = order.payment_status || 'Paid';
                         const isPaid = status === 'Paid';
                         return (
@@ -269,7 +373,8 @@ const Orders = () => {
                               {status}
                             </span>
                         );
-                    })()}
+                    })()
+                    )}
                   </td>
                   {!deleteMode && (
                     <td>
@@ -316,7 +421,7 @@ const Orders = () => {
           <SkeletonOrderCardList count={3} />
         ) : (
         <div className="orders-list-mobile mobile-only">
-          {orders.length === 0 ? (
+          {allOrders.length === 0 ? (
             <div className="empty-orders-mobile">
               <FiShoppingCart size={40} style={{ opacity: 0.3, marginBottom: '12px' }} />
               <p style={{ margin: 0, fontWeight: 500 }}>No orders yet</p>
@@ -324,19 +429,20 @@ const Orders = () => {
             </div>
           ) : (
             <>
-              {[...orders]
+              {[...allOrders]
                 .sort((a, b) => new Date(b.order_date) - new Date(a.order_date))
-                .slice(0, showAllOrders ? orders.length : 3)
+                .slice(0, showAllOrders ? allOrders.length : 3)
                 .map(order => {
-                  const status = order.payment_status || 'Paid';
+                  const status = order._offline ? 'Pending Sync' : (order.payment_status || 'Paid');
                   const isPaid = status === 'Paid';
+                  const isOffline = order._offline;
                   const isSelected = selectedOrders.includes(order.id);
                   
                   if (deleteMode) {
                     return (
                       <div 
                         key={order.id} 
-                        className={`order-card-mobile selectable ${isSelected ? 'selected' : ''}`}
+                        className={`order-card-mobile selectable ${isSelected ? 'selected' : ''} ${isOffline ? 'offline' : ''}`}
                         onClick={() => toggleOrderSelection(order.id)}
                       >
                         <div className="order-card-checkbox">
@@ -347,12 +453,16 @@ const Orders = () => {
                         <div className="order-card-content">
                           <div className="order-card-header">
                             <span className="order-card-customer">{order.customer_name}</span>
-                            <span className={`order-card-status ${isPaid ? 'paid' : 'pending'}`}>
-                              {status}
+                            <span className={`order-card-status ${isOffline ? 'offline' : (isPaid ? 'paid' : 'pending')}`}>
+                              {isOffline && <FiWifiOff size={10} />} {status}
                             </span>
                           </div>
                           <div className="order-card-id">
-                            #{String(order.id).slice(0, 8)}
+                            {isOffline ? (
+                              <><FiWifiOff size={10} /> Offline Order</>
+                            ) : (
+                              <>#{String(order.id).slice(0, 8)}</>
+                            )}
                           </div>
                           <div className="order-card-date">
                             {new Date(order.order_date).toLocaleDateString('en-US', { 
@@ -372,6 +482,43 @@ const Orders = () => {
                                 {formatCurrency(order.total_profit, { showSign: true, minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                               </span>
                             </div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  }
+                  
+                  // Non-delete mode - use Link for server orders, div for offline
+                  if (isOffline) {
+                    return (
+                      <div key={order.id} className="order-card-mobile offline" onClick={() => navigate(`/orders/edit/${order.id}`)}>
+                        <div className="order-card-header">
+                          <span className="order-card-customer">{order.customer_name}</span>
+                          <span className="order-card-status offline">
+                            <FiWifiOff size={10} /> Pending Sync
+                          </span>
+                        </div>
+                        <div className="order-card-id">
+                          <FiWifiOff size={10} /> Offline Order
+                        </div>
+                        <div className="order-card-date">
+                          {new Date(order.order_date).toLocaleDateString('en-US', { 
+                            month: 'short', 
+                            day: 'numeric',
+                            year: 'numeric'
+                          })}
+                        </div>
+                        <div className="order-card-footer">
+                          <div className="order-card-amount">
+                            <span className="order-card-amount-label">Total</span>
+                            <span className="order-card-amount-value">{formatCurrency(order.total_sales_price, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</span>
+                          </div>
+                          <div className="order-card-profit">
+                            <span className="order-card-amount-label">Items</span>
+                            <span className="order-card-profit-value">{order.items?.length || 0}</span>
+                          </div>
+                          <div style={{ display: 'flex', gap: '12px', alignItems: 'center', marginLeft: 'auto' }}>
+                            <FiEdit2 size={16} style={{ color: 'var(--primary-color)' }} />
                           </div>
                         </div>
                       </div>
@@ -412,7 +559,7 @@ const Orders = () => {
                             <button
                               type="button"
                               className="order-card-edit-btn"
-                              onClick={(e) => { e.stopPropagation(); navigate(`/orders/edit/${order.id}`); }}
+                              onClick={(e) => { e.preventDefault(); e.stopPropagation(); navigate(`/orders/edit/${order.id}`); }}
                               style={{ background: 'none', border: 'none', color: 'var(--primary-color)', padding: '4px', display: 'flex' }}
                             >
                               <FiEdit2 size={16} />
@@ -425,24 +572,24 @@ const Orders = () => {
                   );
                 })
               }
-              {orders.length > 3 && (
+              {allOrders.length > 3 && (
                 <button 
                   className="view-all-orders-btn"
                   onClick={() => setShowAllOrders(!showAllOrders)}
                 >
                   {showAllOrders 
                     ? 'Show Less' 
-                    : `View All ${orders.length} Orders`
+                    : `View All ${allOrders.length} Orders`
                   }
                 </button>
               )}
               <div className="view-all-orders">
                 <span className="view-all-text">
                   {showAllOrders 
-                    ? `Showing all ${orders.length} orders`
-                    : orders.length > 3 
-                      ? `Showing 3 of ${orders.length} orders` 
-                      : `${orders.length} order${orders.length === 1 ? '' : 's'} total`
+                    ? `Showing all ${allOrders.length} orders`
+                    : allOrders.length > 3 
+                      ? `Showing 3 of ${allOrders.length} orders` 
+                      : `${allOrders.length} order${allOrders.length === 1 ? '' : 's'} total`
                   }
                 </span>
               </div>

@@ -16,6 +16,134 @@
   color: var(--text-secondary);
 }
 
+.create-order-loading .error-icon {
+  color: #ef4444;
+}
+
+.create-order-loading .error-message {
+  color: #ef4444;
+  font-weight: 500;
+}
+
+/* Error Toast */
+.error-toast {
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #dc2626;
+  padding: 0.75rem 1rem;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  z-index: 100;
+  animation: slideIn 0.3s ease;
+  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.15);
+}
+
+.error-toast button {
+  background: none;
+  border: none;
+  color: #dc2626;
+  font-size: 1.25rem;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+}
+
+.error-toast .save-offline-btn {
+  background: #dc2626;
+  color: white;
+  padding: 0.35rem 0.75rem;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  margin-left: 0.5rem;
+}
+
+.error-toast .save-offline-btn:hover {
+  background: #b91c1c;
+}
+
+/* Success Toast */
+.success-toast {
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  background: #ecfdf5;
+  border: 1px solid #a7f3d0;
+  color: #059669;
+  padding: 0.75rem 1rem;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  z-index: 100;
+  animation: slideIn 0.3s ease;
+  box-shadow: 0 4px 12px rgba(5, 150, 105, 0.15);
+}
+
+.success-toast button {
+  background: none;
+  border: none;
+  color: #059669;
+  font-size: 1.25rem;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+}
+
+/* Offline Banner */
+.offline-banner {
+  background: linear-gradient(90deg, #fef3c7, #fde68a);
+  color: #92400e;
+  padding: 0.75rem 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  border-bottom: 1px solid #fbbf24;
+}
+
+.offline-order-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: #92400e;
+  background: #fef3c7;
+  padding: 0.2rem 0.5rem;
+  border-radius: 6px;
+  margin-left: 0.5rem;
+}
+
+.offline-indicator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: #fef3c7;
+  color: #92400e;
+  border-radius: 8px;
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
 .loading-spinner {
   width: 40px;
   height: 40px;
@@ -41,6 +169,8 @@
   position: sticky;
   top: 0;
   z-index: 30;
+  flex-wrap: wrap;
+  gap: 0.75rem;
 }
 
 .create-order-header .header-left {
@@ -48,6 +178,68 @@
   flex-direction: column;
   align-items: flex-start;
   gap: 0.35rem;
+}
+
+.order-number-badge {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--accent-color);
+  background: rgba(99, 102, 241, 0.1);
+  padding: 0.2rem 0.5rem;
+  border-radius: 6px;
+  margin-left: 0.5rem;
+}
+
+.order-meta-info {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.status-badge {
+  padding: 0.35rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+.status-pending {
+  background: rgba(245, 158, 11, 0.15);
+  color: #f59e0b;
+}
+
+.status-processing {
+  background: rgba(59, 130, 246, 0.15);
+  color: #3b82f6;
+}
+
+.status-completed {
+  background: rgba(16, 185, 129, 0.15);
+  color: #10b981;
+}
+
+.status-cancelled {
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+}
+
+.unsaved-badge {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  background: rgba(245, 158, 11, 0.15);
+  color: #f59e0b;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
 }
 
 .create-order-title {
@@ -420,12 +612,118 @@
   background: rgba(248, 250, 252, 0.9);
 }
 
+.items-table tr.editing td {
+  background: rgba(99, 102, 241, 0.05);
+}
+
 .product-cell {
   font-weight: 500;
   max-width: 200px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+}
+
+.product-cell-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.product-name-text {
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.product-code-small {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+/* Quantity Controls */
+.quantity-cell {
+  min-width: 120px;
+}
+
+.quantity-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.qty-btn {
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 6px;
+  cursor: pointer;
+  color: var(--text-secondary);
+  transition: all 0.15s;
+}
+
+.qty-btn:hover:not(:disabled) {
+  background: var(--accent-color);
+  color: white;
+  border-color: var(--accent-color);
+}
+
+.qty-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.qty-input {
+  width: 45px;
+  text-align: center;
+  padding: 0.35rem;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  background: rgba(248, 250, 252, 0.9);
+}
+
+.qty-input:focus {
+  outline: none;
+  border-color: var(--accent-color);
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+}
+
+.stock-warning {
+  display: block;
+  font-size: 0.65rem;
+  color: #f59e0b;
+  margin-top: 0.2rem;
+  font-weight: 500;
+}
+
+/* Discount editing */
+.discount-display {
+  cursor: pointer;
+  padding: 0.25rem;
+  border-radius: 4px;
+  transition: background 0.15s;
+}
+
+.discount-display:hover {
+  background: rgba(148, 163, 184, 0.15);
+}
+
+.discount-edit-input {
+  width: 50px;
+  text-align: center;
+  padding: 0.3rem;
+  border: 1px solid var(--accent-color);
+  border-radius: 4px;
+  font-size: 0.8rem;
+  background: white;
+}
+
+.discount-edit-input:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
 }
 
 .subtotal-cell {
