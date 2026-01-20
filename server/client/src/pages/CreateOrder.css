@@ -128,6 +128,15 @@
   padding: 1.75rem;
   max-width: 1600px;
   margin: 0 auto;
+  box-sizing: border-box;
+}
+
+.order-form-section {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  min-width: 0;
+}
 }
 
 /* Form Cards */
@@ -612,8 +621,9 @@
 
 @media (max-width: 768px) {
   .create-order-page {
-    width: calc(100% + 24px);
-    margin: 0 -12px;
+    width: 100%;
+    margin: 0;
+    overflow-x: hidden;
   }
 
   .create-order-header {
@@ -662,13 +672,38 @@
     padding: 0.75rem;
     gap: 1rem;
     max-width: 100%;
+    overflow-x: hidden;
+  }
+
+  .order-form-section {
+    width: 100%;
+    min-width: 0;
+    overflow: hidden;
+  }
+
+  .order-summary-section {
+    width: 100%;
+    min-width: 0;
   }
 
   .form-card,
   .summary-card {
     padding: 1rem;
     width: 100%;
+    max-width: 100%;
     border-radius: 14px;
+    box-sizing: border-box;
+    overflow: hidden;
+  }
+
+  .items-table-wrapper {
+    width: 100%;
+    overflow-x: auto;
+  }
+
+  .table-container {
+    width: 100%;
+    min-width: 0;
   }
 
   .form-grid {
