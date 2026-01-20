@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { NavLink } from 'react-router-dom';
 import {
   FiHome,
@@ -21,6 +21,13 @@ import './Sidebar.css';
 
 const Sidebar = ({ isOpen, onClose }) => {
   const [pendingTasksCount, setPendingTasksCount] = useState(0);
+  const [swipeOffset, setSwipeOffset] = useState(0);
+  const [isSwipingNav, setIsSwipingNav] = useState(false);
+  
+  const sidebarRef = useRef(null);
+  const touchStartX = useRef(0);
+  const touchStartY = useRef(0);
+  const isSwiping = useRef(false);
 
   useEffect(() => {
     const q = query(collection(db, 'tasks'), where('status', '==', 'pending'));
@@ -37,8 +44,82 @@ const Sidebar = ({ isOpen, onClose }) => {
     return () => unsub();
   }, []);
 
+  // Swipe to close handlers
+  const handleTouchStart = useCallback((e) => {
+    if (!isOpen) return;
+    touchStartX.current = e.touches[0].clientX;
+    touchStartY.current = e.touches[0].clientY;
+    isSwiping.current = false;
+    setIsSwipingNav(false);
+  }, [isOpen]);
+
+  const handleTouchMove = useCallback((e) => {
+    if (!isOpen) return;
+    
+    const currentX = e.touches[0].clientX;
+    const currentY = e.touches[0].clientY;
+    const diffX = touchStartX.current - currentX;
+    const diffY = Math.abs(touchStartY.current - currentY);
+    
+    // Only start swiping if horizontal movement is greater than vertical
+    if (!isSwiping.current && diffX > 10 && diffX > diffY) {
+      isSwiping.current = true;
+      setIsSwipingNav(true);
+    }
+    
+    if (isSwiping.current && diffX > 0) {
+      // Swiping left to close
+      const offset = Math.min(diffX, 300); // Max offset
+      setSwipeOffset(-offset);
+    }
+  }, [isOpen]);
+
+  const handleTouchEnd = useCallback(() => {
+    if (!isOpen || !isSwiping.current) {
+      setSwipeOffset(0);
+      setIsSwipingNav(false);
+      return;
+    }
+    
+    // If swiped more than 80px, close the sidebar
+    if (Math.abs(swipeOffset) > 80) {
+      onClose && onClose();
+    }
+    
+    setSwipeOffset(0);
+    setIsSwipingNav(false);
+    isSwiping.current = false;
+  }, [isOpen, swipeOffset, onClose]);
+
+  // Reset swipe offset when sidebar closes
+  useEffect(() => {
+    if (!isOpen) {
+      setSwipeOffset(0);
+      setIsSwipingNav(false);
+    }
+  }, [isOpen]);
+
+  const sidebarStyle = isSwipingNav ? {
+    transform: `translateX(${swipeOffset}px)`,
+    transition: 'none'
+  } : {};
+
   return (
-    <aside className={`sidebar ${isOpen ? 'open' : ''}`}>
+    <aside 
+      ref={sidebarRef}
+      className={`sidebar ${isOpen ? 'open' : ''}`}
+      style={sidebarStyle}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+    >
+      {/* Swipe indicator line */}
+      {isOpen && (
+        <div className="swipe-indicator">
+          <div className="swipe-line"></div>
+        </div>
+      )}
+      
       <div className="sidebar-header">
         <div className="logo-container">
           <img src="/Ryme Icon.png" alt="Ryme" className="logo-img" />

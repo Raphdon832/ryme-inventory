@@ -1,12 +1,36 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { FiMenu, FiSearch, FiBell, FiMail } from 'react-icons/fi';
 import Sidebar from './Sidebar';
 import Splash from './Splash';
 import OfflineIndicator from './OfflineIndicator';
+import PullToRefresh from './PullToRefresh';
 
 const Layout = ({ children }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [showSplash, setShowSplash] = useState(true);
+
+  // Lock body scroll when sidebar is open on mobile
+  useEffect(() => {
+    if (isSidebarOpen) {
+      document.body.style.overflow = 'hidden';
+      document.body.style.touchAction = 'none';
+    } else {
+      document.body.style.overflow = '';
+      document.body.style.touchAction = '';
+    }
+    
+    return () => {
+      document.body.style.overflow = '';
+      document.body.style.touchAction = '';
+    };
+  }, [isSidebarOpen]);
+
+  // Pull to refresh handler - reloads the page
+  const handleRefresh = useCallback(async () => {
+    // Small delay for animation
+    await new Promise(resolve => setTimeout(resolve, 500));
+    window.location.reload();
+  }, []);
 
   return (
     <div className="dashboard-layout">
@@ -49,7 +73,9 @@ const Layout = ({ children }) => {
             </div>
           </div>
         </header>
-        <div className="content-wrapper">{children}</div>
+        <PullToRefresh onRefresh={handleRefresh} disabled={isSidebarOpen}>
+          <div className="content-wrapper">{children}</div>
+        </PullToRefresh>
         <OfflineIndicator />
       </main>
     </div>

@@ -14,7 +14,6 @@ const Orders = () => {
   const [orders, setOrders] = useState([]);
   const [offlineOrders, setOfflineOrders] = useState([]);
   const [showAllOrders, setShowAllOrders] = useState(false);
-  const [statModal, setStatModal] = useState({ open: false, label: '', value: '', footnote: '' });
   const [deleteMode, setDeleteMode] = useState(false);
   const [selectedOrders, setSelectedOrders] = useState([]);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -24,7 +23,7 @@ const Orders = () => {
   const [syncing, setSyncing] = useState(false);
 
   // Lock scroll when any modal is open
-  useScrollLock(showDeleteConfirm || statModal.open);
+  useScrollLock(showDeleteConfirm);
 
   // Subscribe to offline status
   useEffect(() => {
@@ -163,10 +162,7 @@ const Orders = () => {
 
       {/* Stats Grid */}
       <div className="stats-grid">
-        <div 
-          className="stat-widget clickable border-blue"
-          onClick={() => setStatModal({ open: true, label: 'Total Orders', value: totalOrders, footnote: 'Total number of orders placed by customers' })}
-        >
+        <div className="stat-widget border-blue">
           <div className="stat-header">
             <div className="stat-icon blue">
               <FiShoppingCart />
@@ -176,10 +172,7 @@ const Orders = () => {
           <div className="stat-value">{totalOrders}</div>
         </div>
 
-        <div 
-          className="stat-widget clickable border-purple"
-          onClick={() => setStatModal({ open: true, label: 'Total Revenue', value: formatCurrency(totalRevenue), footnote: 'Total revenue from paid orders' })}
-        >
+        <div className="stat-widget border-purple">
           <div className="stat-header">
             <div className="stat-icon purple">
               <FiTag />
@@ -189,10 +182,7 @@ const Orders = () => {
           <div className="stat-value">{formatCurrency(totalRevenue)}</div>
         </div>
 
-        <div 
-          className="stat-widget clickable border-green"
-          onClick={() => setStatModal({ open: true, label: 'Total Profit', value: formatCurrency(totalProfit), footnote: 'Net profit from all paid orders' })}
-        >
+        <div className="stat-widget border-green">
           <div className="stat-header">
             <div className="stat-icon green">
               <FiTrendingUp />
@@ -202,10 +192,7 @@ const Orders = () => {
           <div className="stat-value">{formatCurrency(totalProfit)}</div>
         </div>
 
-        <div 
-          className="stat-widget clickable border-orange"
-          onClick={() => setStatModal({ open: true, label: 'Avg. Order Value', value: formatCurrency(avgOrderValue), footnote: 'Average value per order' })}
-        >
+        <div className="stat-widget border-orange">
           <div className="stat-header">
             <div className="stat-icon orange">
               <FiTag />
@@ -215,22 +202,6 @@ const Orders = () => {
           <div className="stat-value">{formatCurrency(avgOrderValue)}</div>
         </div>
       </div>
-
-      {/* Stat Detail Modal */}
-      {statModal.open && (
-        <div className="stat-modal-overlay" onClick={() => setStatModal({ ...statModal, open: false })}>
-          <div className="stat-modal" onClick={(e) => e.stopPropagation()}>
-            <div className="stat-modal-header">
-              <h3>{statModal.label}</h3>
-              <button className="stat-modal-close" onClick={() => setStatModal({ ...statModal, open: false })}>×</button>
-            </div>
-            <div className="stat-modal-body">
-              <div className="stat-modal-value">{statModal.value}</div>
-              <div className="stat-modal-footnote">{statModal.footnote}</div>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Orders List */}
       <div className="card">

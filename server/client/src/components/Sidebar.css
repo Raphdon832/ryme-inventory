@@ -12,6 +12,30 @@
   border-right: 1px solid #1f1f1f;
   transition: transform 0.3s ease;
   max-width: 100vw;
+  touch-action: pan-y;
+}
+
+/* Swipe indicator for mobile */
+.swipe-indicator {
+  display: none;
+  position: absolute;
+  top: 50%;
+  right: 6px;
+  transform: translateY(-50%);
+  padding: 20px 4px;
+  z-index: 10;
+}
+
+.swipe-line {
+  width: 4px;
+  height: 40px;
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 4px;
+  transition: background 0.2s ease;
+}
+
+.sidebar:active .swipe-line {
+  background: rgba(255, 255, 255, 0.5);
 }
 
 .sidebar-header {
@@ -160,10 +184,15 @@
     border-top-right-radius: 24px;
     border-bottom-right-radius: 24px;
     border-right: none;
+    will-change: transform;
   }
 
   .sidebar.open {
     transform: translateX(0);
+  }
+
+  .swipe-indicator {
+    display: block;
   }
 
   .sidebar-header {

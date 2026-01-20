@@ -2,8 +2,8 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/png" href="/Ryme Icon.png" />
-    <link rel="apple-touch-icon" href="/Ryme Icon.png" />
+    <link rel="icon" type="image/png" href="/Ryme Icon 2.png" />
+    <link rel="apple-touch-icon" href="/Ryme Icon 2.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <meta name="theme-color" content="#141414" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -12,9 +12,154 @@
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="description" content="Inventory Management System for Ryme Interiors" />
     <title>Ryme Interiors</title>
+    <script>
+      (function() {
+        try {
+          var localSettings = localStorage.getItem('ryme_settings');
+          if (localSettings) {
+             var parsed = JSON.parse(localSettings);
+             if (parsed.display && parsed.display.darkMode) {
+               document.body.classList.add('theme-dark');
+             }
+          }
+        } catch (e) { console.error(e); }
+      })();
+    </script>
+    <style>
+      /* Pre-loader Splash Styles */
+      .splash-overlay {
+        position: fixed;
+        top: 0; left: 0; width: 100vw; height: 100vh;
+        background-color: #ffffff;
+        display: flex; align-items: center; justify-content: center;
+        z-index: 9999;
+        transition: opacity 0.8s ease, transform 0.8s ease;
+      }
+      .splash-content {
+        position: relative; width: 300px; height: 300px;
+        display: flex; align-items: center; justify-content: center;
+      }
+      .splash-center-logo {
+        position: absolute; z-index: 10;
+        width: 100px; height: 100px;
+        display: flex; align-items: center; justify-content: center;
+        background: white; border-radius: 20px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        animation: pulse-logo 2s infinite ease-in-out;
+      }
+      .splash-center-logo img { width: 60px; height: auto; object-fit: contain; }
+      .splash-orbit {
+        position: absolute; width: 100%; height: 100%;
+        border-radius: 50%;
+        animation: orbit-rotate 20s linear infinite;
+      }
+      .splash-orbit::before {
+        content: ''; position: absolute;
+        top: 10%; left: 10%; width: 80%; height: 80%;
+        border: 1px dashed rgba(37, 99, 235, 0.2);
+        border-radius: 50%; box-sizing: border-box;
+      }
+      .orbit-icon {
+        position: absolute; width: 44px; height: 44px;
+        background: white; border-radius: 12px;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 20px; color: #0f172a; top: 50%; left: 50%;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        margin-top: -22px; margin-left: -22px;
+      }
+      .orbit-icon svg { width: 1em; height: 1em; }
+      
+      @keyframes orbit-rotate { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+      
+      @keyframes icon-spin-1 { from { transform: rotate(0deg) translate(110px) rotate(0deg); } to { transform: rotate(0deg) translate(110px) rotate(-360deg); } }
+      @keyframes icon-spin-2 { from { transform: rotate(60deg) translate(110px) rotate(-60deg); } to { transform: rotate(60deg) translate(110px) rotate(-420deg); } }
+      @keyframes icon-spin-3 { from { transform: rotate(120deg) translate(110px) rotate(-120deg); } to { transform: rotate(120deg) translate(110px) rotate(-480deg); } }
+      @keyframes icon-spin-4 { from { transform: rotate(180deg) translate(110px) rotate(-180deg); } to { transform: rotate(180deg) translate(110px) rotate(-540deg); } }
+      @keyframes icon-spin-5 { from { transform: rotate(240deg) translate(110px) rotate(-240deg); } to { transform: rotate(240deg) translate(110px) rotate(-600deg); } }
+      @keyframes icon-spin-6 { from { transform: rotate(300deg) translate(110px) rotate(-300deg); } to { transform: rotate(300deg) translate(110px) rotate(-660deg); } }
+      
+      .orbit-icon:nth-child(1) { animation: icon-spin-1 20s linear infinite; }
+      .orbit-icon:nth-child(2) { animation: icon-spin-2 20s linear infinite; }
+      .orbit-icon:nth-child(3) { animation: icon-spin-3 20s linear infinite; }
+      .orbit-icon:nth-child(4) { animation: icon-spin-4 20s linear infinite; }
+      .orbit-icon:nth-child(5) { animation: icon-spin-5 20s linear infinite; }
+      .orbit-icon:nth-child(6) { animation: icon-spin-6 20s linear infinite; }
+      
+      @keyframes pulse-logo {
+        0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.4); }
+        70% { transform: scale(1.05); box-shadow: 0 0 0 15px rgba(37, 99, 235, 0); }
+        100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(37, 99, 235, 0); }
+      }
+      
+      /* Dark Mode Support */
+      body.theme-dark .splash-overlay { background-color: #0b0b0d; }
+      body.theme-dark .splash-center-logo { background: #18181b; }
+      body.theme-dark .orbit-icon { background: #18181b; color: #e2e8f0; box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
+      body.theme-dark .splash-orbit::before { border-color: rgba(37, 99, 235, 0.4); }
+    </style>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <!-- Pre-rendered Splash Screen -->
+      <div class="splash-overlay">
+        <div class="splash-content">
+          <div class="splash-center-logo">
+            <img src="/Ryme Icon.png" alt="Ryme Interiors" />
+          </div>
+          <div class="splash-orbit">
+            <!-- Icon 1 -->
+            <div class="orbit-icon icon-1">
+              <svg stroke="currentColor" fill="none" stroke-width="2" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M3 5v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2z"></path>
+                <path d="M7 7h10"></path><path d="M7 11h10"></path><path d="M7 15h10"></path>
+              </svg>
+            </div>
+            <!-- Icon 2: BarChart2 -->
+            <div class="orbit-icon icon-2">
+              <svg stroke="currentColor" fill="none" stroke-width="2" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="18" y1="20" x2="18" y2="10"></line>
+                <line x1="12" y1="20" x2="12" y2="4"></line>
+                <line x1="6" y1="20" x2="6" y2="14"></line>
+              </svg>
+            </div>
+            <!-- Icon 3: ShoppingCart -->
+            <div class="orbit-icon icon-3">
+              <svg stroke="currentColor" fill="none" stroke-width="2" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="9" cy="21" r="1"></circle>
+                <circle cx="20" cy="21" r="1"></circle>
+                <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
+              </svg>
+            </div>
+            <!-- Icon 4: User -->
+            <div class="orbit-icon icon-4">
+              <svg stroke="currentColor" fill="none" stroke-width="2" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                <circle cx="12" cy="7" r="4"></circle>
+              </svg>
+            </div>
+            <!-- Icon 5: Box -->
+            <div class="orbit-icon icon-5">
+              <svg stroke="currentColor" fill="none" stroke-width="2" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round">
+                 <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+                 <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+                 <line x1="12" y1="22.08" x2="12" y2="12"></line>
+              </svg>
+            </div>
+            <!-- Icon 6: Target -->
+            <div class="orbit-icon icon-6">
+              <svg stroke="currentColor" fill="none" stroke-width="2" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"></circle>
+                <circle cx="12" cy="12" r="6"></circle>
+                <circle cx="12" cy="12" r="2"></circle>
+              </svg>
+            </div>
+          </div>
+        </div>
+        <div style="position: absolute; bottom: 40px; font-family: sans-serif; font-weight: 600; color: #52525b; font-size: 14px; letter-spacing: 0.05em;">
+          LOADING...
+        </div>
+      </div>
+    </div>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>

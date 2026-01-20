@@ -40,11 +40,10 @@ const Dashboard = () => {
   const [showImportModal, setShowImportModal] = useState(false);
   const [importRows, setImportRows] = useState([]);
   const [importError, setImportError] = useState('');
-  const [statModal, setStatModal] = useState({ open: false, label: '', value: '', footnote: '' });
   const [reorderStatus, setReorderStatus] = useState('');
 
   // Lock scroll when any modal is open
-  useScrollLock(showImportModal || statModal.open);
+  useScrollLock(showImportModal);
 
   useEffect(() => {
     const unsubscribeProducts = api.subscribe('/products', (response) => {
@@ -204,10 +203,7 @@ const Dashboard = () => {
         <SkeletonStatsGrid count={4} />
       ) : (
       <div className="stats-grid bento-grid">
-        <div 
-          className="stat-widget clickable accent-blue"
-          onClick={() => setStatModal({ open: true, label: 'Total Products', value: stats.totalProducts, footnote: 'Total number of products in your inventory' })}
-        >
+        <div className="stat-widget accent-blue">
           <div className="stat-header">
             <span className="stat-label">Total Products</span>
             <span className="stat-arrow"><FiArrowUpRight /></span>
@@ -216,10 +212,7 @@ const Dashboard = () => {
           <div className="stat-footnote">Inventory count</div>
         </div>
 
-        <div 
-          className="stat-widget clickable accent-purple"
-          onClick={() => setStatModal({ open: true, label: 'Total Orders', value: stats.totalOrders, footnote: 'Total number of orders processed to date' })}
-        >
+        <div className="stat-widget accent-purple">
           <div className="stat-header">
             <span className="stat-label">Total Orders</span>
             <span className="stat-arrow"><FiArrowUpRight /></span>
@@ -228,10 +221,7 @@ const Dashboard = () => {
           <div className="stat-footnote">Orders processed</div>
         </div>
 
-        <div 
-          className="stat-widget clickable accent-green"
-          onClick={() => setStatModal({ open: true, label: 'Total Revenue', value: formatCurrencyCompact(stats.totalRevenue), footnote: 'Total sales revenue from all completed orders' })}
-        >
+        <div className="stat-widget accent-green">
           <div className="stat-header">
             <span className="stat-label">Total Revenue</span>
             <span className="stat-arrow"><FiArrowUpRight /></span>
@@ -240,10 +230,7 @@ const Dashboard = () => {
           <div className="stat-footnote">Total sales value</div>
         </div>
 
-        <div 
-          className="stat-widget clickable accent-orange"
-          onClick={() => setStatModal({ open: true, label: 'Total Profit', value: formatCurrencyCompact(stats.totalProfit), footnote: 'Net profit generated from all sales' })}
-        >
+        <div className="stat-widget accent-orange">
           <div className="stat-header">
             <span className="stat-label">Total Profit</span>
             <span className="stat-arrow"><FiArrowUpRight /></span>
@@ -252,22 +239,6 @@ const Dashboard = () => {
           <div className="stat-footnote">Profit generated</div>
         </div>
       </div>
-      )}
-
-      {/* Stat Detail Modal */}
-      {statModal.open && (
-        <div className="stat-modal-overlay" onClick={() => setStatModal({ ...statModal, open: false })}>
-          <div className="stat-modal" onClick={(e) => e.stopPropagation()}>
-            <div className="stat-modal-header">
-              <h3>{statModal.label}</h3>
-              <button className="stat-modal-close" onClick={() => setStatModal({ ...statModal, open: false })}>×</button>
-            </div>
-            <div className="stat-modal-body">
-              <div className="stat-modal-value">{statModal.value}</div>
-              <div className="stat-modal-footnote">{statModal.footnote}</div>
-            </div>
-          </div>
-        </div>
       )}
 
       <div className="dashboard-grid">
