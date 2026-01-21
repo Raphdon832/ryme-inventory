@@ -780,9 +780,9 @@
   padding: 3rem 1rem;
   color: var(--text-muted);
   text-align: center;
-  background: rgba(248, 250, 252, 0.8);
+  background: var(--bg-body);
   border-radius: 12px;
-  border: 1px dashed rgba(148, 163, 184, 0.35);
+  border: 1px dashed var(--border-color);
 }
 
 .empty-items svg {
@@ -870,7 +870,7 @@
 
 .summary-divider {
   height: 1px;
-  background: rgba(148, 163, 184, 0.25);
+  background: var(--border-color);
   margin: 0.75rem 0;
 }
 
@@ -887,9 +887,9 @@
 .profit-row {
   margin-top: 0.5rem;
   padding: 0.75rem;
-  background: rgba(16, 185, 129, 0.08);
+  background: var(--success-bg);
   border-radius: 10px;
-  border: 1px solid rgba(16, 185, 129, 0.2);
+  border: 1px solid var(--success-text);
 }
 
 .quick-actions .btn-primary.full-width {
@@ -1016,8 +1016,8 @@
 
   .quantity-input,
   .discount-input {
-    background: rgba(248, 250, 252, 0.9);
-    border: 1px solid rgba(148, 163, 184, 0.35);
+    background: var(--bg-body);
+    border: 1px solid var(--border-color);
     border-radius: 12px;
     padding: 0.6rem 0.75rem;
   }
@@ -1034,8 +1034,8 @@
     font-size: 1rem;
     border-radius: 10px;
     text-align: left;
-    background: #fff;
-    border: 1px solid rgba(148, 163, 184, 0.35);
+    background: var(--bg-surface);
+    border: 1px solid var(--border-color);
     padding-left: 0.9rem;
   }
 
