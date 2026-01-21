@@ -84,6 +84,13 @@ const Orders = () => {
     ...orders
   ];
 
+  // Apply default sorting (newest first) to all views
+  const sortedAllOrders = [...allOrders].sort((a, b) => {
+    const dateA = new Date(a.order_date);
+    const dateB = new Date(b.order_date);
+    return dateB - dateA;
+  });
+
   const toggleOrderSelection = (orderId) => {
     setSelectedOrders(prev => 
       prev.includes(orderId) 
@@ -158,7 +165,7 @@ const Orders = () => {
           <div style={{ display: 'flex', gap: '8px' }}>
             <button 
               className="secondary" 
-              onClick={() => exportOrders(orders, 'csv')}
+              onClick={() => exportOrders(sortedAllOrders, 'csv')}
               title="Export as CSV"
               style={{ padding: '0 16px', display: 'flex', alignItems: 'center', gap: '8px', height: '42px', borderRadius: '10px', background: 'var(--bg-surface)', border: '1px solid var(--border-color)', color: 'var(--text-secondary)', cursor: 'pointer' }}
             >
@@ -166,7 +173,7 @@ const Orders = () => {
             </button>
             <button 
               className="secondary" 
-              onClick={() => exportOrders(orders, 'pdf')}
+              onClick={() => exportOrders(sortedAllOrders, 'pdf')}
               title="Export as PDF"
               style={{ padding: '0 16px', display: 'flex', alignItems: 'center', gap: '8px', height: '42px', borderRadius: '10px', background: 'var(--bg-surface)', border: '1px solid var(--border-color)', color: 'var(--text-secondary)', cursor: 'pointer' }}
             >
@@ -299,7 +306,7 @@ const Orders = () => {
               </tr>
             </thead>
             <tbody>
-              {allOrders.map(order => {
+              {sortedAllOrders.map(order => {
                 const isSelected = selectedOrders.includes(order.id);
                 const isOffline = order._offline;
                 return (
@@ -411,7 +418,7 @@ const Orders = () => {
           <SkeletonOrderCardList count={3} />
         ) : (
         <div className="orders-list-mobile mobile-only">
-          {allOrders.length === 0 ? (
+          {sortedAllOrders.length === 0 ? (
             <div className="empty-orders-mobile">
               <FiShoppingCart size={40} style={{ opacity: 0.3, marginBottom: '12px' }} />
               <p style={{ margin: 0, fontWeight: 500 }}>No orders yet</p>
@@ -419,9 +426,8 @@ const Orders = () => {
             </div>
           ) : (
             <>
-              {[...allOrders]
-                .sort((a, b) => new Date(b.order_date) - new Date(a.order_date))
-                .slice(0, showAllOrders ? allOrders.length : 3)
+              {sortedAllOrders
+                .slice(0, showAllOrders ? sortedAllOrders.length : 3)
                 .map(order => {
                   const status = order._offline ? 'Pending Sync' : (order.payment_status || 'Paid');
                   const isPaid = status === 'Paid';

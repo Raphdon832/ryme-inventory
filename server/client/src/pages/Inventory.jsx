@@ -331,7 +331,7 @@ const Inventory = () => {
           <div style={{ position: 'relative', display: 'flex', gap: '8px' }}>
             <button 
               className="secondary" 
-              onClick={() => exportInventory(products, 'csv')}
+              onClick={() => exportInventory(sortedProducts, 'csv')}
               title="Export as CSV"
               style={{ padding: '0 16px', display: 'flex', alignItems: 'center', gap: '8px', height: '42px', borderRadius: '10px' }}
             >
@@ -339,7 +339,7 @@ const Inventory = () => {
             </button>
             <button 
               className="secondary" 
-              onClick={() => exportInventory(products, 'pdf')}
+              onClick={() => exportInventory(sortedProducts, 'pdf')}
               title="Export as PDF"
               style={{ padding: '0 16px', display: 'flex', alignItems: 'center', gap: '8px', height: '42px', borderRadius: '10px' }}
             >
