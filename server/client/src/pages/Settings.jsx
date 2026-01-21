@@ -178,7 +178,7 @@ const Settings = () => {
         width: '44px',
         height: '24px',
         borderRadius: '12px',
-        background: checked ? '#0A0A0A' : '#E5E5E5',
+        background: checked ? 'var(--text-primary)' : 'var(--bg-tertiary)',
         border: 'none',
         padding: '2px',
         cursor: disabled ? 'not-allowed' : 'pointer',
@@ -195,7 +195,7 @@ const Settings = () => {
         width: '20px',
         height: '20px',
         borderRadius: '50%',
-        background: 'white',
+        background: 'var(--bg-primary)',
         boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
         transition: 'all 0.2s',
         flexShrink: 0

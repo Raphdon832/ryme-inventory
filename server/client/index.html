@@ -19,8 +19,16 @@
           if (localSettings) {
              var parsed = JSON.parse(localSettings);
              if (parsed.display && parsed.display.darkMode) {
-               // Add to documentElement immediately (always available)
-               document.documentElement.classList.add('theme-dark');
+               var isDark = false;
+               if (parsed.display.darkMode === 'dark' || parsed.display.darkMode === true) {
+                 isDark = true;
+               } else if (parsed.display.darkMode === 'auto') {
+                 isDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+               }
+               
+               if (isDark) {
+                 document.documentElement.classList.add('theme-dark');
+               }
              }
           }
         } catch (e) { console.error(e); }

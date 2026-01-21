@@ -99,7 +99,8 @@ export const SettingsProvider = ({ children }) => {
       // Add transition class for smooth animation
       document.body.classList.add('theme-transition');
       
-      // Apply the theme
+      // Apply the theme to both html and body for consistency
+      document.documentElement.classList.toggle('theme-dark', isDark);
       document.body.classList.toggle('theme-dark', isDark);
       
       // Remove transition class after animation completes

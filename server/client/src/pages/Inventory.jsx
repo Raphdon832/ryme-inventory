@@ -14,6 +14,7 @@ const Inventory = () => {
   const toast = useToast();
   const { formatCurrency, settings, currencySymbol } = useSettings();
   const [products, setProducts] = useState([]);
+  const [categoriesList, setCategoriesList] = useState([]); // Real category list from DB
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedProducts, setSelectedProducts] = useState([]);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -23,24 +24,38 @@ const Inventory = () => {
   const [bulkDeleting, setBulkDeleting] = useState(false);
   const [bulkUpdating, setBulkUpdating] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
+  const [isAddingNewBulkCategory, setIsAddingNewBulkCategory] = useState(false);
+  const [newBulkCategoryName, setNewBulkCategoryName] = useState('');
   const [bulkUpdateForm, setBulkUpdateForm] = useState({
-    markupType: 'percentage', // percentage or amount
+    markupType: 'percentage', // percentage, amount, or set_price
     markupValue: '',
     costType: 'percentage', // percentage or fixed
-    costAdjustment: ''
+    costAdjustment: '',
+    category: '', // '' means unchanged
+    stockValue: '',
+    stockMode: 'add' // add, subtract, set
   });
 
   // Filter/Sort state
   const [showFilterDropdown, setShowFilterDropdown] = useState(false);
   const [sortBy, setSortBy] = useState('name_asc'); // default sort
+  const [filterCategory, setFilterCategory] = useState('all');
   const [expandedBrands, setExpandedBrands] = useState({}); // for grouped view
   const filterDropdownRef = useRef(null);
+
+  // Get unique categories for filtering
+  const categories = useMemo(() => {
+    const cats = [...new Set(products.map(p => p.category).filter(Boolean))].sort();
+    return ['all', ...cats];
+  }, [products]);
 
   // Sort options
   const sortOptions = [
     { value: 'grouped', label: 'Grouped by Brand' },
     { value: 'name_asc', label: 'Product Name (A-Z)' },
     { value: 'name_desc', label: 'Product Name (Z-A)' },
+    { value: 'category_asc', label: 'Category (A-Z)' },
+    { value: 'category_desc', label: 'Category (Z-A)' },
     { value: 'brand_asc', label: 'Brand Name (A-Z)' },
     { value: 'brand_desc', label: 'Brand Name (Z-A)' },
     { value: 'price_asc', label: 'Price (Low to High)' },
@@ -80,7 +95,14 @@ const Inventory = () => {
       setLoadingProducts(false);
     });
 
-    return () => unsubscribe();
+    const unsubCats = api.subscribe('/categories', (response) => {
+      setCategoriesList(response.data);
+    });
+
+    return () => {
+      unsubscribe();
+      unsubCats();
+    };
   }, []);
 
   // Play low stock alert when new low stock items are detected
@@ -160,6 +182,24 @@ const Inventory = () => {
     }
   };
 
+  const handleAddNewBulkCategory = async () => {
+    const name = newBulkCategoryName.trim();
+    if (!name) return;
+
+    try {
+      const response = await api.post('/categories', { name });
+      const newCat = response.data.data;
+      
+      setBulkUpdateForm(prev => ({ ...prev, category: newCat.name }));
+      setIsAddingNewBulkCategory(false);
+      setNewBulkCategoryName('');
+      toast.success(`Category "${name}" created`);
+    } catch (error) {
+      console.error('Error creating category:', error);
+      toast.error('Failed to create category');
+    }
+  };
+
   const handleBulkUpdate = async () => {
     setBulkUpdating(true);
     try {
@@ -167,23 +207,50 @@ const Inventory = () => {
         const product = products.find(p => p.id === productId);
         if (!product) return;
 
+        // 1. Calculate new Cost
         let newCost = Number(product.cost_of_production);
-        if (bulkUpdateForm.costType === 'percentage' && bulkUpdateForm.costAdjustment) {
-          newCost = newCost * (1 + Number(bulkUpdateForm.costAdjustment) / 100);
-        } else if (bulkUpdateForm.costType === 'fixed' && bulkUpdateForm.costAdjustment) {
-          newCost = newCost + Number(bulkUpdateForm.costAdjustment);
+        if (bulkUpdateForm.costAdjustment) {
+          if (bulkUpdateForm.costType === 'percentage') {
+            newCost = newCost * (1 + Number(bulkUpdateForm.costAdjustment) / 100);
+          } else if (bulkUpdateForm.costType === 'fixed') {
+            newCost = newCost + Number(bulkUpdateForm.costAdjustment);
+          }
+        }
+
+        // 2. Calculate Markup/Pricing
+        let newMarkupPercentage = product.markup_percentage;
+        let newMarkupAmount = product.markup_amount;
+
+        if (bulkUpdateForm.markupValue) {
+          if (bulkUpdateForm.markupType === 'percentage') {
+            newMarkupPercentage = Number(bulkUpdateForm.markupValue);
+            newMarkupAmount = ''; // Clear amount to ensure percentage is used
+          } else if (bulkUpdateForm.markupType === 'amount') {
+            newMarkupAmount = Number(bulkUpdateForm.markupValue);
+            newMarkupPercentage = ''; // Clear percentage
+          } else if (bulkUpdateForm.markupType === 'set_price') {
+            // Target sales price provided, calculate required markup amount
+            newMarkupAmount = Number(bulkUpdateForm.markupValue) - newCost;
+            newMarkupPercentage = ''; // Clear percentage
+          }
+        }
+
+        // 3. New Stock Quantity
+        let newStock = Number(product.stock_quantity || 0);
+        if (bulkUpdateForm.stockValue) {
+          const val = Number(bulkUpdateForm.stockValue);
+          if (bulkUpdateForm.stockMode === 'add') newStock += val;
+          else if (bulkUpdateForm.stockMode === 'subtract') newStock -= val;
+          else if (bulkUpdateForm.stockMode === 'set') newStock = val;
         }
 
         const payload = {
           ...product,
           cost_of_production: newCost,
-          // Update markup only if a value was provided
-          markup_percentage: bulkUpdateForm.markupValue 
-            ? (bulkUpdateForm.markupType === 'percentage' ? Number(bulkUpdateForm.markupValue) : 0)
-            : product.markup_percentage,
-          markup_amount: bulkUpdateForm.markupValue
-            ? (bulkUpdateForm.markupType === 'amount' ? Number(bulkUpdateForm.markupValue) : 0)
-            : product.markup_amount
+          markup_percentage: newMarkupPercentage,
+          markup_amount: newMarkupAmount,
+          category: bulkUpdateForm.category || product.category,
+          stock_quantity: Math.max(0, newStock)
         };
 
         return api.put(`/products/${productId}`, payload);
@@ -196,6 +263,18 @@ const Inventory = () => {
       setSelectedProducts([]);
       setSelectionMode(false);
       setShowBulkUpdateModal(false);
+      setIsAddingNewBulkCategory(false);
+      setNewBulkCategoryName('');
+      // Reset form
+      setBulkUpdateForm({
+        markupType: 'percentage',
+        markupValue: '',
+        costType: 'percentage',
+        costAdjustment: '',
+        category: '',
+        stockValue: '',
+        stockMode: 'add'
+      });
     } catch (error) {
       console.error('Error bulk updating products:', error);
       toast.error('Failed to update some products. Please try again.');
@@ -219,14 +298,23 @@ const Inventory = () => {
 
   // Sorted products
   const sortedProducts = useMemo(() => {
-    const sorted = [...products];
+    let filtered = [...products];
     
-    sorted.sort((a, b) => {
+    // Apply category filter
+    if (filterCategory !== 'all') {
+      filtered = filtered.filter(p => p.category === filterCategory);
+    }
+    
+    filtered.sort((a, b) => {
       switch (sortBy) {
         case 'name_asc':
           return (a.name || a.product_name || '').localeCompare(b.name || b.product_name || '');
         case 'name_desc':
           return (b.name || b.product_name || '').localeCompare(a.name || a.product_name || '');
+        case 'category_asc':
+          return (a.category || '').localeCompare(b.category || '');
+        case 'category_desc':
+          return (b.category || '').localeCompare(a.category || '');
         case 'brand_asc':
           return (a.brand_name || '').localeCompare(b.brand_name || '');
         case 'brand_desc':
@@ -256,15 +344,19 @@ const Inventory = () => {
       }
     });
     
-    return sorted;
-  }, [products, sortBy]);
+    return filtered;
+  }, [products, sortBy, filterCategory]);
 
   // Group products by brand for grouped view
   const groupedByBrand = useMemo(() => {
     if (sortBy !== 'grouped') return {};
     
     const groups = {};
-    products.forEach(product => {
+    const filtered = filterCategory === 'all' 
+      ? products 
+      : products.filter(p => p.category === filterCategory);
+      
+    filtered.forEach(product => {
       const brandName = product.brand_name || 'No Brand';
       if (!groups[brandName]) {
         groups[brandName] = [];
@@ -282,7 +374,7 @@ const Inventory = () => {
     });
     
     return sortedGroups;
-  }, [products, sortBy]);
+  }, [products, sortBy, filterCategory]);
 
   // Toggle brand accordion
   const toggleBrandAccordion = (brandName) => {
@@ -473,6 +565,41 @@ const Inventory = () => {
                       {sortBy === option.value && <FiCheck size={16} />}
                     </button>
                   ))}
+
+                  {categories.length > 1 && (
+                    <>
+                      <div style={{ padding: '16px 16px 8px', fontSize: '12px', fontWeight: 600, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.5px', borderTop: '1px solid var(--border-color)', marginTop: '8px' }}>
+                        Filter Category
+                      </div>
+                      {categories.map((cat) => (
+                        <button
+                          key={cat}
+                          onClick={() => {
+                            setFilterCategory(cat);
+                            setShowFilterDropdown(false);
+                            setCurrentPage(1);
+                          }}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            width: '100%',
+                            padding: '10px 16px',
+                            background: filterCategory === cat ? 'rgba(79, 106, 245, 0.1)' : 'transparent',
+                            border: 'none',
+                            cursor: 'pointer',
+                            color: filterCategory === cat ? 'var(--primary-color)' : 'var(--text-primary)',
+                            fontSize: '14px',
+                            textAlign: 'left',
+                            fontWeight: filterCategory === cat ? 600 : 400
+                          }}
+                        >
+                          <span style={{ textTransform: 'capitalize' }}>{cat === 'all' ? 'All Categories' : cat}</span>
+                          {filterCategory === cat && <FiCheck size={16} />}
+                        </button>
+                      ))}
+                    </>
+                  )}
                 </div>
               )}
             </div>
@@ -615,6 +742,7 @@ const Inventory = () => {
                               {selectionMode && <th style={{ width: '40px' }}></th>}
                               <th>Code</th>
                               <th>Product</th>
+                              <th>Category</th>
                               <th>Cost of Production</th>
                               <th>Markup</th>
                               <th>Sales Price</th>
@@ -672,6 +800,23 @@ const Inventory = () => {
                                       <div style={{ fontSize: '12px', color: 'var(--text-tertiary)', marginTop: '2px' }}>{product.description}</div>
                                     )}
                                   </div>
+                                </td>
+                                <td>
+                                  {product.category ? (
+                                    <span style={{ 
+                                      fontSize: '12px', 
+                                      padding: '2px 8px', 
+                                      borderRadius: '12px', 
+                                      background: 'var(--bg-card-hover)', 
+                                      color: 'var(--text-secondary)',
+                                      border: '1px solid var(--border-color)',
+                                      fontWeight: 500
+                                    }}>
+                                      {product.category}
+                                    </span>
+                                  ) : (
+                                    <span style={{ color: 'var(--text-tertiary)', fontSize: '12px' }}>—</span>
+                                  )}
                                 </td>
                                 <td style={{ fontWeight: 500 }}>{formatCurrency(product.cost_of_production)}</td>
                                 <td>
@@ -732,6 +877,7 @@ const Inventory = () => {
                       {selectionMode && <th style={{ width: '40px' }}></th>}
                       <th>Code</th>
                       <th>Product</th>
+                      <th>Category</th>
                       <th>Cost of Production</th>
                       <th>Markup</th>
                       <th>Sales Price</th>
@@ -789,6 +935,23 @@ const Inventory = () => {
                             <div style={{ fontSize: '12px', color: 'var(--text-tertiary)', marginTop: '2px' }}>{product.description}</div>
                           )}
                         </div>
+                      </td>
+                      <td>
+                        {product.category ? (
+                          <span style={{ 
+                            fontSize: '12px', 
+                            padding: '2px 8px', 
+                            borderRadius: '12px', 
+                            background: 'var(--bg-card-hover)', 
+                            color: 'var(--text-secondary)',
+                            border: '1px solid var(--border-color)',
+                            fontWeight: 500
+                          }}>
+                            {product.category}
+                          </span>
+                        ) : (
+                          <span style={{ color: 'var(--text-tertiary)', fontSize: '12px' }}>—</span>
+                        )}
                       </td>
                       <td style={{ fontWeight: 500 }}>{formatCurrency(product.cost_of_production)}</td>
                       <td>
@@ -907,41 +1070,44 @@ const Inventory = () => {
       {/* Bulk Update Modal */}
       {showBulkUpdateModal && (
         <div className="modal-overlay" style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100dvh', background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px', boxSizing: 'border-box', transform: 'none' }}>
-          <div style={{ background: 'var(--bg-surface)', borderRadius: '16px', padding: '24px', maxWidth: '400px', width: '95%', maxHeight: '90vh', overflowY: 'auto' }}>
-            <h3 style={{ margin: '0 0 8px' }}>Bulk Price Update</h3>
+          <div style={{ background: 'var(--bg-surface)', borderRadius: '16px', padding: '24px', maxWidth: '450px', width: '95%', maxHeight: '90vh', overflowY: 'auto' }}>
+            <h3 style={{ margin: '0 0 8px' }}>Bulk Update Products</h3>
             <p style={{ margin: '0 0 24px', color: 'var(--text-secondary)', fontSize: '14px' }}>
               Updating {selectedProducts.length} product(s). Values left empty will remain unchanged.
             </p>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+              {/* Pricing Section Title */}
+              <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--primary-color)', textTransform: 'uppercase', letterSpacing: '1px', borderBottom: '1px solid var(--border-color)', paddingBottom: '6px' }}>Pricing & Costs</div>
+
               {/* Cost Update */}
               <div>
-                <label style={{ display: 'block', fontSize: '14px', fontWeight: 600, marginBottom: '8px' }}>Adjust Cost of Production</label>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, marginBottom: '6px' }}>Cost of Production Adjustment</label>
                 <div style={{ display: 'flex', gap: '8px' }}>
                   <div style={{ position: 'relative', flex: 1 }}>
                     <input 
                       type="number" 
-                      placeholder="Amount"
+                      placeholder="Value"
                       value={bulkUpdateForm.costAdjustment}
                       onChange={(e) => setBulkUpdateForm(prev => ({ ...prev, costAdjustment: e.target.value }))}
-                      style={{ paddingLeft: '24px' }}
+                      style={{ paddingLeft: bulkUpdateForm.costType === 'fixed' ? '24px' : '12px' }}
                     />
-                    <span style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)', fontSize: '14px' }}>{bulkUpdateForm.costType === 'fixed' ? currencySymbol : '%'}</span>
+                    {bulkUpdateForm.costType === 'fixed' && <span style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)', fontSize: '14px' }}>{currencySymbol}</span>}
                   </div>
                   <select 
-                    style={{ width: '100px', padding: '8px' }}
+                    style={{ width: '120px', padding: '8px' }}
                     value={bulkUpdateForm.costType}
                     onChange={(e) => setBulkUpdateForm(prev => ({ ...prev, costType: e.target.value }))}
                   >
-                    <option value="percentage">%</option>
-                    <option value="fixed">{currencySymbol}</option>
+                    <option value="percentage">% Change</option>
+                    <option value="fixed">Fixed Add/Sub</option>
                   </select>
                 </div>
               </div>
 
-              {/* Markup Update */}
+              {/* Pricing / Markup Update */}
               <div>
-                <label style={{ display: 'block', fontSize: '14px', fontWeight: 600, marginBottom: '8px' }}>Adjust Markup (Set New Value)</label>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, marginBottom: '6px' }}>Sales Price or Markup Change</label>
                 <div style={{ display: 'flex', gap: '8px' }}>
                   <div style={{ position: 'relative', flex: 1 }}>
                     <input 
@@ -949,38 +1115,123 @@ const Inventory = () => {
                       placeholder="Value"
                       value={bulkUpdateForm.markupValue}
                       onChange={(e) => setBulkUpdateForm(prev => ({ ...prev, markupValue: e.target.value }))}
-                      style={{ paddingLeft: '24px' }}
+                      style={{ paddingLeft: (bulkUpdateForm.markupType === 'amount' || bulkUpdateForm.markupType === 'set_price') ? '24px' : '12px' }}
                     />
-                    <span style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)', fontSize: '14px' }}>{bulkUpdateForm.markupType === 'amount' ? currencySymbol : '%'}</span>
+                    {(bulkUpdateForm.markupType === 'amount' || bulkUpdateForm.markupType === 'set_price') && <span style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)', fontSize: '14px' }}>{currencySymbol}</span>}
                   </div>
                   <select 
-                    style={{ width: '100px', padding: '8px' }}
+                    style={{ width: '130px', padding: '8px' }}
                     value={bulkUpdateForm.markupType}
                     onChange={(e) => setBulkUpdateForm(prev => ({ ...prev, markupType: e.target.value }))}
                   >
-                    <option value="percentage">%</option>
-                    <option value="amount">{currencySymbol}</option>
+                    <option value="percentage">% Markup</option>
+                    <option value="amount">Markup Amt</option>
+                    <option value="set_price">Fix Sales Price</option>
+                  </select>
+                </div>
+                <p style={{ margin: '4px 0 0', fontSize: '11px', color: 'var(--text-tertiary)' }}>Set Markup % or Amount, OR define a target Sales Price.</p>
+              </div>
+
+              {/* Product Info Section Title */}
+              <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--primary-color)', textTransform: 'uppercase', letterSpacing: '1px', borderBottom: '1px solid var(--border-color)', paddingBottom: '6px', marginTop: '10px' }}>Product Details & Stock</div>
+
+              {/* Category Update */}
+              <div>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, marginBottom: '6px' }}>Change Category</label>
+                {!isAddingNewBulkCategory ? (
+                  <select 
+                    value={bulkUpdateForm.category}
+                    onChange={(e) => {
+                      if (e.target.value === 'new') {
+                        setIsAddingNewBulkCategory(true);
+                      } else {
+                        setBulkUpdateForm(prev => ({ ...prev, category: e.target.value }));
+                      }
+                    }}
+                    style={{ width: '100%' }}
+                  >
+                    <option value="">(No Change)</option>
+                    {categoriesList.map(cat => (
+                      <option key={cat.id} value={cat.name}>{cat.name}</option>
+                    ))}
+                    <option value="new" style={{ fontWeight: 'bold', color: 'var(--primary-color)' }}>+ Add New Category...</option>
+                  </select>
+                ) : (
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <input 
+                      type="text" 
+                      placeholder="New category name" 
+                      value={newBulkCategoryName}
+                      onChange={(e) => setNewBulkCategoryName(e.target.value)}
+                      style={{ flex: 1, height: '42px' }}
+                      autoFocus
+                    />
+                    <button 
+                      type="button" 
+                      onClick={handleAddNewBulkCategory}
+                      style={{ padding: '0 12px', height: '42px', borderRadius: '8px', background: 'var(--primary-color)', color: 'white', border: 'none' }}
+                    >
+                      Add
+                    </button>
+                    <button 
+                      type="button" 
+                      className="secondary" 
+                      onClick={() => {
+                        setIsAddingNewBulkCategory(false);
+                        setNewBulkCategoryName('');
+                      }}
+                      style={{ padding: '0 12px', height: '42px', borderRadius: '8px' }}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* Stock Update */}
+              <div>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, marginBottom: '6px' }}>Stock Units Adjustment</label>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <input 
+                    type="number" 
+                    placeholder="Units"
+                    value={bulkUpdateForm.stockValue}
+                    onChange={(e) => setBulkUpdateForm(prev => ({ ...prev, stockValue: e.target.value }))}
+                    style={{ flex: 1 }}
+                  />
+                  <select 
+                    style={{ width: '110px', padding: '8px' }}
+                    value={bulkUpdateForm.stockMode}
+                    onChange={(e) => setBulkUpdateForm(prev => ({ ...prev, stockMode: e.target.value }))}
+                  >
+                    <option value="add">Add (+)</option>
+                    <option value="subtract">Sub (-)</option>
+                    <option value="set">Set Fixed</option>
                   </select>
                 </div>
               </div>
 
-              <div style={{ display: 'flex', gap: '12px', marginTop: '12px' }}>
+              <div style={{ display: 'flex', gap: '12px', marginTop: '16px', padding: '16px 0 0', borderTop: '1px solid var(--border-color)' }}>
                 <button 
                   className="secondary"
-                  onClick={() => setShowBulkUpdateModal(false)}
-                  style={{ flex: 1 }}
+                  onClick={() => {
+                    setShowBulkUpdateModal(false);
+                    setIsAddingNewBulkCategory(false);
+                    setNewBulkCategoryName('');
+                  }}
+                  style={{ flex: 1, borderRadius: '12px' }}
                 >
                   Cancel
                 </button>
                 <button 
                   onClick={handleBulkUpdate}
-                  style={{ flex: 1 }}
-                  disabled={(!bulkUpdateForm.costAdjustment && !bulkUpdateForm.markupValue) || bulkUpdating}
+                  style={{ flex: 1, borderRadius: '12px' }}
+                  disabled={(!bulkUpdateForm.costAdjustment && !bulkUpdateForm.markupValue && !bulkUpdateForm.category && !bulkUpdateForm.stockValue) || bulkUpdating}
                 >
                   {bulkUpdating ? (
                     <><span className="btn-spinner"></span> Applying...</>
                   ) : (
-                    'Apply Changes'
+                    'Update All'
                   )}
                 </button>
               </div>

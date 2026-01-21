@@ -26,6 +26,7 @@ const customersRef = collection(db, 'customers');
 const vendorsRef = collection(db, 'vendors');
 const activityLogRef = collection(db, 'activity_log');
 const recycleBinRef = collection(db, 'recycle_bin');
+const categoriesRef = collection(db, 'categories');
 
 const normalizeDoc = (snap) => ({ id: snap.id, ...snap.data() });
 
@@ -107,6 +108,11 @@ const api = {
       const id = path.split('/')[2];
       const snapshot = await getDoc(doc(vendorsRef, id));
       return { data: { data: snapshot.exists() ? normalizeDoc(snapshot) : null } };
+    }
+
+    if (path === '/categories') {
+      const snapshot = await getDocs(query(categoriesRef, orderBy('name', 'asc')));
+      return { data: { data: snapshot.docs.map(normalizeDoc) } };
     }
 
     if (path === '/products') {
@@ -196,6 +202,13 @@ const api = {
       const id = path.split('/')[2];
       return onSnapshot(doc(vendorsRef, id), (snapshot) => {
         const data = snapshot.exists() ? normalizeDoc(snapshot) : null;
+        callback({ data });
+      });
+    }
+
+    if (path === '/categories') {
+      return onSnapshot(query(categoriesRef, orderBy('name', 'asc')), (snapshot) => {
+        const data = snapshot.docs.map(normalizeDoc);
         callback({ data });
       });
     }
@@ -309,6 +322,15 @@ const api = {
       return { data: { data } };
     }
 
+    if (path === '/categories') {
+      const docRef = await addDoc(categoriesRef, {
+        name: payload.name,
+        created_at: new Date().toISOString()
+      });
+      const snapshot = await getDoc(docRef);
+      return { data: { data: normalizeDoc(snapshot) } };
+    }
+
     if (path === '/products') {
       const pricing = computePricing(payload);
       const docRef = await addDoc(productsRef, {
@@ -316,6 +338,7 @@ const api = {
         brand_name: payload.brand_name || '',
         product_name: payload.product_name || '',
         volume_size: payload.volume_size || '',
+        category: payload.category || '',
         sorting_code: payload.sorting_code || '',
         // Combined display name
         name: payload.name,
@@ -596,6 +619,7 @@ const api = {
         brand_name: payload.brand_name || '',
         product_name: payload.product_name || '',
         volume_size: payload.volume_size || '',
+        category: payload.category || '',
         sorting_code: payload.sorting_code || '',
         // Combined display name
         name: payload.name,

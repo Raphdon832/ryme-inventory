@@ -4,6 +4,9 @@
   --bg-body: #f5f7fa;
   --bg-surface: #ffffff;
   --bg-surface-hover: #f0f4f8;
+  --bg-tertiary: #f1f5f9;
+  --bg-primary: #ffffff;
+  --bg-card-hover: #f8fafc;
   --card-bg: #ffffff;
 
   --sidebar-bg: #ffffff;
@@ -115,6 +118,9 @@ body.theme-dark {
   --bg-body: #0b0b0d;
   --bg-surface: #111317;
   --bg-surface-hover: #1a1d22;
+  --bg-tertiary: #0a0a0a;
+  --bg-primary: #1c1c1f;
+  --bg-card-hover: #161618;
   --card-bg: #111317;
 
   --sidebar-bg: #000000;

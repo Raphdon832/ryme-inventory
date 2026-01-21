@@ -39,6 +39,10 @@ service cloud.firestore {
       allow read, write: if true;
     }
 
+    match /categories/{docId} {
+      allow read, write: if true;
+    }
+
     // App settings (single doc)
     match /app_settings/{docId} {
       allow read, write: if true;

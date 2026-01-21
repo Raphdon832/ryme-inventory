@@ -75,6 +75,7 @@ const AddProduct = () => {
     brand_name: '',
     product_name: '',
     volume_size: '',
+    category: '',
     sorting_code: '',
     description: '',
     cost_of_production: '',
@@ -88,10 +89,30 @@ const AddProduct = () => {
   const [pricingError, setPricingError] = useState('');
   const [codeCopied, setCodeCopied] = useState(false);
   const [manualCodeEdit, setManualCodeEdit] = useState(false);
+  const [existingCategories, setExistingCategories] = useState([]);
+  const [isAddingNewCategory, setIsAddingNewCategory] = useState(false);
+  const [isAddingNewBulkCategory, setIsAddingNewBulkCategory] = useState(false);
+  const [newCatName, setNewCatName] = useState('');
+
+  const fetchCategories = async () => {
+    try {
+      const response = await api.get('/categories');
+      setExistingCategories(response.data.data || []);
+    } catch (error) {
+      console.error('Error fetching categories:', error);
+    }
+  };
+
+  useEffect(() => {
+    fetchCategories();
+  }, []);
 
   // Bulk mode state
   const [bulkBrandName, setBulkBrandName] = useState('');
   const [bulkProducts, setBulkProducts] = useState([]);
+  const [bulkCategory, setBulkCategory] = useState('');
+
+  // Bulk mode state
   const [bulkDefaults, setBulkDefaults] = useState({
     cost_of_production: '',
     markup_percentage: '',
@@ -101,6 +122,7 @@ const AddProduct = () => {
   const [newBulkProduct, setNewBulkProduct] = useState({
     product_name: '',
     volume_size: '',
+    category: '',
     description: '',
     cost_of_production: '',
     markup_percentage: '',
@@ -153,6 +175,7 @@ const AddProduct = () => {
         brand_name: brandName || legacyName,
         product_name: productName,
         volume_size: volumeSize,
+        category: product.category || '',
         sorting_code: sortingCode,
         description: product.description || '',
         cost_of_production: product.cost_of_production,
@@ -200,6 +223,29 @@ const AddProduct = () => {
       setTimeout(() => setCodeCopied(false), 2000);
     } catch (err) {
       console.error('Failed to copy:', err);
+    }
+  };
+
+  const handleAddNewCategory = async (type = 'single') => {
+    const name = newCatName.trim();
+    if (!name) return;
+
+    try {
+      const response = await api.post('/categories', { name });
+      const newCat = response.data.data;
+      setExistingCategories(prev => [...prev, newCat].sort((a, b) => a.name.localeCompare(b.name)));
+      
+      if (type === 'single') {
+        setFormData(prev => ({ ...prev, category: newCat.name }));
+        setIsAddingNewCategory(false);
+      } else {
+        setBulkCategory(newCat.name);
+        setIsAddingNewBulkCategory(false);
+      }
+      setNewCatName('');
+      toast.success(`Category "${name}" created`);
+    } catch (error) {
+      toast.error(error.response?.data?.error || 'Failed to create category');
     }
   };
 
@@ -257,6 +303,7 @@ const AddProduct = () => {
         brand_name: formData.brand_name.trim(),
         product_name: formData.product_name.trim(),
         volume_size: formData.volume_size.trim(),
+        category: formData.category.trim(),
         sorting_code: formData.sorting_code.toUpperCase().trim(),
         // Combined display name
         name: fullName,
@@ -302,6 +349,7 @@ const AddProduct = () => {
       brand_name: bulkBrandName.trim(),
       product_name: newBulkProduct.product_name.trim(),
       volume_size: newBulkProduct.volume_size.trim(),
+      category: bulkCategory.trim() || newBulkProduct.category.trim(),
       sorting_code: sortingCode,
       name: fullName,
       description: newBulkProduct.description || '',
@@ -316,6 +364,7 @@ const AddProduct = () => {
     setNewBulkProduct({
       product_name: '',
       volume_size: '',
+      category: '',
       description: '',
       cost_of_production: '',
       markup_percentage: '',
@@ -364,6 +413,7 @@ const AddProduct = () => {
           brand_name: product.brand_name,
           product_name: product.product_name,
           volume_size: product.volume_size,
+          category: product.category,
           sorting_code: product.sorting_code.toUpperCase(),
           name: product.name,
           description: product.description,
@@ -477,6 +527,62 @@ const AddProduct = () => {
                     onChange={handleChange} 
                   />
                   <small className="helper-text">The size, volume, or variant of the product</small>
+                </div>
+
+                <div className="form-group">
+                  <label>Category</label>
+                  {!isAddingNewCategory ? (
+                    <div className="category-select-wrapper" style={{ display: 'flex', gap: '8px' }}>
+                      <select 
+                        name="category" 
+                        value={formData.category} 
+                        onChange={(e) => {
+                          if (e.target.value === 'new') {
+                            setIsAddingNewCategory(true);
+                          } else {
+                            setFormData(prev => ({ ...prev, category: e.target.value }));
+                          }
+                        }}
+                        style={{ flex: 1 }}
+                      >
+                        <option value="">Select Category</option>
+                        {existingCategories.map(cat => (
+                          <option key={cat.id} value={cat.name}>{cat.name}</option>
+                        ))}
+                        <option value="new" style={{ fontWeight: 'bold', color: 'var(--primary-color)' }}>+ Add New Category...</option>
+                      </select>
+                    </div>
+                  ) : (
+                    <div className="category-add-wrapper" style={{ display: 'flex', gap: '8px' }}>
+                      <input 
+                        type="text" 
+                        placeholder="New category name" 
+                        value={newCatName}
+                        onChange={(e) => setNewCatName(e.target.value)}
+                        autoFocus
+                      />
+                      <button 
+                        type="button" 
+                        className="btn-primary" 
+                        onClick={() => handleAddNewCategory('single')}
+                        style={{ padding: '0 12px', height: '38px' }}
+                      >
+                        Add
+                      </button>
+                      <button 
+                        type="button" 
+                        className="btn-secondary" 
+                        onClick={() => {
+                          setIsAddingNewCategory(false);
+                          setNewCatName('');
+                        }}
+                        style={{ padding: '0 12px', height: '38px' }}
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  )}
+                  <small className="helper-text">Group similar products together</small>
                 </div>
 
                 <div className="form-group">
@@ -679,23 +785,75 @@ const AddProduct = () => {
           {/* ============ BULK MODE ============ */}
           {mode === 'bulk' && !isEditing && (
             <div className="bulk-mode">
-              {/* Brand Name Card */}
+              {/* Brand & Category Card */}
               <div className="form-card">
                 <h3 className="section-title">
-                  <FiTag /> Brand
+                  <FiTag /> Brand & Category
                 </h3>
                 <p className="section-description">
-                  Set the brand name once. All products below will use this brand.
+                  Set the brand and category once. All products below will use these.
                 </p>
                 
-                <div className="form-group">
-                  <label>Brand Name <span className="required">*</span></label>
-                  <input 
-                    type="text" 
-                    placeholder="e.g., Dr Vranjes" 
-                    value={bulkBrandName} 
-                    onChange={(e) => setBulkBrandName(e.target.value)}
-                  />
+                <div className="form-row">
+                  <div className="form-group">
+                    <label>Brand Name <span className="required">*</span></label>
+                    <input 
+                      type="text" 
+                      placeholder="e.g., Dr Vranjes" 
+                      value={bulkBrandName} 
+                      onChange={(e) => setBulkBrandName(e.target.value)}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>Category</label>
+                    {!isAddingNewBulkCategory ? (
+                      <select 
+                        value={bulkCategory} 
+                        onChange={(e) => {
+                          if (e.target.value === 'new') {
+                            setIsAddingNewBulkCategory(true);
+                          } else {
+                            setBulkCategory(e.target.value);
+                          }
+                        }}
+                      >
+                        <option value="">Select Category</option>
+                        {existingCategories.map(cat => (
+                          <option key={cat.id} value={cat.name}>{cat.name}</option>
+                        ))}
+                        <option value="new" style={{ fontWeight: 'bold' }}>+ Add New Category...</option>
+                      </select>
+                    ) : (
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        <input 
+                          type="text" 
+                          placeholder="New category name" 
+                          value={newCatName}
+                          onChange={(e) => setNewCatName(e.target.value)}
+                          autoFocus
+                        />
+                        <button 
+                          type="button" 
+                          className="btn-primary" 
+                          onClick={() => handleAddNewCategory('bulk')}
+                          style={{ padding: '0 12px', height: '38px' }}
+                        >
+                          Add
+                        </button>
+                        <button 
+                          type="button" 
+                          className="btn-secondary" 
+                          onClick={() => {
+                            setIsAddingNewBulkCategory(false);
+                            setNewCatName('');
+                          }}
+                          style={{ padding: '0 12px', height: '38px' }}
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
 
@@ -789,6 +947,20 @@ const AddProduct = () => {
                         onChange={(e) => setNewBulkProduct({ ...newBulkProduct, volume_size: e.target.value })}
                       />
                     </div>
+                    {!bulkCategory && (
+                    <div className="form-group">
+                      <label>Category</label>
+                      <select 
+                        value={newBulkProduct.category} 
+                        onChange={(e) => setNewBulkProduct({ ...newBulkProduct, category: e.target.value })}
+                      >
+                        <option value="">Select Category</option>
+                        {existingCategories.map(cat => (
+                          <option key={cat.id} value={cat.name}>{cat.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                    )}
                     <div className="form-group" style={{ flex: '0 0 auto' }}>
                       <label>Code Preview</label>
                       <div className="code-preview-inline">

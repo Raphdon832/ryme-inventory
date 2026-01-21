@@ -43,6 +43,42 @@ function createTables() {
       }
     });
 
+    db.run(`ALTER TABLE products ADD COLUMN brand_name TEXT`, (err) => {
+      if (err && !String(err.message || '').includes('duplicate column')) {
+        console.error('Error adding brand_name column', err.message);
+      }
+    });
+
+    db.run(`ALTER TABLE products ADD COLUMN product_name TEXT`, (err) => {
+      if (err && !String(err.message || '').includes('duplicate column')) {
+        console.error('Error adding product_name column', err.message);
+      }
+    });
+
+    db.run(`ALTER TABLE products ADD COLUMN volume_size TEXT`, (err) => {
+      if (err && !String(err.message || '').includes('duplicate column')) {
+        console.error('Error adding volume_size column', err.message);
+      }
+    });
+
+    db.run(`ALTER TABLE products ADD COLUMN sorting_code TEXT`, (err) => {
+      if (err && !String(err.message || '').includes('duplicate column')) {
+        console.error('Error adding sorting_code column', err.message);
+      }
+    });
+
+    db.run(`ALTER TABLE products ADD COLUMN category TEXT`, (err) => {
+      if (err && !String(err.message || '').includes('duplicate column')) {
+        console.error('Error adding category column', err.message);
+      }
+    });
+
+    // Categories Table
+    db.run(`CREATE TABLE IF NOT EXISTS categories (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL UNIQUE
+    )`);
+
     // Orders Table
     db.run(`CREATE TABLE IF NOT EXISTS orders (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -81,7 +117,19 @@ app.get('/api/products', (req, res) => {
 
 // Create a new product
 app.post('/api/products', (req, res) => {
-  const { name, description, cost_of_production, markup_percentage, markup_amount, stock_quantity } = req.body;
+  const { 
+    name, 
+    brand_name, 
+    product_name, 
+    volume_size, 
+    sorting_code, 
+    category,
+    description, 
+    cost_of_production, 
+    markup_percentage, 
+    markup_amount, 
+    stock_quantity 
+  } = req.body;
 
   const cost = Number(cost_of_production);
   const percentProvided = markup_percentage !== undefined && markup_percentage !== null && markup_percentage !== '';
@@ -98,8 +146,17 @@ app.post('/api/products', (req, res) => {
   const sales_price = cost + appliedMarkup;
   const profit = sales_price - cost;
 
-  const sql = `INSERT INTO products (name, description, cost_of_production, markup_percentage, markup_amount, sales_price, profit, stock_quantity) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`;
-  const params = [name, description, cost, amountProvided ? 0 : percentValue, amountProvided ? amountValue : 0, sales_price, profit, stock_quantity];
+  const sql = `INSERT INTO products (
+    name, brand_name, product_name, volume_size, sorting_code, category,
+    description, cost_of_production, markup_percentage, markup_amount, 
+    sales_price, profit, stock_quantity
+  ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+  
+  const params = [
+    name, brand_name, product_name, volume_size, sorting_code, category,
+    description, cost, amountProvided ? 0 : percentValue, amountProvided ? amountValue : 0, 
+    sales_price, profit, stock_quantity
+  ];
 
   db.run(sql, params, function (err) {
     if (err) {
@@ -115,7 +172,19 @@ app.post('/api/products', (req, res) => {
 
 // Update a product
 app.put('/api/products/:id', (req, res) => {
-  const { name, description, cost_of_production, markup_percentage, markup_amount, stock_quantity } = req.body;
+  const { 
+    name, 
+    brand_name, 
+    product_name, 
+    volume_size, 
+    sorting_code, 
+    category,
+    description, 
+    cost_of_production, 
+    markup_percentage, 
+    markup_amount, 
+    stock_quantity 
+  } = req.body;
   const productId = req.params.id;
 
   const cost = Number(cost_of_production);
@@ -133,8 +202,18 @@ app.put('/api/products/:id', (req, res) => {
   const sales_price = cost + appliedMarkup;
   const profit = sales_price - cost;
 
-  const sql = `UPDATE products SET name = ?, description = ?, cost_of_production = ?, markup_percentage = ?, markup_amount = ?, sales_price = ?, profit = ?, stock_quantity = ? WHERE id = ?`;
-  const params = [name, description, cost, amountProvided ? 0 : percentValue, amountProvided ? amountValue : 0, sales_price, profit, stock_quantity, productId];
+  const sql = `UPDATE products SET 
+    name = ?, brand_name = ?, product_name = ?, volume_size = ?, 
+    sorting_code = ?, category = ?, description = ?, cost_of_production = ?, 
+    markup_percentage = ?, markup_amount = ?, sales_price = ?, profit = ?, 
+    stock_quantity = ? 
+    WHERE id = ?`;
+    
+  const params = [
+    name, brand_name, product_name, volume_size, sorting_code, category,
+    description, cost, amountProvided ? 0 : percentValue, amountProvided ? amountValue : 0, 
+    sales_price, profit, stock_quantity, productId
+  ];
 
   db.run(sql, params, function (err) {
     if (err) {
@@ -158,6 +237,32 @@ app.delete('/api/products/:id', (req, res) => {
       return;
     }
     res.json({ message: 'success', deletedId: productId });
+  });
+});
+
+// Category Routes
+app.get('/api/categories', (req, res) => {
+  db.all('SELECT * FROM categories ORDER BY name ASC', [], (err, rows) => {
+    if (err) {
+      res.status(400).json({ error: err.message });
+      return;
+    }
+    res.json({ data: rows });
+  });
+});
+
+app.post('/api/categories', (req, res) => {
+  const { name } = req.body;
+  if (!name) return res.status(400).json({ error: 'Name is required' });
+
+  db.run('INSERT INTO categories (name) VALUES (?)', [name], function(err) {
+    if (err) {
+      if (err.message.includes('UNIQUE')) {
+        return res.status(400).json({ error: 'Category already exists' });
+      }
+      return res.status(400).json({ error: err.message });
+    }
+    res.json({ data: { id: this.lastID, name } });
   });
 });
 
