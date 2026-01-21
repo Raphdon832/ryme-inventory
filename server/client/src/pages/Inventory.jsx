@@ -2,11 +2,12 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../api';
 import { SkeletonTable } from '../components/Skeleton.jsx';
-import { FiPlus, FiEdit2, FiTrash2, FiPackage, FiTag, FiTrendingUp, FiX, FiCheck, FiPercent, FiDollarSign, FiFilter, FiChevronDown, FiChevronUp, FiChevronRight } from 'react-icons/fi';
+import { FiPlus, FiEdit2, FiTrash2, FiPackage, FiTag, FiTrendingUp, FiX, FiCheck, FiPercent, FiDollarSign, FiFilter, FiChevronDown, FiChevronUp, FiChevronRight, FiDownload, FiFileText } from 'react-icons/fi';
 import { useSettings } from '../contexts/SettingsContext';
 import useScrollLock from '../hooks/useScrollLock';
 import soundManager from '../utils/soundManager';
 import { useToast } from '../components/Toast';
+import { exportInventory } from '../utils/exportUtils';
 
 const Inventory = () => {
   const navigate = useNavigate();
@@ -326,9 +327,29 @@ const Inventory = () => {
           <h1>Inventory</h1>
           <p>Manage your products, costs, and pricing</p>
         </div>
-        <button className="add-btn-bordered" onClick={() => navigate('/inventory/add')}>
-          <FiPlus size={18} /> Add Product
-        </button>
+        <div style={{ display: 'flex', gap: '10px' }}>
+          <div style={{ position: 'relative', display: 'flex', gap: '8px' }}>
+            <button 
+              className="secondary" 
+              onClick={() => exportInventory(products, 'csv')}
+              title="Export as CSV"
+              style={{ padding: '0 16px', display: 'flex', alignItems: 'center', gap: '8px', height: '42px', borderRadius: '10px' }}
+            >
+              <FiFileText size={16} /> <span className="hide-mobile">CSV</span>
+            </button>
+            <button 
+              className="secondary" 
+              onClick={() => exportInventory(products, 'pdf')}
+              title="Export as PDF"
+              style={{ padding: '0 16px', display: 'flex', alignItems: 'center', gap: '8px', height: '42px', borderRadius: '10px' }}
+            >
+              <FiDownload size={16} /> <span className="hide-mobile">PDF</span>
+            </button>
+          </div>
+          <button className="add-btn-bordered" onClick={() => navigate('/inventory/add')} style={{ height: '42px' }}>
+            <FiPlus size={18} /> Add Product
+          </button>
+        </div>
       </div>
 
       {/* Stats Grid */}

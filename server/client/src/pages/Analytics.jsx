@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { FiTrendingUp, FiTrendingDown, FiDollarSign, FiShoppingCart, FiPackage, FiBarChart2, FiPieChart, FiCalendar } from 'react-icons/fi';
+import { FiTrendingUp, FiTrendingDown, FiDollarSign, FiShoppingCart, FiPackage, FiBarChart2, FiPieChart, FiCalendar, FiDownload, FiFileText } from 'react-icons/fi';
 import { collection, getDocs, query, orderBy } from 'firebase/firestore';
 import { db } from '../api';
 import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { useSettings } from '../contexts/SettingsContext';
+import { exportFinancialReport } from '../utils/exportUtils';
 import './Analytics.css';
 
 const Analytics = () => {
@@ -122,6 +123,30 @@ const Analytics = () => {
 
   const COLORS = ['#2563eb', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899'];
 
+  const handleExport = (type) => {
+    const transactions = filteredOrders.map(o => ({
+      date: new Date(o.order_date).toLocaleDateString(),
+      type: 'Sale',
+      reference: o.orderId || o.id.substring(0, 8),
+      revenue: o.total_sales_price || 0,
+      cost: (o.total_sales_price || 0) - (o.total_profit || 0),
+      profit: o.total_profit || 0,
+      method: o.payment_method || 'Cash'
+    }));
+
+    const data = {
+      summary: {
+        totalRevenue: formatCurrency(totalRevenue),
+        totalCost: formatCurrency(totalRevenue - totalProfit),
+        totalProfit: formatCurrency(totalProfit),
+        margin: totalRevenue > 0 ? ((totalProfit / totalRevenue) * 100).toFixed(1) : 0
+      },
+      transactions
+    };
+
+    exportFinancialReport(data, type);
+  };
+
   if (loading) {
     return (
       <div className="analytics-page">
@@ -137,14 +162,34 @@ const Analytics = () => {
           <h1>Analytics</h1>
           <p>Track your business performance</p>
         </div>
-        <div className="date-filter">
-          <FiCalendar />
-          <select value={dateRange} onChange={e => setDateRange(e.target.value)}>
-            <option value="7">Last 7 days</option>
-            <option value="30">Last 30 days</option>
-            <option value="90">Last 90 days</option>
-            <option value="365">Last year</option>
-          </select>
+        <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <button 
+              className="secondary" 
+              onClick={() => handleExport('csv')}
+              title="Export Full Financial Report (CSV)"
+              style={{ padding: '0 16px', display: 'flex', alignItems: 'center', gap: '8px', height: '42px', borderRadius: '10px', background: 'var(--bg-surface)', border: '1px solid var(--border-color)', color: 'var(--text-secondary)', cursor: 'pointer', transition: 'all 0.2s' }}
+            >
+              <FiFileText size={16} /> <span className="hide-mobile">CSV</span>
+            </button>
+            <button 
+              className="secondary" 
+              onClick={() => handleExport('pdf')}
+              title="Export Full Financial Report (PDF)"
+              style={{ padding: '0 16px', display: 'flex', alignItems: 'center', gap: '8px', height: '42px', borderRadius: '10px', background: 'var(--bg-surface)', border: '1px solid var(--border-color)', color: 'var(--text-secondary)', cursor: 'pointer', transition: 'all 0.2s' }}
+            >
+              <FiDownload size={16} /> <span className="hide-mobile">PDF Report</span>
+            </button>
+          </div>
+          <div className="date-filter">
+            <FiCalendar />
+            <select value={dateRange} onChange={e => setDateRange(e.target.value)}>
+              <option value="7">Last 7 days</option>
+              <option value="30">Last 30 days</option>
+              <option value="90">Last 90 days</option>
+              <option value="365">Last year</option>
+            </select>
+          </div>
         </div>
       </div>
 

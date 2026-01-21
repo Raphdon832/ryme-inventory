@@ -2,10 +2,11 @@ import React, { useState, useEffect } from 'react';
 import api from '../api';
 import { SkeletonTable, SkeletonOrderCardList } from '../components/Skeleton.jsx';
 import { Link, useNavigate } from 'react-router-dom';
-import { FiPlus, FiShoppingCart, FiTag, FiTrendingUp, FiX, FiTrash2, FiEye, FiAlertCircle, FiEdit2, FiWifiOff, FiRefreshCw, FiCheck } from 'react-icons/fi';
+import { FiPlus, FiShoppingCart, FiTag, FiTrendingUp, FiX, FiTrash2, FiEye, FiAlertCircle, FiEdit2, FiWifiOff, FiRefreshCw, FiCheck, FiDownload, FiFileText } from 'react-icons/fi';
 import { useSettings } from '../contexts/SettingsContext';
 import useScrollLock from '../hooks/useScrollLock';
 import offlineManager from '../utils/offlineManager';
+import { exportOrders } from '../utils/exportUtils';
 import './Orders.css';
 
 const Orders = () => {
@@ -153,8 +154,26 @@ const Orders = () => {
           <h1>Orders</h1>
           <p>Create and manage customer orders</p>
         </div>
-        <div className="orders-header-actions">
-          <Link to="/orders/new" className="btn-primary btn-animate hover-lift">
+        <div className="orders-header-actions" style={{ display: 'flex', gap: '10px' }}>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <button 
+              className="secondary" 
+              onClick={() => exportOrders(orders, 'csv')}
+              title="Export as CSV"
+              style={{ padding: '0 16px', display: 'flex', alignItems: 'center', gap: '8px', height: '42px', borderRadius: '10px', background: 'var(--bg-surface)', border: '1px solid var(--border-color)', color: 'var(--text-secondary)', cursor: 'pointer' }}
+            >
+              <FiFileText size={16} /> <span className="hide-mobile">CSV</span>
+            </button>
+            <button 
+              className="secondary" 
+              onClick={() => exportOrders(orders, 'pdf')}
+              title="Export as PDF"
+              style={{ padding: '0 16px', display: 'flex', alignItems: 'center', gap: '8px', height: '42px', borderRadius: '10px', background: 'var(--bg-surface)', border: '1px solid var(--border-color)', color: 'var(--text-secondary)', cursor: 'pointer' }}
+            >
+              <FiDownload size={16} /> <span className="hide-mobile">PDF</span>
+            </button>
+          </div>
+          <Link to="/orders/new" className="btn-primary btn-animate hover-lift" style={{ height: '42px', display: 'flex', alignItems: 'center' }}>
             <FiPlus size={16} /> New Order
           </Link>
         </div>
