@@ -96,7 +96,16 @@ export const SettingsProvider = ({ children }) => {
     }
     
     const applyTheme = (isDark) => {
+      // Add transition class for smooth animation
+      document.body.classList.add('theme-transition');
+      
+      // Apply the theme
       document.body.classList.toggle('theme-dark', isDark);
+      
+      // Remove transition class after animation completes
+      setTimeout(() => {
+        document.body.classList.remove('theme-transition');
+      }, 400);
     };
     
     if (darkModeSetting === 'auto') {
