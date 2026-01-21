@@ -109,6 +109,8 @@ body.theme-transition *::after {
               stroke 0.3s ease !important;
 }
 
+/* Support theme-dark on html or body element for early loading */
+html.theme-dark,
 body.theme-dark {
   --bg-body: #0b0b0d;
   --bg-surface: #111317;

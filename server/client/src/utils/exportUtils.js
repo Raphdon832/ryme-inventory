@@ -22,7 +22,7 @@ export const exportToCSV = (data, fileName) => {
  */
 export const exportToPDF = (columns, data, options = {}) => {
   const { title = 'Report', fileName = 'report', subtitle = '', orientation = 'portrait' } = options;
-  const doc = jsPDF({ orientation });
+  const doc = new jsPDF({ orientation });
 
   // Add Title
   doc.setFontSize(20);
@@ -155,7 +155,7 @@ export const exportFinancialReport = (data, type = 'pdf') => {
       profit: (t.revenue || 0) - (t.cost || 0)
     }));
 
-    const doc = jsPDF();
+    const doc = new jsPDF();
     doc.setFontSize(22);
     doc.text('Financial Report', 14, 20);
     
