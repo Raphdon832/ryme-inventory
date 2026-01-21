@@ -17,6 +17,10 @@ const defaultSettings = {
   inventory: {
     lowStockThreshold: 10,
     autoReorder: false
+  },
+  quickNav: {
+    enabled: false,
+    items: [] // Array of { id, path, icon, label } - max 5 items
   }
 };
 
@@ -32,7 +36,8 @@ const settingsRef = doc(db, 'app_settings', 'general');
 const mergeSettings = (base, incoming) => ({
   notifications: { ...base.notifications, ...(incoming?.notifications || {}) },
   display: { ...base.display, ...(incoming?.display || {}) },
-  inventory: { ...base.inventory, ...(incoming?.inventory || {}) }
+  inventory: { ...base.inventory, ...(incoming?.inventory || {}) },
+  quickNav: { ...base.quickNav, ...(incoming?.quickNav || {}) }
 });
 
 const safeLoadLocal = () => {

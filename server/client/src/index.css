@@ -6,10 +6,10 @@
   --bg-surface-hover: #f0f4f8;
   --card-bg: #ffffff;
 
-  --sidebar-bg: #0a0a0a;
-  --sidebar-hover: #1a1a1a;
+  --sidebar-bg: #ffffff;
+  --sidebar-hover: #f0f4f8;
   --sidebar-active: #2563eb;
-  --sidebar-text: #a1a1aa;
+  --sidebar-text: #52525b;
   --sidebar-text-active: #ffffff;
 
   --primary-color: #2563eb;
@@ -102,7 +102,7 @@ body.theme-dark {
   --bg-surface-hover: #1a1d22;
   --card-bg: #111317;
 
-  --sidebar-bg: #0b0b0d;
+  --sidebar-bg: #000000;
   --sidebar-hover: #14161a;
   --sidebar-active: #2563eb;
   --sidebar-text: #a1a1aa;

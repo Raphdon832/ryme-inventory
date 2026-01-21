@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { FiBell, FiDatabase, FiSave, FiMoon, FiRefreshCw, FiVolume2, FiPlay } from 'react-icons/fi';
+import { FiBell, FiDatabase, FiSave, FiMoon, FiRefreshCw, FiVolume2, FiPlay, FiNavigation, FiPlus, FiX, FiCheck } from 'react-icons/fi';
 import { useSettings } from '../contexts/SettingsContext';
+import { AVAILABLE_NAV_OPTIONS, ICON_MAP } from '../components/QuickNavBar';
 import api from '../api';
 import soundManager from '../utils/soundManager';
 import './Settings.css';
@@ -23,6 +24,10 @@ const Settings = () => {
   // Sound settings state
   const [soundEnabled, setSoundEnabled] = useState(soundManager.enabled);
   const [soundVolume, setSoundVolume] = useState(soundManager.volume);
+  
+  // Quick Navigation state
+  const [showNavPicker, setShowNavPicker] = useState(false);
+  const quickNavItems = settings.quickNav?.items || [];
 
   // Sync sound settings on mount
   useEffect(() => {
@@ -72,6 +77,56 @@ const Settings = () => {
     });
     setSaved(false);
   };
+  
+  // Quick Navigation handlers
+  const handleQuickNavToggle = () => {
+    updateSettings({
+      quickNav: {
+        enabled: !settings.quickNav?.enabled
+      }
+    });
+    setSaved(false);
+  };
+  
+  const addQuickNavItem = (item) => {
+    if (quickNavItems.length >= 5) return;
+    if (quickNavItems.find(i => i.id === item.id)) return;
+    
+    updateSettings({
+      quickNav: {
+        items: [...quickNavItems, item]
+      }
+    });
+    setSaved(false);
+    setShowNavPicker(false);
+  };
+  
+  const removeQuickNavItem = (itemId) => {
+    updateSettings({
+      quickNav: {
+        items: quickNavItems.filter(i => i.id !== itemId)
+      }
+    });
+    setSaved(false);
+  };
+  
+  const moveQuickNavItem = (index, direction) => {
+    const newItems = [...quickNavItems];
+    const newIndex = index + direction;
+    if (newIndex < 0 || newIndex >= newItems.length) return;
+    
+    [newItems[index], newItems[newIndex]] = [newItems[newIndex], newItems[index]];
+    updateSettings({
+      quickNav: {
+        items: newItems
+      }
+    });
+    setSaved(false);
+  };
+  
+  const availableOptions = AVAILABLE_NAV_OPTIONS.filter(
+    opt => !quickNavItems.find(item => item.id === opt.id)
+  );
 
   const handleSave = async () => {
     const success = await saveSettings();
@@ -275,6 +330,290 @@ const Settings = () => {
                 <option value="GBP">£ British Pound</option>
               </select>
             </div>
+          </div>
+        </div>
+
+        {/* Quick Navigation - Mobile */}
+        <div className="card">
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
+            <div style={{
+              width: '40px',
+              height: '40px',
+              borderRadius: '10px',
+              background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: 'white'
+            }}>
+              <FiNavigation size={20} />
+            </div>
+            <div>
+              <h3 style={{ margin: 0 }}>Quick Navigation</h3>
+              <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-secondary)' }}>Customize bottom navbar for mobile (max 5 items)</p>
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 0', borderBottom: '1px solid var(--border-color)' }}>
+              <div>
+                <p style={{ margin: 0, fontWeight: 500 }}>Enable Quick Navigation</p>
+                <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-tertiary)' }}>Show bottom navbar on mobile for quick access</p>
+              </div>
+              <Toggle checked={settings.quickNav?.enabled || false} onChange={handleQuickNavToggle} disabled={loading} />
+            </div>
+
+            {settings.quickNav?.enabled && (
+              <>
+                <div style={{ padding: '12px 0' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                    <p style={{ margin: 0, fontWeight: 500 }}>Navigation Items ({quickNavItems.length}/5)</p>
+                    {quickNavItems.length < 5 && (
+                      <button
+                        onClick={() => setShowNavPicker(true)}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          padding: '6px 12px',
+                          fontSize: '12px',
+                          background: 'var(--primary-color)',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '6px',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        <FiPlus size={14} /> Add Item
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Current Items */}
+                  {quickNavItems.length === 0 ? (
+                    <div style={{
+                      padding: '24px',
+                      background: 'var(--bg-tertiary)',
+                      borderRadius: '10px',
+                      textAlign: 'center',
+                      color: 'var(--text-tertiary)',
+                      fontSize: '13px'
+                    }}>
+                      No navigation items added yet. Click "Add Item" to get started.
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      {quickNavItems.map((item, index) => {
+                        const IconComponent = ICON_MAP[item.icon];
+                        return (
+                          <div
+                            key={item.id}
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '12px',
+                              padding: '10px 12px',
+                              background: 'var(--bg-tertiary)',
+                              borderRadius: '10px',
+                              border: '1px solid var(--border-color)'
+                            }}
+                          >
+                            <div style={{
+                              width: '32px',
+                              height: '32px',
+                              borderRadius: '8px',
+                              background: 'rgba(79, 106, 245, 0.1)',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              color: 'var(--primary-color)'
+                            }}>
+                              {IconComponent && <IconComponent size={16} />}
+                            </div>
+                            <div style={{ flex: 1 }}>
+                              <p style={{ margin: 0, fontWeight: 500, fontSize: '14px' }}>{item.label}</p>
+                              <p style={{ margin: 0, fontSize: '11px', color: 'var(--text-tertiary)' }}>{item.path}</p>
+                            </div>
+                            <div style={{ display: 'flex', gap: '4px' }}>
+                              <button
+                                onClick={() => moveQuickNavItem(index, -1)}
+                                disabled={index === 0}
+                                style={{
+                                  width: '28px',
+                                  height: '28px',
+                                  borderRadius: '6px',
+                                  border: '1px solid var(--border-color)',
+                                  background: 'var(--bg-surface)',
+                                  cursor: index === 0 ? 'not-allowed' : 'pointer',
+                                  opacity: index === 0 ? 0.4 : 1,
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  fontSize: '12px'
+                                }}
+                              >
+                                ↑
+                              </button>
+                              <button
+                                onClick={() => moveQuickNavItem(index, 1)}
+                                disabled={index === quickNavItems.length - 1}
+                                style={{
+                                  width: '28px',
+                                  height: '28px',
+                                  borderRadius: '6px',
+                                  border: '1px solid var(--border-color)',
+                                  background: 'var(--bg-surface)',
+                                  cursor: index === quickNavItems.length - 1 ? 'not-allowed' : 'pointer',
+                                  opacity: index === quickNavItems.length - 1 ? 0.4 : 1,
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  fontSize: '12px'
+                                }}
+                              >
+                                ↓
+                              </button>
+                              <button
+                                onClick={() => removeQuickNavItem(item.id)}
+                                style={{
+                                  width: '28px',
+                                  height: '28px',
+                                  borderRadius: '6px',
+                                  border: '1px solid rgba(239, 68, 68, 0.3)',
+                                  background: 'rgba(239, 68, 68, 0.1)',
+                                  color: '#EF4444',
+                                  cursor: 'pointer',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center'
+                                }}
+                              >
+                                <FiX size={14} />
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+
+                {/* Item Picker Modal */}
+                {showNavPicker && (
+                  <div 
+                    style={{
+                      position: 'fixed',
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      background: 'rgba(0,0,0,0.5)',
+                      backdropFilter: 'blur(4px)',
+                      zIndex: 1000,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      padding: '20px'
+                    }}
+                    onClick={() => setShowNavPicker(false)}
+                  >
+                    <div 
+                      style={{
+                        background: 'var(--bg-surface)',
+                        borderRadius: '16px',
+                        width: '100%',
+                        maxWidth: '400px',
+                        maxHeight: '70vh',
+                        overflow: 'hidden',
+                        display: 'flex',
+                        flexDirection: 'column'
+                      }}
+                      onClick={e => e.stopPropagation()}
+                    >
+                      <div style={{
+                        padding: '16px 20px',
+                        borderBottom: '1px solid var(--border-color)',
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center'
+                      }}>
+                        <h3 style={{ margin: 0 }}>Add Navigation Item</h3>
+                        <button
+                          onClick={() => setShowNavPicker(false)}
+                          style={{
+                            width: '32px',
+                            height: '32px',
+                            borderRadius: '8px',
+                            border: 'none',
+                            background: 'var(--bg-tertiary)',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center'
+                          }}
+                        >
+                          <FiX size={18} />
+                        </button>
+                      </div>
+                      <div style={{ flex: 1, overflow: 'auto', padding: '12px' }}>
+                        {availableOptions.length === 0 ? (
+                          <div style={{
+                            padding: '24px',
+                            textAlign: 'center',
+                            color: 'var(--text-tertiary)',
+                            fontSize: '13px'
+                          }}>
+                            All available options have been added.
+                          </div>
+                        ) : (
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                            {availableOptions.map((option) => {
+                              const IconComponent = ICON_MAP[option.icon];
+                              return (
+                                <button
+                                  key={option.id}
+                                  onClick={() => addQuickNavItem(option)}
+                                  style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '12px',
+                                    padding: '12px',
+                                    background: 'var(--bg-tertiary)',
+                                    border: '1px solid var(--border-color)',
+                                    borderRadius: '10px',
+                                    cursor: 'pointer',
+                                    textAlign: 'left',
+                                    transition: 'all 0.15s'
+                                  }}
+                                >
+                                  <div style={{
+                                    width: '36px',
+                                    height: '36px',
+                                    borderRadius: '8px',
+                                    background: 'rgba(79, 106, 245, 0.1)',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    color: 'var(--primary-color)'
+                                  }}>
+                                    {IconComponent && <IconComponent size={18} />}
+                                  </div>
+                                  <div style={{ flex: 1 }}>
+                                    <p style={{ margin: 0, fontWeight: 500, fontSize: '14px', color: 'var(--text-primary)' }}>{option.label}</p>
+                                    <p style={{ margin: 0, fontSize: '12px', color: 'var(--text-tertiary)' }}>{option.path}</p>
+                                  </div>
+                                  <FiPlus size={18} style={{ color: 'var(--text-tertiary)' }} />
+                                </button>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
           </div>
         </div>
 

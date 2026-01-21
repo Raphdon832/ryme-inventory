@@ -5,12 +5,17 @@ import Splash from './Splash';
 import OfflineIndicator from './OfflineIndicator';
 import PullToRefresh from './PullToRefresh';
 import GlobalSearch from './GlobalSearch';
+import QuickNavBar from './QuickNavBar';
+import { useSettings } from '../contexts/SettingsContext';
 
 const Layout = ({ children }) => {
+  const { settings } = useSettings();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [showSplash, setShowSplash] = useState(true);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+  
+  const hasQuickNav = settings.quickNav?.enabled && settings.quickNav?.items?.length > 0;
 
   // Lock body scroll when sidebar is open on mobile
   useEffect(() => {
@@ -57,7 +62,7 @@ const Layout = ({ children }) => {
   }, []);
 
   return (
-    <div className="dashboard-layout">
+    <div className={`dashboard-layout ${hasQuickNav && isMobile ? 'has-quick-nav' : ''}`}>
       <div
         className={`sidebar-overlay ${isSidebarOpen ? 'show' : ''}`}
         onClick={() => setIsSidebarOpen(false)}
@@ -120,6 +125,14 @@ const Layout = ({ children }) => {
         </PullToRefresh>
         <OfflineIndicator />
       </main>
+      
+      {/* Quick Navigation Bar - Mobile Only */}
+      {isMobile && (
+        <QuickNavBar 
+          onSearchClick={() => setIsSearchOpen(true)} 
+          isHidden={isSidebarOpen}
+        />
+      )}
       
       {/* Global Search Modal */}
       <GlobalSearch 
