@@ -10,7 +10,7 @@ const defaultSettings = {
     weeklyReports: false
   },
   display: {
-    darkMode: false,
+    darkMode: 'light', // 'light', 'dark', or 'auto'
     compactView: false,
     currency: 'NGN'
   },
@@ -84,10 +84,38 @@ export const SettingsProvider = ({ children }) => {
     return () => unsubscribe();
   }, []);
 
+  // Handle dark mode with system preference support
   useEffect(() => {
-    document.body.classList.toggle('theme-dark', Boolean(settings.display.darkMode));
+    const darkModeSetting = settings.display.darkMode;
+    
+    // Migrate boolean to string if needed
+    if (typeof darkModeSetting === 'boolean') {
+      const newValue = darkModeSetting ? 'dark' : 'light';
+      updateSettings({ display: { darkMode: newValue } });
+      return;
+    }
+    
+    const applyTheme = (isDark) => {
+      document.body.classList.toggle('theme-dark', isDark);
+    };
+    
+    if (darkModeSetting === 'auto') {
+      // Check system preference
+      const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+      applyTheme(mediaQuery.matches);
+      
+      // Listen for system preference changes
+      const handleChange = (e) => applyTheme(e.matches);
+      mediaQuery.addEventListener('change', handleChange);
+      return () => mediaQuery.removeEventListener('change', handleChange);
+    } else {
+      applyTheme(darkModeSetting === 'dark');
+    }
+  }, [settings.display.darkMode]);
+
+  useEffect(() => {
     document.body.classList.toggle('compact-view', Boolean(settings.display.compactView));
-  }, [settings.display.darkMode, settings.display.compactView]);
+  }, [settings.display.compactView]);
 
   const saveSettings = async (nextSettings = settings) => {
     try {

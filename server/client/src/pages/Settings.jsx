@@ -297,12 +297,67 @@ const Settings = () => {
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 0', borderBottom: '1px solid var(--border-color)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 0', borderBottom: '1px solid var(--border-color)', flexWrap: 'wrap', gap: '12px' }}>
               <div>
-                <p style={{ margin: 0, fontWeight: 500 }}>Dark Mode</p>
-                <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-tertiary)' }}>Use the dark color theme</p>
+                <p style={{ margin: 0, fontWeight: 500 }}>Appearance</p>
+                <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-tertiary)' }}>Choose your preferred theme</p>
               </div>
-              <Toggle checked={settings.display.darkMode} onChange={() => handleToggle('display', 'darkMode')} disabled={loading} />
+              <div style={{ display: 'flex', gap: '4px', background: 'var(--bg-tertiary)', borderRadius: '8px', padding: '4px' }}>
+                <button
+                  onClick={() => updateSettings({ display: { darkMode: 'light' } })}
+                  disabled={loading}
+                  style={{
+                    padding: '6px 12px',
+                    borderRadius: '6px',
+                    border: 'none',
+                    background: settings.display.darkMode === 'light' ? 'var(--bg-primary)' : 'transparent',
+                    color: settings.display.darkMode === 'light' ? 'var(--text-primary)' : 'var(--text-tertiary)',
+                    fontWeight: settings.display.darkMode === 'light' ? 600 : 400,
+                    cursor: 'pointer',
+                    fontSize: '13px',
+                    boxShadow: settings.display.darkMode === 'light' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                    transition: 'all 0.2s ease'
+                  }}
+                >
+                  Light
+                </button>
+                <button
+                  onClick={() => updateSettings({ display: { darkMode: 'dark' } })}
+                  disabled={loading}
+                  style={{
+                    padding: '6px 12px',
+                    borderRadius: '6px',
+                    border: 'none',
+                    background: settings.display.darkMode === 'dark' ? 'var(--bg-primary)' : 'transparent',
+                    color: settings.display.darkMode === 'dark' ? 'var(--text-primary)' : 'var(--text-tertiary)',
+                    fontWeight: settings.display.darkMode === 'dark' ? 600 : 400,
+                    cursor: 'pointer',
+                    fontSize: '13px',
+                    boxShadow: settings.display.darkMode === 'dark' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                    transition: 'all 0.2s ease'
+                  }}
+                >
+                  Dark
+                </button>
+                <button
+                  onClick={() => updateSettings({ display: { darkMode: 'auto' } })}
+                  disabled={loading}
+                  style={{
+                    padding: '6px 12px',
+                    borderRadius: '6px',
+                    border: 'none',
+                    background: settings.display.darkMode === 'auto' ? 'var(--bg-primary)' : 'transparent',
+                    color: settings.display.darkMode === 'auto' ? 'var(--text-primary)' : 'var(--text-tertiary)',
+                    fontWeight: settings.display.darkMode === 'auto' ? 600 : 400,
+                    cursor: 'pointer',
+                    fontSize: '13px',
+                    boxShadow: settings.display.darkMode === 'auto' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                    transition: 'all 0.2s ease'
+                  }}
+                >
+                  Auto
+                </button>
+              </div>
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 0', borderBottom: '1px solid var(--border-color)' }}>
