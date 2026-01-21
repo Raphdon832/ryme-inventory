@@ -6,7 +6,7 @@ import { FiRefreshCw, FiX } from 'react-icons/fi';
 function ReloadPrompt() {
   const {
     offlineReady: [offlineReady, setOfflineReady],
-    needUpdate: [needUpdate, setNeedUpdate],
+    needRefresh: [needRefresh, setNeedRefresh],
     updateServiceWorker,
   } = useRegisterSW({
     onRegistered(r) {
@@ -19,17 +19,17 @@ function ReloadPrompt() {
 
   const close = () => {
     setOfflineReady(false);
-    setNeedUpdate(false);
+    setNeedRefresh(false);
   };
 
-  if (!offlineReady && !needUpdate) return null;
+  if (!offlineReady && !needRefresh) return null;
 
   return (
     <div className="pwa-toast-container">
       <div className="pwa-toast">
         <div className="pwa-toast-content">
           <div className="pwa-toast-icon">
-            <FiRefreshCw className={needUpdate ? 'spin-icon' : ''} size={20} />
+            <FiRefreshCw className={needRefresh ? 'spin-icon' : ''} size={20} />
           </div>
           <div className="pwa-toast-message">
             {offlineReady ? (
@@ -40,7 +40,7 @@ function ReloadPrompt() {
           </div>
         </div>
         <div className="pwa-toast-buttons">
-          {needUpdate && (
+          {needRefresh && (
             <button className="pwa-reload-btn" onClick={() => updateServiceWorker(true)}>
               Reload
             </button>
