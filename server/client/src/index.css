@@ -1898,6 +1898,37 @@ input:focus, select:focus {
   }
 }
 
+/* Mobile Search Button */
+.mobile-search-btn {
+  display: none;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  cursor: pointer;
+  padding: 8px;
+  border-radius: var(--radius-sm);
+  box-shadow: none;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+}
+
+.mobile-search-btn:hover {
+  background: var(--bg-surface-hover);
+}
+
+.mobile-search-btn:active {
+  background: rgba(79, 106, 245, 0.1);
+  color: var(--primary-color);
+  border-color: var(--primary-color);
+}
+
+@media (max-width: 768px) {
+  .mobile-search-btn {
+    display: flex;
+  }
+}
+
 /* Bento Grid for Stats on Mobile */
 @media (max-width: 768px) {
   .stats-grid.bento-grid {

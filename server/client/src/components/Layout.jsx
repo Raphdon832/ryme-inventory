@@ -4,14 +4,17 @@ import Sidebar from './Sidebar';
 import Splash from './Splash';
 import OfflineIndicator from './OfflineIndicator';
 import PullToRefresh from './PullToRefresh';
+import GlobalSearch from './GlobalSearch';
 
 const Layout = ({ children }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [showSplash, setShowSplash] = useState(true);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
 
   // Lock body scroll when sidebar is open on mobile
   useEffect(() => {
-    if (isSidebarOpen) {
+    if (isSidebarOpen || isSearchOpen) {
       document.body.style.overflow = 'hidden';
       document.body.style.touchAction = 'none';
     } else {
@@ -23,7 +26,28 @@ const Layout = ({ children }) => {
       document.body.style.overflow = '';
       document.body.style.touchAction = '';
     };
-  }, [isSidebarOpen]);
+  }, [isSidebarOpen, isSearchOpen]);
+
+  // Track window resize for mobile detection
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth <= 768);
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  // Global keyboard shortcut for search
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'f') {
+        e.preventDefault();
+        setIsSearchOpen(true);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   // Pull to refresh handler - reloads the page
   const handleRefresh = useCallback(async () => {
@@ -50,11 +74,29 @@ const Layout = ({ children }) => {
             >
               <FiMenu />
             </button>
-            <div className="search-bar search-bar--compact">
+            {/* Desktop Search Bar */}
+            <div 
+              className="search-bar search-bar--compact"
+              onClick={() => setIsSearchOpen(true)}
+              style={{ cursor: 'pointer' }}
+            >
               <FiSearch color="var(--text-tertiary)" size={18} />
-              <input type="text" placeholder="Search task" />
+              <input 
+                type="text" 
+                placeholder="Search anything..." 
+                readOnly 
+                style={{ cursor: 'pointer' }}
+              />
               <span className="search-shortcut">⌘ F</span>
             </div>
+            {/* Mobile Search Button */}
+            <button
+              className="mobile-search-btn"
+              onClick={() => setIsSearchOpen(true)}
+              aria-label="Search"
+            >
+              <FiSearch size={20} />
+            </button>
           </div>
 
           <div className="header-right">
@@ -73,11 +115,18 @@ const Layout = ({ children }) => {
             </div>
           </div>
         </header>
-        <PullToRefresh onRefresh={handleRefresh} disabled={isSidebarOpen}>
+        <PullToRefresh onRefresh={handleRefresh} disabled={isSidebarOpen || isSearchOpen}>
           <div className="content-wrapper">{children}</div>
         </PullToRefresh>
         <OfflineIndicator />
       </main>
+      
+      {/* Global Search Modal */}
+      <GlobalSearch 
+        isOpen={isSearchOpen} 
+        onClose={() => setIsSearchOpen(false)}
+        isMobile={isMobile}
+      />
     </div>
   );
 };
