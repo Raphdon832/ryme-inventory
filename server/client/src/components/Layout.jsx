@@ -4,12 +4,10 @@ import Sidebar from './Sidebar';
 import Splash from './Splash';
 import OfflineIndicator from './OfflineIndicator';
 import PullToRefresh from './PullToRefresh';
-import GlobalSearch from './GlobalSearch';
 
 const Layout = ({ children }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [showSplash, setShowSplash] = useState(true);
-  const [showMobileSearch, setShowMobileSearch] = useState(false);
 
   // Lock body scroll when sidebar is open on mobile
   useEffect(() => {
@@ -52,15 +50,11 @@ const Layout = ({ children }) => {
             >
               <FiMenu />
             </button>
-            <GlobalSearch />
-            {/* Mobile Search Trigger */}
-            <button 
-              className="mobile-search-trigger"
-              onClick={() => setShowMobileSearch(true)}
-              aria-label="Search"
-            >
-              <FiSearch size={20} />
-            </button>
+            <div className="search-bar search-bar--compact">
+              <FiSearch color="var(--text-tertiary)" size={18} />
+              <input type="text" placeholder="Search task" />
+              <span className="search-shortcut">⌘ F</span>
+            </div>
           </div>
 
           <div className="header-right">
@@ -84,11 +78,6 @@ const Layout = ({ children }) => {
         </PullToRefresh>
         <OfflineIndicator />
       </main>
-      
-      {/* Mobile Search Modal */}
-      {showMobileSearch && (
-        <GlobalSearch isMobile={true} onClose={() => setShowMobileSearch(false)} />
-      )}
     </div>
   );
 };
