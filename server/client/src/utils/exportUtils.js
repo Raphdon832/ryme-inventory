@@ -1,5 +1,5 @@
 import jsPDF from 'jspdf';
-import 'jspdf-autotable';
+import autoTable from 'jspdf-autotable';
 import Papa from 'papaparse';
 import { saveAs } from 'file-saver';
 
@@ -35,7 +35,7 @@ export const exportToPDF = (columns, data, options = {}) => {
   doc.text(subtitle || `Generated on: ${new Date().toLocaleDateString()}`, 14, 30);
 
   // Add Table
-  doc.autoTable({
+  autoTable(doc, {
     columns,
     body: data,
     startY: 35,
@@ -160,10 +160,10 @@ export const exportFinancialReport = (data, type = 'pdf') => {
     doc.setFontSize(10);
     doc.text(`Total Revenue: ${summary.totalRevenue}`, 14, 55);
     doc.text(`Total Cost: ${summary.totalCost}`, 14, 62);
-    doc.text(`Gross Profit: ${summary.totalProfit}`, 14, 69);
+    doc.text(`Total Profit: ${summary.totalProfit}`, 14, 69);
     doc.text(`Profit Margin: ${summary.margin}%`, 14, 76);
 
-    doc.autoTable({
+    autoTable(doc, {
       columns,
       body: tableData,
       startY: 85,
