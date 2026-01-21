@@ -38,7 +38,7 @@
   border-radius: 12px;
   text-decoration: none;
   color: var(--text-tertiary);
-  transition: all 0.2s ease;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   background: transparent;
   border: none;
   cursor: pointer;
@@ -47,7 +47,7 @@
 }
 
 .quick-nav-item:active {
-  transform: scale(0.95);
+  transform: scale(0.9);
   background: rgba(79, 106, 245, 0.08);
 }
 
@@ -58,6 +58,13 @@
 .quick-nav-item.active .quick-nav-icon {
   background: rgba(79, 106, 245, 0.12);
   color: var(--primary-color);
+  animation: quick-nav-icon-pop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes quick-nav-icon-pop {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.2); }
+  100% { transform: scale(1); }
 }
 
 .quick-nav-icon {
@@ -67,7 +74,11 @@
   width: 40px;
   height: 32px;
   border-radius: 10px;
-  transition: all 0.2s ease;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.quick-nav-item:active .quick-nav-icon {
+  transform: scale(0.85);
 }
 
 .quick-nav-label {
@@ -78,6 +89,7 @@
   overflow: hidden;
   text-overflow: ellipsis;
   max-width: 60px;
+  transition: color 0.2s ease;
 }
 
 /* Add padding to content wrapper when quick nav is enabled */

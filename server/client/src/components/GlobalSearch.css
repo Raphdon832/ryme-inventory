@@ -319,13 +319,13 @@
 }
 
 .search-result-icon.product {
-  background: rgba(16, 185, 129, 0.1);
-  color: #10B981;
+  background: var(--success-bg);
+  color: var(--success-text);
 }
 
 .search-result-icon.order {
-  background: rgba(245, 158, 11, 0.1);
-  color: #F59E0B;
+  background: var(--warning-bg);
+  color: var(--warning-text);
 }
 
 .search-result-icon.customer {
@@ -387,8 +387,8 @@
 }
 
 .search-result-badge.pending {
-  background: rgba(245, 158, 11, 0.1);
-  color: #F59E0B;
+  background: var(--warning-bg);
+  color: var(--warning-text);
 }
 
 .search-result-badge.processing {
@@ -398,13 +398,13 @@
 
 .search-result-badge.completed,
 .search-result-badge.delivered {
-  background: rgba(16, 185, 129, 0.1);
-  color: #10B981;
+  background: var(--success-bg);
+  color: var(--success-text);
 }
 
 .search-result-badge.cancelled {
-  background: rgba(239, 68, 68, 0.1);
-  color: #EF4444;
+  background: var(--danger-bg);
+  color: var(--danger-text);
 }
 
 /* Footer */

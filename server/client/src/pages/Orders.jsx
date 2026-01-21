@@ -154,7 +154,7 @@ const Orders = () => {
           <p>Create and manage customer orders</p>
         </div>
         <div className="orders-header-actions">
-          <Link to="/orders/new" className="btn-primary">
+          <Link to="/orders/new" className="btn-primary btn-animate hover-lift">
             <FiPlus size={16} /> New Order
           </Link>
         </div>
@@ -162,7 +162,7 @@ const Orders = () => {
 
       {/* Stats Grid */}
       <div className="stats-grid">
-        <div className="stat-widget border-blue">
+        <div className="stat-widget border-blue animate-slide-up delay-100">
           <div className="stat-header">
             <div className="stat-icon blue">
               <FiShoppingCart />
@@ -172,7 +172,7 @@ const Orders = () => {
           <div className="stat-value">{totalOrders}</div>
         </div>
 
-        <div className="stat-widget border-purple">
+        <div className="stat-widget border-purple animate-slide-up delay-200">
           <div className="stat-header">
             <div className="stat-icon purple">
               <FiTag />
@@ -182,7 +182,7 @@ const Orders = () => {
           <div className="stat-value">{formatCurrency(totalRevenue)}</div>
         </div>
 
-        <div className="stat-widget border-green">
+        <div className="stat-widget border-green animate-slide-up delay-300">
           <div className="stat-header">
             <div className="stat-icon green">
               <FiTrendingUp />
@@ -192,7 +192,7 @@ const Orders = () => {
           <div className="stat-value">{formatCurrency(totalProfit)}</div>
         </div>
 
-        <div className="stat-widget border-orange">
+        <div className="stat-widget border-orange animate-slide-up delay-400">
           <div className="stat-header">
             <div className="stat-icon orange">
               <FiTag />
@@ -204,7 +204,7 @@ const Orders = () => {
       </div>
 
       {/* Orders List */}
-      <div className="card">
+      <div className="card animate-fade-in delay-200">
         <div className="flex justify-between" style={{ marginBottom: '20px', alignItems: 'center' }}>
           <div>
             <h3 style={{ margin: 0 }}>Order History</h3>
@@ -220,7 +220,7 @@ const Orders = () => {
           <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
             {offlineOrders.length > 0 && isOnline && (
               <button 
-                className="icon-btn-circle sync-btn"
+                className="icon-btn-circle sync-btn btn-animate"
                 onClick={handleSyncNow}
                 disabled={syncing}
                 title="Sync offline orders"
@@ -231,27 +231,27 @@ const Orders = () => {
             {deleteMode ? (
               <>
                 <button 
-                  className="icon-btn-circle"
+                  className="icon-btn-circle btn-animate"
                   onClick={cancelDeleteMode}
                   title="Cancel"
                 >
                   <FiX size={18} />
                 </button>
                 <button 
-                  className="icon-btn-circle danger"
+                  className="icon-btn-circle danger btn-animate"
                   onClick={() => setShowDeleteConfirm(true)}
                   disabled={selectedOrders.length === 0}
                   title={`Delete ${selectedOrders.length} selected`}
                 >
                   <FiTrash2 size={18} />
                   {selectedOrders.length > 0 && (
-                    <span className="delete-count">{selectedOrders.length}</span>
+                    <span className="delete-count animate-pop-in">{selectedOrders.length}</span>
                   )}
                 </button>
               </>
             ) : (
               <button 
-                className="icon-btn-circle"
+                className="icon-btn-circle btn-animate"
                 onClick={() => setDeleteMode(true)}
                 title="Delete orders"
               >

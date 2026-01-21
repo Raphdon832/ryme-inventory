@@ -190,10 +190,10 @@ const Dashboard = () => {
           <p>Track stock levels, sales, and profit in one place.</p>
         </div>
         <div className="page-actions">
-          <button className="add-btn-bordered" onClick={() => navigate('/inventory/add')}>
-            <FiPlus size={16} /> Add Product
+          <button className="add-btn-bordered btn-animate hover-lift" onClick={() => navigate('/inventory/add')}>
+            <FiPlus size={16} className="icon-spin" /> Add Product
           </button>
-          <button className="secondary" onClick={() => setShowImportModal(true)}>
+          <button className="secondary btn-animate hover-lift" onClick={() => setShowImportModal(true)}>
             <FiDownload size={16} /> Import Products
           </button>
         </div>
@@ -203,7 +203,7 @@ const Dashboard = () => {
         <SkeletonStatsGrid count={4} />
       ) : (
       <div className="stats-grid bento-grid">
-        <div className="stat-widget accent-blue">
+        <div className="stat-widget accent-blue animate-slide-up delay-100">
           <div className="stat-header">
             <span className="stat-label">Total Products</span>
             <span className="stat-arrow"><FiArrowUpRight /></span>
@@ -212,7 +212,7 @@ const Dashboard = () => {
           <div className="stat-footnote">Inventory count</div>
         </div>
 
-        <div className="stat-widget accent-purple">
+        <div className="stat-widget accent-purple animate-slide-up delay-200">
           <div className="stat-header">
             <span className="stat-label">Total Orders</span>
             <span className="stat-arrow"><FiArrowUpRight /></span>
@@ -221,7 +221,7 @@ const Dashboard = () => {
           <div className="stat-footnote">Orders processed</div>
         </div>
 
-        <div className="stat-widget accent-green">
+        <div className="stat-widget accent-green animate-slide-up delay-300">
           <div className="stat-header">
             <span className="stat-label">Total Revenue</span>
             <span className="stat-arrow"><FiArrowUpRight /></span>
@@ -230,7 +230,7 @@ const Dashboard = () => {
           <div className="stat-footnote">Total sales value</div>
         </div>
 
-        <div className="stat-widget accent-orange">
+        <div className="stat-widget accent-orange animate-slide-up delay-400">
           <div className="stat-header">
             <span className="stat-label">Total Profit</span>
             <span className="stat-arrow"><FiArrowUpRight /></span>
@@ -241,8 +241,8 @@ const Dashboard = () => {
       </div>
       )}
 
-      <div className="dashboard-grid">
-        <div className="card analytics-card">
+      <div className="dashboard-grid animate-fade-in delay-200">
+        <div className="card analytics-card hover-lift">
           <div className="card-header">
             <h3>Product Analytics</h3>
           </div>
@@ -265,7 +265,7 @@ const Dashboard = () => {
         </div>
 
         {settings.notifications.lowStockAlerts && (
-          <div className="card reminder-card">
+          <div className="card reminder-card hover-lift">
             <div className="card-header">
               <h3>Low Stock Alert</h3>
             </div>
@@ -277,10 +277,10 @@ const Dashboard = () => {
                 </>
               ) : (
                 <>
-                  <h4>{lowStockItems[0].name}</h4>
+                  <h4 className="animate-pop-in">{lowStockItems[0].name}</h4>
                   <p>Only {lowStockItems[0].stock_quantity} units left</p>
                   <button
-                    className="primary full"
+                    className="primary full btn-animate"
                     onClick={handleReorderTask}
                     disabled={reorderStatus === 'creating'}
                   >
@@ -301,23 +301,23 @@ const Dashboard = () => {
           </div>
         )}
 
-        <div className="card list-card">
+        <div className="card list-card hover-lift">
           <div className="card-header">
             <h3>Top Products</h3>
-            <button className="chip-button" onClick={() => navigate('/inventory')}>View All</button>
+            <button className="chip-button btn-animate" onClick={() => navigate('/inventory')}>View All</button>
           </div>
           <div className="list-items">
             {topProducts.length === 0 ? (
               <div className="empty-state">No product sales yet.</div>
             ) : (
               topProducts.map((item, index) => (
-                <div className="list-item" key={`${item.name}-${index}`}>
+                <div className="list-item list-item-hover animate-slide-up" style={{ animationDelay: `${index * 100}ms` }} key={`${item.name}-${index}`}>
                   <div className="list-icon">
                     <FiCheckCircle />
                   </div>
                   <div className="list-content">
                     <div className="list-title">{item.name}</div>
-                    <div className="list-subtitle">{item.total_sold} units sold</div>
+                    <div className="list-subtitle default-cursor">{item.total_sold} units sold</div>
                   </div>
                   <div className="list-meta">{formatCurrencyCompact(item.total_revenue)}</div>
                 </div>
@@ -327,24 +327,24 @@ const Dashboard = () => {
         </div>
       </div>
 
-      <div className="dashboard-grid bottom-grid">
-        <div className="card team-card">
+      <div className="dashboard-grid bottom-grid animate-fade-in delay-300">
+        <div className="card team-card hover-lift">
           <div className="card-header">
             <h3>Recent Orders</h3>
-            <button className="chip-button" onClick={() => navigate('/orders')}>View All</button>
+            <button className="chip-button btn-animate" onClick={() => navigate('/orders')}>View All</button>
           </div>
           <div className="list-items">
             {recentOrders.length === 0 ? (
               <div className="empty-state">No orders yet.</div>
             ) : (
-              recentOrders.map((order) => (
-                <div className="list-item" key={order.id}>
+              recentOrders.map((order, index) => (
+                <div className="list-item list-item-hover animate-slide-up" style={{ animationDelay: `${index * 100}ms` }} key={order.id}>
                   <div className="list-icon">
                     <FiShoppingCart />
                   </div>
                   <div className="list-content">
                     <div className="list-title">{order.customer_name}</div>
-                    <div className="list-subtitle">
+                    <div className="list-subtitle default-cursor">
                       {new Date(order.order_date).toLocaleDateString()}
                     </div>
                   </div>
@@ -355,7 +355,7 @@ const Dashboard = () => {
           </div>
         </div>
 
-        <div className="card progress-card">
+        <div className="card progress-card hover-lift">
           <div className="card-header">
             <h3>Product Margin</h3>
           </div>
@@ -379,7 +379,7 @@ const Dashboard = () => {
           </div>
         </div>
 
-        <div className="card timer-card">
+        <div className="card timer-card hover-lift">
           <div className="card-header">
             <h3>Inventory Value</h3>
           </div>

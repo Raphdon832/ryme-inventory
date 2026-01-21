@@ -127,25 +127,25 @@ const Customers = () => {
           <h1>Customers</h1>
           <p>Manage customer profiles and track their orders</p>
         </div>
-        <button className="btn-primary" onClick={openCreateModal}>
+        <button className="btn-primary btn-animate hover-lift" onClick={openCreateModal}>
           <FiPlus /> Add Customer
         </button>
       </div>
 
       <div className="stats-grid">
-        <div className="stat-widget border-blue">
+        <div className="stat-widget border-blue animate-slide-up delay-100">
           <div className="stat-icon blue"><FiUser /></div>
           <div className="stat-label">Total Customers</div>
           <div className="stat-value">{totalCustomers}</div>
         </div>
-        <div className="stat-widget border-green">
+        <div className="stat-widget border-green animate-slide-up delay-200">
           <div className="stat-icon green"><FiUser /></div>
           <div className="stat-label">Total Orders</div>
           <div className="stat-value">{totalOrders}</div>
         </div>
       </div>
 
-      <div className="card">
+      <div className="card animate-fade-in delay-200">
         <div className="table-container">
           {loading ? (
             <div style={{ padding: '24px', color: 'var(--text-secondary)' }}>Loading customers...</div>
@@ -199,7 +199,7 @@ const Customers = () => {
                       <td>
                         <div style={{ display: 'flex', gap: '8px' }}>
                           <button
-                            className="secondary"
+                            className="secondary btn-animate"
                             style={{ padding: '8px', width: '36px', height: '36px', borderRadius: '50%' }}
                             onClick={() => openEditModal(customer)}
                             title="Edit customer"
@@ -207,7 +207,7 @@ const Customers = () => {
                             <FiEdit2 size={16} />
                           </button>
                           <button
-                            className="secondary"
+                            className="secondary btn-animate"
                             style={{ padding: '8px', width: '36px', height: '36px', borderRadius: '50%', color: 'var(--danger-text)' }}
                             onClick={() => handleDelete(customer)}
                             disabled={deletingId === customer.id}

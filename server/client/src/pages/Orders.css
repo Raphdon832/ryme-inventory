@@ -15,20 +15,20 @@
   gap: 4px;
   margin-left: 8px;
   padding: 2px 8px;
-  background: #fef3c7;
-  color: #92400e;
+  background: var(--warning-bg);
+  color: var(--warning-text);
   border-radius: 10px;
   font-size: 11px;
   font-weight: 600;
 }
 
 .sync-btn {
-  background: #fef3c7 !important;
-  color: #92400e !important;
+  background: var(--warning-bg) !important;
+  color: var(--warning-text) !important;
 }
 
 .sync-btn:hover {
-  background: #fde68a !important;
+  filter: brightness(0.95);
 }
 
 .spinning {
@@ -41,15 +41,15 @@
 }
 
 .offline-row {
-  background: rgba(254, 243, 199, 0.3);
+  background: var(--warning-bg);
 }
 
 .badge-offline {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  background: #fef3c7 !important;
-  color: #92400e !important;
+  background: var(--warning-bg) !important;
+  color: var(--warning-text) !important;
   padding: 4px 8px;
   border-radius: 4px;
   font-weight: 600;
@@ -60,8 +60,8 @@
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  background: rgba(254, 243, 199, 0.5);
-  color: #92400e;
+  background: var(--warning-bg);
+  color: var(--warning-text);
   padding: 4px 8px;
   border-radius: 4px;
   font-weight: 600;
@@ -136,8 +136,8 @@
 }
 
 .order-card-mobile.selected {
-  border-color: #EF4444;
-  background: rgba(239, 68, 68, 0.05);
+  border-color: var(--danger-text);
+  background: var(--danger-bg);
 }
 
 .order-card-checkbox {
@@ -159,8 +159,8 @@
 }
 
 .order-card-checkbox .checkbox.checked {
-  background: #EF4444;
-  border-color: #EF4444;
+  background: var(--danger-text);
+  border-color: var(--danger-text);
   color: white;
 }
 
@@ -177,17 +177,17 @@
 }
 
 .table-checkbox.checked {
-  background: #EF4444;
-  border-color: #EF4444;
+  background: var(--danger-text);
+  border-color: var(--danger-text);
   color: white;
 }
 
 tr.row-selected {
-  background: rgba(239, 68, 68, 0.05) !important;
+  background: var(--danger-bg) !important;
 }
 
 tr.row-selected td {
-  border-color: rgba(239, 68, 68, 0.2);
+  border-color: var(--danger-text);
 }
 
 /* Delete Confirm Modal */
@@ -227,23 +227,23 @@ tr.row-selected td {
 }
 
 .order-card-status.paid {
-  background: rgba(16, 185, 129, 0.1);
-  color: #10B981;
+  background: var(--success-bg);
+  color: var(--success-text);
 }
 
 .order-card-status.pending {
-  background: rgba(245, 158, 11, 0.1);
-  color: #F59E0B;
+  background: var(--warning-bg);
+  color: var(--warning-text);
 }
 
 .order-card-status.offline {
-  background: #fef3c7;
-  color: #92400e;
+  background: var(--warning-bg);
+  color: var(--warning-text);
 }
 
 .order-card-mobile.offline {
-  border-color: #fde68a;
-  background: rgba(254, 243, 199, 0.2);
+  border-color: var(--warning-text);
+  background: var(--warning-bg);
   cursor: pointer;
 }
 
@@ -297,11 +297,11 @@ tr.row-selected td {
 }
 
 .order-card-profit-value.positive {
-  color: #10B981;
+  color: var(--success-text);
 }
 
 .order-card-profit-value.negative {
-  color: #EF4444;
+  color: var(--danger-text);
 }
 
 .order-card-arrow {
@@ -391,7 +391,7 @@ tr.row-selected td {
   display: flex;
   align-items: center;
   gap: 5px;
-  background: #EF4444;
+  background: var(--danger-text);
   color: white;
   border: none;
   padding: 6px 12px;
@@ -403,11 +403,12 @@ tr.row-selected td {
 }
 
 .btn-danger:hover {
-  background: #DC2626;
+  background: var(--danger-hover);
 }
 
 .btn-danger:disabled {
-  background: #FECACA;
+  background: var(--danger-bg);
+  color: var(--danger-text);
   cursor: not-allowed;
   transform: none !important;
   box-shadow: none !important;
@@ -473,7 +474,7 @@ tr.row-selected td {
 }
 
 .icon-btn-circle.danger:hover {
-  background: rgba(239, 68, 68, 0.1);
+  background: var(--danger-bg);
   border-color: var(--danger-text);
 }
 
@@ -486,7 +487,7 @@ tr.row-selected td {
   position: absolute;
   top: -4px;
   right: -4px;
-  background: #EF4444;
+  background: var(--danger-text);
   color: white;
   font-size: 10px;
   font-weight: 700;
@@ -533,8 +534,8 @@ tr.row-selected td {
   font-size: 20px;
 }
 
-.stat-icon.blue { background: rgba(37, 99, 235, 0.1); color: #2563eb; }
-.stat-icon.green { background: rgba(5, 150, 105, 0.1); color: #059669; }
+.stat-icon.blue { background: var(--info-bg); color: var(--primary-color); }
+.stat-icon.green { background: var(--success-bg); color: var(--success-text); }
 
 .stat-label {
   font-size: 13px;
@@ -566,6 +567,21 @@ tr.row-selected td {
   padding: 20px;
   box-sizing: border-box;
   transform: none !important;
+  animation: modal-overlay-fade-in 0.25s ease;
+}
+
+@keyframes modal-overlay-fade-in {
+  from { opacity: 0; backdrop-filter: blur(0); }
+  to { opacity: 1; backdrop-filter: blur(4px); }
+}
+
+.modal-overlay.closing {
+  animation: modal-overlay-fade-out 0.2s ease forwards;
+}
+
+@keyframes modal-overlay-fade-out {
+  from { opacity: 1; }
+  to { opacity: 0; }
 }
 
 .modal-content {
@@ -576,12 +592,33 @@ tr.row-selected td {
   max-height: 90vh;
   overflow-y: auto;
   border: 1px solid var(--border-color);
-  animation: slideIn 0.3s ease;
+  animation: modal-content-slide-in 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
-@keyframes slideIn {
-  from { transform: translateY(20px); opacity: 0; }
-  to { transform: translateY(0); opacity: 1; }
+@keyframes modal-content-slide-in {
+  from { 
+    transform: translateY(30px) scale(0.95); 
+    opacity: 0; 
+  }
+  to { 
+    transform: translateY(0) scale(1); 
+    opacity: 1; 
+  }
+}
+
+.modal-overlay.closing .modal-content {
+  animation: modal-content-slide-out 0.2s ease forwards;
+}
+
+@keyframes modal-content-slide-out {
+  from { 
+    transform: translateY(0) scale(1); 
+    opacity: 1; 
+  }
+  to { 
+    transform: translateY(20px) scale(0.95); 
+    opacity: 0; 
+  }
 }
 
 .modal-header {
@@ -717,8 +754,8 @@ tr.row-selected td {
 }
 
 .table-action-btn:hover {
-  color: var(--danger-color, #ef4444);
-  background: rgba(239, 68, 68, 0.1);
+  color: var(--danger-text);
+  background: var(--danger-bg);
 }
 
 .badge {
@@ -734,8 +771,8 @@ tr.row-selected td {
 }
 
 .badge-success {
-  background: rgba(5, 150, 105, 0.1);
-  color: #059669;
+  background: var(--success-bg);
+  color: var(--success-text);
 }
 
 @media (max-width: 640px) {

@@ -105,18 +105,29 @@
   color: var(--sidebar-text);
   text-decoration: none;
   font-weight: 600;
-  transition: all 0.2s ease;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .nav-item:hover {
   background-color: var(--sidebar-hover);
   color: var(--text-primary);
+  transform: translateX(4px);
+}
+
+.nav-item:active {
+  transform: translateX(2px) scale(0.98);
 }
 
 .nav-item.active {
   background: var(--primary-color);
-  color: #ffffff; /* Active state is blue, so white text is good */
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+}
+
+.nav-item.active:hover {
+  transform: translateX(0);
 }
 
 .nav-item.disabled {
@@ -127,12 +138,22 @@
 .nav-item.disabled:hover {
   background: transparent;
   color: var(--sidebar-text);
+  transform: none;
 }
 
 .nav-icon {
   font-size: 1.1rem;
   display: inline-flex;
   align-items: center;
+  transition: transform 0.2s ease;
+}
+
+.nav-item:hover .nav-icon {
+  transform: scale(1.1);
+}
+
+.nav-item.active .nav-icon {
+  transform: scale(1);
 }
 
 .nav-badge {
@@ -142,6 +163,11 @@
   font-size: 0.7rem;
   padding: 4px 8px;
   border-radius: 999px;
+  transition: transform 0.2s ease;
+}
+
+.nav-item:hover .nav-badge {
+  transform: scale(1.05);
 }
 
 .sidebar-footer {

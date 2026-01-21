@@ -79,13 +79,13 @@
 }
 
 .stat-card .stat-icon.blue {
-  background: rgba(37, 99, 235, 0.1);
-  color: #2563eb;
+  background: var(--info-bg);
+  color: var(--primary-color);
 }
 
 .stat-card .stat-icon.green {
-  background: rgba(16, 185, 129, 0.1);
-  color: #10B981;
+  background: var(--success-bg);
+  color: var(--success-text);
 }
 
 .stat-card .stat-icon.purple {
@@ -94,8 +94,8 @@
 }
 
 .stat-card .stat-icon.orange {
-  background: rgba(245, 158, 11, 0.1);
-  color: #F59E0B;
+  background: var(--warning-bg);
+  color: var(--warning-text);
 }
 
 .stat-change {
@@ -109,13 +109,13 @@
 }
 
 .stat-change.positive {
-  background: rgba(16, 185, 129, 0.1);
-  color: #10B981;
+  background: var(--success-bg);
+  color: var(--success-text);
 }
 
 .stat-change.negative {
-  background: rgba(239, 68, 68, 0.1);
-  color: #EF4444;
+  background: var(--danger-bg);
+  color: var(--danger-text);
 }
 
 .stat-card .stat-value {
@@ -131,10 +131,10 @@
 }
 
 /* Border colors */
-.border-blue { border-color: #2563eb !important; }
-.border-green { border-color: #10B981 !important; }
+.border-blue { border-color: var(--primary-color) !important; }
+.border-green { border-color: var(--success-text) !important; }
 .border-purple { border-color: #8B5CF6 !important; }
-.border-orange { border-color: #F59E0B !important; }
+.border-orange { border-color: var(--warning-text) !important; }
 
 /* Charts Grid */
 .charts-grid {
