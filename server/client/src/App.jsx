@@ -18,11 +18,13 @@ import Calendar from './pages/Calendar';
 import Analytics from './pages/Analytics';
 import Team from './pages/Team';
 import Help from './pages/Help';
+import ReloadPrompt from './components/ReloadPrompt';
 import './App.css';
 
 function App() {
   return (
     <ToastProvider>
+      <ReloadPrompt />
       <Router>
         <Layout>
           <Routes>
