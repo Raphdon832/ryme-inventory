@@ -52,7 +52,8 @@ export const exportToPDF = (columns, data, options = {}) => {
  * Formatter for Inventory Data
  */
 export const exportInventory = (products, type = 'pdf') => {
-  const data = products.map(p => ({
+  const data = products.map((p, index) => ({
+    sn: index + 1,
     sku: p.sku || 'N/A',
     name: p.product_name || p.name,
     category: p.category || 'Uncategorized',
@@ -65,13 +66,15 @@ export const exportInventory = (products, type = 'pdf') => {
   }));
 
   if (type === 'csv') {
+    // For CSV, we can also add S/N
     exportToCSV(data, 'inventory_report');
   } else {
     const columns = [
+      { header: 'S/N', dataKey: 'sn' },
       { header: 'SKU', dataKey: 'sku' },
-      { header: 'Name', dataKey: 'name' },
-      { header: 'Category', dataKey: 'category' },
       { header: 'Brand', dataKey: 'brand' },
+      { header: 'Product Name', dataKey: 'name' },
+      { header: 'Category', dataKey: 'category' },
       { header: 'Stock', dataKey: 'stock' },
       { header: 'Price', dataKey: 'price' },
       { header: 'Cost', dataKey: 'cost' },
@@ -86,7 +89,8 @@ export const exportInventory = (products, type = 'pdf') => {
  * Formatter for Orders Data
  */
 export const exportOrders = (orders, type = 'pdf') => {
-  const data = orders.map(o => ({
+  const data = orders.map((o, index) => ({
+    sn: index + 1,
     id: o.orderId || o.id?.substring(0, 8) || 'N/A',
     date: new Date(o.order_date?.seconds * 1000 || o.order_date).toLocaleDateString(),
     customer: o.customer_name || 'Walk-in',
@@ -101,6 +105,7 @@ export const exportOrders = (orders, type = 'pdf') => {
     exportToCSV(data, 'orders_report');
   } else {
     const columns = [
+      { header: 'S/N', dataKey: 'sn' },
       { header: 'Order ID', dataKey: 'id' },
       { header: 'Date', dataKey: 'date' },
       { header: 'Customer', dataKey: 'customer' },
@@ -122,7 +127,8 @@ export const exportFinancialReport = (data, type = 'pdf') => {
   const { summary, transactions = [] } = data;
   
   if (type === 'csv') {
-    const csvData = transactions.map(t => ({
+    const csvData = transactions.map((t, index) => ({
+      sn: index + 1,
       date: t.date,
       type: t.type,
       reference: t.reference,
@@ -134,6 +140,7 @@ export const exportFinancialReport = (data, type = 'pdf') => {
     exportToCSV(csvData, 'financial_report');
   } else {
     const columns = [
+      { header: 'S/N', dataKey: 'sn' },
       { header: 'Date', dataKey: 'date' },
       { header: 'Type', dataKey: 'type' },
       { header: 'Reference', dataKey: 'reference' },
@@ -142,7 +149,8 @@ export const exportFinancialReport = (data, type = 'pdf') => {
       { header: 'Profit', dataKey: 'profit' }
     ];
 
-    const tableData = transactions.map(t => ({
+    const tableData = transactions.map((t, index) => ({
+      sn: index + 1,
       ...t,
       profit: (t.revenue || 0) - (t.cost || 0)
     }));
