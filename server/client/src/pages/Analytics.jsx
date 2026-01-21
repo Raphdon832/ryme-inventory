@@ -41,6 +41,7 @@ const Analytics = () => {
 
   // Filter by date range
   const filterByDateRange = (items) => {
+    if (dateRange === 'all') return items;
     const now = new Date();
     const daysAgo = new Date(now.setDate(now.getDate() - parseInt(dateRange)));
     return items.filter(item => new Date(item.order_date) >= daysAgo);
@@ -56,6 +57,7 @@ const Analytics = () => {
 
   // Compare with previous period
   const getPreviousPeriodOrders = () => {
+    if (dateRange === 'all') return []; // No previous period for "all time"
     const now = new Date();
     const days = parseInt(dateRange);
     const periodStart = new Date(now.setDate(now.getDate() - days));
@@ -188,6 +190,7 @@ const Analytics = () => {
               <option value="30">Last 30 days</option>
               <option value="90">Last 90 days</option>
               <option value="365">Last year</option>
+              <option value="all">All Time</option>
             </select>
           </div>
         </div>
