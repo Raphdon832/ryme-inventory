@@ -471,7 +471,7 @@ const Inventory = () => {
                   onClick={() => setShowBulkUpdateModal(true)}
                   disabled={selectedProducts.length === 0}
                   title={`Update ${selectedProducts.length} selected`}
-                  style={{ width: '40px', height: '40px', borderRadius: '50%', padding: 0, background: selectedProducts.length > 0 ? 'rgba(79, 106, 245, 0.1)' : 'var(--bg-surface)', border: '1px solid var(--border-color)', color: 'var(--primary-color)' }}
+                  style={{ width: '40px', height: '40px', borderRadius: '50%', padding: 0, background: selectedProducts.length > 0 ? 'var(--info-bg)' : 'var(--bg-surface)', border: '1px solid var(--border-color)', color: 'var(--primary-color)' }}
                 >
                   <FiTag size={18} />
                 </button>
@@ -480,11 +480,11 @@ const Inventory = () => {
                   onClick={() => setShowDeleteConfirm(true)}
                   disabled={selectedProducts.length === 0}
                   title={`Delete ${selectedProducts.length} selected`}
-                  style={{ width: '40px', height: '40px', borderRadius: '50%', padding: 0, background: selectedProducts.length > 0 ? 'rgba(239, 68, 68, 0.1)' : 'var(--bg-surface)', border: '1px solid var(--border-color)', color: 'var(--danger-text)', position: 'relative' }}
+                  style={{ width: '40px', height: '40px', borderRadius: '50%', padding: 0, background: selectedProducts.length > 0 ? 'var(--danger-bg)' : 'var(--bg-surface)', border: '1px solid var(--border-color)', color: 'var(--danger-text)', position: 'relative' }}
                 >
                   <FiTrash2 size={18} />
                   {selectedProducts.length > 0 && (
-                    <span style={{ position: 'absolute', top: '-4px', right: '-4px', background: '#EF4444', color: 'white', fontSize: '10px', fontWeight: 700, width: '18px', height: '18px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{selectedProducts.length}</span>
+                    <span style={{ position: 'absolute', top: '-4px', right: '-4px', background: 'var(--danger-text)', color: 'white', fontSize: '10px', fontWeight: 700, width: '18px', height: '18px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{selectedProducts.length}</span>
                   )}
                 </button>
               </>
@@ -607,7 +607,7 @@ const Inventory = () => {
                               <tr 
                                 key={product.id}
                                 onClick={selectionMode ? () => toggleProductSelection(product.id) : undefined}
-                                style={{ cursor: selectionMode ? 'pointer' : 'default', background: selectedProducts.includes(product.id) ? 'rgba(79, 106, 245, 0.05)' : undefined }}
+                                style={{ cursor: selectionMode ? 'pointer' : 'default', background: selectedProducts.includes(product.id) ? 'var(--info-bg)' : undefined }}
                               >
                                 {selectionMode && (
                                   <td>
@@ -633,7 +633,7 @@ const Inventory = () => {
                                       fontWeight: 600, 
                                       fontSize: '12px',
                                       letterSpacing: '0.5px',
-                                      background: 'rgba(79, 106, 245, 0.1)',
+                                      background: 'var(--info-bg)',
                                       color: 'var(--primary-color)',
                                       padding: '4px 8px',
                                       borderRadius: '4px'
@@ -724,7 +724,7 @@ const Inventory = () => {
                       <tr 
                         key={product.id}
                         onClick={selectionMode ? () => toggleProductSelection(product.id) : undefined}
-                        style={{ cursor: selectionMode ? 'pointer' : 'default', background: selectedProducts.includes(product.id) ? 'rgba(79, 106, 245, 0.05)' : undefined }}
+                        style={{ cursor: selectionMode ? 'pointer' : 'default', background: selectedProducts.includes(product.id) ? 'var(--info-bg)' : undefined }}
                       >
                         {selectionMode && (
                           <td>
@@ -750,7 +750,7 @@ const Inventory = () => {
                             fontWeight: 600, 
                             fontSize: '12px',
                             letterSpacing: '0.5px',
-                            background: 'rgba(79, 106, 245, 0.1)',
+                            background: 'var(--info-bg)',
                             color: 'var(--primary-color)',
                             padding: '4px 8px',
                             borderRadius: '4px'

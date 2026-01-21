@@ -302,9 +302,9 @@
 }
 
 .btn-secondary {
-  background: rgba(255, 255, 255, 0.8);
+  background: var(--bg-surface);
   color: var(--text-primary);
-  border: 1px solid rgba(148, 163, 184, 0.35);
+  border: 1px solid var(--border-color);
 }
 
 .btn-secondary:hover {
@@ -334,10 +334,10 @@
 /* Form Cards */
 .form-card,
 .summary-card {
-  background: rgba(255, 255, 255, 0.9);
+  background: var(--bg-surface);
   border-radius: 16px;
   padding: 1.5rem;
-  border: 1px solid rgba(148, 163, 184, 0.25);
+  border: 1px solid var(--border-color);
 }
 
 .summary-card {
@@ -408,7 +408,7 @@
 .form-select:focus {
   outline: none;
   border-color: var(--accent-color);
-  box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.12);
+  box-shadow: 0 0 0 4px var(--info-bg);
 }
 
 .form-input::placeholder {
@@ -569,15 +569,15 @@
   gap: 0.35rem;
   padding: 0.35rem 0.6rem;
   border-radius: 999px;
-  background: rgba(99, 102, 241, 0.08);
-  border: 1px solid rgba(99, 102, 241, 0.2);
+  background: var(--info-bg);
+  border: 1px solid var(--primary-color);
 }
 
 .table-container {
   overflow-x: auto;
   border-radius: 12px;
-  border: 1px solid rgba(148, 163, 184, 0.25);
-  background: rgba(255, 255, 255, 0.95);
+  border: 1px solid var(--border-color);
+  background: var(--bg-surface);
 }
 
 .items-table {
@@ -587,7 +587,7 @@
 }
 
 .items-table th {
-  background: rgba(248, 250, 252, 0.9);
+  background: var(--bg-body);
   padding: 0.75rem 1rem;
   text-align: left;
   font-weight: 600;
@@ -595,12 +595,12 @@
   font-size: 0.75rem;
   text-transform: uppercase;
   letter-spacing: 0.025em;
-  border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+  border-bottom: 1px solid var(--border-color);
 }
 
 .items-table td {
   padding: 0.875rem 1rem;
-  border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+  border-bottom: 1px solid var(--border-color);
   color: var(--text-primary);
 }
 
@@ -609,11 +609,11 @@
 }
 
 .items-table tr:hover td {
-  background: rgba(248, 250, 252, 0.9);
+  background: var(--bg-surface-hover);
 }
 
 .items-table tr.editing td {
-  background: rgba(99, 102, 241, 0.05);
+  background: var(--info-bg);
 }
 
 .product-cell {
@@ -655,8 +655,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid rgba(148, 163, 184, 0.35);
-  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid var(--border-color);
+  background: var(--bg-surface);
   border-radius: 6px;
   cursor: pointer;
   color: var(--text-secondary);
@@ -678,23 +678,24 @@
   width: 45px;
   text-align: center;
   padding: 0.35rem;
-  border: 1px solid rgba(148, 163, 184, 0.35);
+  border: 1px solid var(--border-color);
   border-radius: 6px;
   font-size: 0.85rem;
   font-weight: 600;
-  background: rgba(248, 250, 252, 0.9);
+  background: var(--bg-body);
+  color: var(--text-primary);
 }
 
 .qty-input:focus {
   outline: none;
   border-color: var(--accent-color);
-  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+  box-shadow: 0 0 0 3px var(--info-bg);
 }
 
 .stock-warning {
   display: block;
   font-size: 0.65rem;
-  color: #f59e0b;
+  color: var(--warning-text);
   margin-top: 0.2rem;
   font-weight: 500;
 }
@@ -708,7 +709,7 @@
 }
 
 .discount-display:hover {
-  background: rgba(148, 163, 184, 0.15);
+  background: var(--bg-surface-hover);
 }
 
 .discount-edit-input {
