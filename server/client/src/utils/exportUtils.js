@@ -181,3 +181,91 @@ export const exportFinancialReport = (data, type = 'pdf') => {
     doc.save('financial_report.pdf');
   }
 };
+
+/**
+ * Formatter for Tax & Financial Data
+ */
+export const exportTaxReport = (financials, type = 'pdf') => {
+  const { revenue, profit, taxType, pitDetails, citRate, calculateCIT, calculateEDT, calculateVAT, totalTaxLiability, netProfitAfterTax } = financials;
+  
+  const reportTitle = `Tax Compliance Report (${taxType === 'CIT' ? 'Corporate' : 'Individual/PIT'})`;
+  const fileName = `tax_report_${new Date().toISOString().split('T')[0]}`;
+  
+  if (type === 'csv') {
+    const csvData = [
+      { Label: 'Status', Value: taxType === 'CIT' ? 'Corporate Entity' : 'Individual/Sole Proprietorship' },
+      { Label: 'Total Revenue', Value: revenue },
+      { Label: 'Total Profit (Assessable)', Value: profit },
+      { Label: 'Tax Liability', Value: totalTaxLiability },
+      { Label: 'VAT (7.5%)', Value: calculateVAT() },
+      { Label: 'Net After Tax', Value: netProfitAfterTax }
+    ];
+    exportToCSV(csvData, fileName);
+  } else {
+    const doc = new jsPDF();
+    
+    // Header
+    doc.setFontSize(20);
+    doc.setTextColor(0, 0, 0);
+    doc.text('RYME INVENTORY SYSTEM', 14, 20);
+    
+    doc.setFontSize(14);
+    doc.text(reportTitle, 14, 30);
+    
+    doc.setFontSize(10);
+    doc.setTextColor(100);
+    doc.text(`Generated on: ${new Date().toLocaleDateString('en-NG')}`, 14, 38);
+    doc.line(14, 42, 196, 42);
+
+    // Summary Section
+    doc.setFontSize(12);
+    doc.setTextColor(0);
+    doc.text('Financial Summary', 14, 52);
+    
+    autoTable(doc, {
+      startY: 56,
+      body: [
+        ['Annual Revenue', `N${revenue.toLocaleString()}`],
+        ['Gross Assessable Profit', `N${profit.toLocaleString()}`],
+        ['Total Tax Liability', `N${totalTaxLiability.toLocaleString()}`],
+        ['Net Profit After Tax', `N${netProfitAfterTax.toLocaleString()}`]
+      ],
+      theme: 'grid',
+      styles: { fontSize: 10, cellPadding: 4 },
+      columnStyles: { 0: { fontStyle: 'bold', width: 60 } }
+    });
+
+    // Breakdown Section
+    const breakdownStartY = doc.lastAutoTable.finalY + 15;
+    doc.text('Detailed Breakdown', 14, breakdownStartY);
+
+    const breakdownBody = taxType === 'CIT' ? [
+        ['CIT (Company Income Tax)', `${(citRate * 100)}% of Profit`, `N${calculateCIT().toLocaleString()}`],
+        ['EDT (Education Tax)', '3.0% of Profit', `N${calculateEDT().toLocaleString()}`],
+        ['VAT (Value Added Tax)', '7.5% of Revenue', `N${calculateVAT().toLocaleString()}`]
+    ] : [
+        ['Consolidated Relief Allowance', 'Higher of 200k/1% GI + 20% GI', `(N${pitDetails.cra.toLocaleString()})`],
+        ['Statutory Pension', '8% of Gross Income', `(N${pitDetails.pension.toLocaleString()})`],
+        ['PIT (Personal Income Tax)', 'Graduated Scale (7%-24%)', `N${pitDetails.finalTax.toLocaleString()}`],
+        ['VAT (Value Added Tax)', '7.5% of Revenue', `N${calculateVAT().toLocaleString()}`]
+    ];
+
+    autoTable(doc, {
+      startY: breakdownStartY + 4,
+      head: [['Tax Component', 'Rate/Basis', 'Amount']],
+      body: breakdownBody,
+      theme: 'striped',
+      headStyles: { fillColor: [0, 0, 0] },
+      styles: { fontSize: 9 }
+    });
+
+    // Footer
+    const footerY = doc.lastAutoTable.finalY + 20;
+    doc.setFontSize(8);
+    doc.setTextColor(150);
+    doc.text('Disclaimer: This report is an automated assessment based on transactions in RYME Inventory.', 14, footerY);
+    doc.text('It should be used for compliance guidance only. Consult a certified tax professional for official filing.', 14, footerY + 5);
+
+    doc.save(`${fileName}.pdf`);
+  }
+};

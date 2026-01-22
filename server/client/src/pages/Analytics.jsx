@@ -93,16 +93,16 @@ const Analytics = () => {
     const productSales = {};
     filteredOrders.forEach(order => {
       (order.items || []).forEach(item => {
-        const productId = item.product_id;
-        if (!productSales[productId]) {
-          productSales[productId] = { 
+        const key = item.product_name || item.product_id;
+        if (!productSales[key]) {
+          productSales[key] = { 
             name: item.product_name || 'Unknown', 
             revenue: 0, 
             quantity: 0 
           };
         }
-        productSales[productId].revenue += (item.sales_price || 0) * (item.quantity || 0);
-        productSales[productId].quantity += item.quantity || 0;
+        productSales[key].revenue += (item.sales_price_at_time || item.sales_price || 0) * (item.quantity || 0);
+        productSales[key].quantity += item.quantity || 0;
       });
     });
     return Object.values(productSales)
@@ -197,8 +197,8 @@ const Analytics = () => {
       </div>
 
       {/* Stats Grid */}
-      <div className="analytics-stats">
-        <div className="stat-card border-blue">
+      <div className="stats-grid">
+        <div className="stat-widget border-blue animate-slide-up delay-100">
           <div className="stat-header">
             <div className="stat-icon blue"><FiDollarSign /></div>
             <span className={`stat-change ${revenueChange >= 0 ? 'positive' : 'negative'}`}>
@@ -206,32 +206,32 @@ const Analytics = () => {
               {Math.abs(revenueChange).toFixed(1)}%
             </span>
           </div>
-          <div className="stat-value">{formatCurrency(totalRevenue)}</div>
           <div className="stat-label">Total Revenue</div>
+          <div className="stat-value">{formatCurrency(totalRevenue)}</div>
         </div>
 
-        <div className="stat-card border-green">
+        <div className="stat-widget border-green animate-slide-up delay-200">
           <div className="stat-header">
             <div className="stat-icon green"><FiTrendingUp /></div>
           </div>
-          <div className="stat-value">{formatCurrency(totalProfit)}</div>
           <div className="stat-label">Total Profit</div>
+          <div className="stat-value">{formatCurrency(totalProfit)}</div>
         </div>
 
-        <div className="stat-card border-purple">
+        <div className="stat-widget border-purple animate-slide-up delay-300">
           <div className="stat-header">
             <div className="stat-icon purple"><FiShoppingCart /></div>
           </div>
-          <div className="stat-value">{new Intl.NumberFormat('en-US').format(totalOrders)}</div>
           <div className="stat-label">Total Orders</div>
+          <div className="stat-value">{new Intl.NumberFormat('en-US').format(totalOrders)}</div>
         </div>
 
-        <div className="stat-card border-orange">
+        <div className="stat-widget border-orange animate-slide-up delay-400">
           <div className="stat-header">
             <div className="stat-icon orange"><FiBarChart2 /></div>
           </div>
-          <div className="stat-value">{formatCurrency(avgOrderValue)}</div>
           <div className="stat-label">Avg. Order Value</div>
+          <div className="stat-value">{formatCurrency(avgOrderValue)}</div>
         </div>
       </div>
 

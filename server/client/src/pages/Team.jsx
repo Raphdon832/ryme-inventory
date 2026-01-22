@@ -151,19 +151,25 @@ const Team = () => {
       </div>
 
       {/* Stats */}
-      <div className="team-stats">
-        <div className="stat-widget border-blue">
-          <div className="stat-icon blue"><FiUsers /></div>
+      <div className="stats-grid">
+        <div className="stat-widget border-blue animate-slide-up delay-100">
+          <div className="stat-header">
+            <div className="stat-icon blue"><FiUsers /></div>
+          </div>
           <div className="stat-label">Total Members</div>
           <div className="stat-value">{members.length}</div>
         </div>
-        <div className="stat-widget border-green">
-          <div className="stat-icon green"><FiUserCheck /></div>
+        <div className="stat-widget border-green animate-slide-up delay-200">
+          <div className="stat-header">
+            <div className="stat-icon green"><FiUserCheck /></div>
+          </div>
           <div className="stat-label">Active</div>
           <div className="stat-value">{activeCount}</div>
         </div>
-        <div className="stat-widget border-orange">
-          <div className="stat-icon orange"><FiUserX /></div>
+        <div className="stat-widget border-orange animate-slide-up delay-300">
+          <div className="stat-header">
+            <div className="stat-icon orange"><FiUserX /></div>
+          </div>
           <div className="stat-label">Inactive</div>
           <div className="stat-value">{inactiveCount}</div>
         </div>

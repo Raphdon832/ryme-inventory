@@ -112,7 +112,7 @@ const Vendors = () => {
         <div className="stat-widget border-blue">
           <div className="stat-icon blue"><FiBriefcase /></div>
           <div className="stat-label">Total Vendors</div>
-          <div className="stat-value">{vendors.length}</div>
+          <div className="stat-value">{new Intl.NumberFormat('en-US').format(vendors.length)}</div>
         </div>
       </div>
 

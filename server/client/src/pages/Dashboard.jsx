@@ -38,6 +38,8 @@ const Dashboard = () => {
     totalOrders: 0,
     totalRevenue: 0,
     totalProfit: 0,
+    totalExpenses: 0,
+    netProfit: 0,
     lowStockItems: [],
     revenueChart: [],
     topProducts: [],
@@ -69,6 +71,31 @@ const Dashboard = () => {
       
       const totalRevenue = orders.reduce((acc, order) => acc + order.total_sales_price, 0);
       const totalProfit = orders.reduce((acc, order) => acc + order.total_profit, 0);
+
+      // Fetch expenses to calculate net profit
+      api.get('/expenses')
+        .then(res => {
+          const totalExpenses = res.data.data.reduce((sum, item) => sum + item.amount, 0);
+          setStats(prev => ({
+            ...prev,
+            totalRevenue,
+            totalProfit,
+            totalExpenses,
+            netProfit: totalProfit - totalExpenses,
+            totalOrders: orders.length,
+            orders
+          }));
+        })
+        .catch(err => {
+          console.error("Dashboard: Error fetching expenses", err);
+          setStats(prev => ({
+            ...prev,
+            totalRevenue,
+            totalProfit,
+            totalOrders: orders.length,
+            orders
+          }));
+        });
 
       const revenueByDate = new Map();
       const productTotals = new Map();
@@ -240,11 +267,29 @@ const Dashboard = () => {
 
         <div className="stat-widget accent-orange animate-slide-up delay-400">
           <div className="stat-header">
-            <span className="stat-label">Total Profit</span>
+            <span className="stat-label">Gross Profit</span>
             <span className="stat-arrow"><FiArrowUpRight /></span>
           </div>
           <div className="stat-value auto-fit">{formatCurrencyCompact(stats.totalProfit)}</div>
-          <div className="stat-footnote">Profit generated</div>
+          <div className="stat-footnote">Before expenses</div>
+        </div>
+
+        <div className="stat-widget accent-red animate-slide-up delay-500">
+          <div className="stat-header">
+            <span className="stat-label">Total Expenses</span>
+            <span className="stat-arrow"><FiArrowUpRight /></span>
+          </div>
+          <div className="stat-value auto-fit">{formatCurrencyCompact(stats.totalExpenses || 0)}</div>
+          <div className="stat-footnote">Overheads & costs</div>
+        </div>
+
+        <div className="stat-widget accent-cyan animate-slide-up delay-600">
+          <div className="stat-header">
+            <span className="stat-label">Net Profit</span>
+            <span className="stat-arrow"><FiArrowUpRight /></span>
+          </div>
+          <div className="stat-value auto-fit">{formatCurrencyCompact(stats.netProfit || 0)}</div>
+          <div className="stat-footnote">Actual earnings</div>
         </div>
       </div>
       )}

@@ -453,7 +453,7 @@ const Inventory = () => {
             </div>
           </div>
           <div className="stat-label">Total Products</div>
-          <div className="stat-value">{totalProducts}</div>
+          <div className="stat-value">{new Intl.NumberFormat('en-US').format(totalProducts)}</div>
         </div>
 
         <div className="stat-widget border-purple">
@@ -483,7 +483,7 @@ const Inventory = () => {
             </div>
           </div>
           <div className="stat-label">Low Stock Items</div>
-          <div className="stat-value">{lowStockCount}</div>
+          <div className="stat-value">{new Intl.NumberFormat('en-US').format(lowStockCount)}</div>
         </div>
       </div>
 

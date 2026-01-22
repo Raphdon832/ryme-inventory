@@ -195,7 +195,7 @@ const Orders = () => {
             </div>
           </div>
           <div className="stat-label">Total Orders</div>
-          <div className="stat-value">{totalOrders}</div>
+          <div className="stat-value">{new Intl.NumberFormat('en-US').format(totalOrders)}</div>
         </div>
 
         <div className="stat-widget border-purple animate-slide-up delay-200">

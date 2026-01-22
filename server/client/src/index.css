@@ -577,10 +577,10 @@ p, span, a, button, input, select, th, td {
 }
 
 .content-wrapper {
-  padding: 0 20px 28px 20px;
+  padding: 24px;
   padding-top: var(--header-height);
-  max-width: 1600px;
-  margin: 0 auto;
+  max-width: 100%;
+  margin: 0;
   width: 100%;
 }
 
@@ -713,6 +713,24 @@ p, span, a, button, input, select, th, td {
 .stat-widget.accent-orange .stat-label { color: #d97706; }
 .stat-widget.accent-orange .stat-value { color: #92400e; }
 .stat-widget.accent-orange .stat-arrow { color: #f59e0b; background: rgba(255,255,255,0.6); }
+
+.stat-widget.accent-red {
+  background: linear-gradient(135deg, #fee2e2 0%, #fda4a4 100%);
+  border: 1px solid #fca5a5;
+  color: #991b1b;
+}
+.stat-widget.accent-red .stat-label { color: #dc2626; }
+.stat-widget.accent-red .stat-value { color: #b91c1c; }
+.stat-widget.accent-red .stat-arrow { color: #ef4444; background: rgba(255,255,255,0.6); }
+
+.stat-widget.accent-cyan {
+  background: linear-gradient(135deg, #ecfeff 0%, #cffafe 100%);
+  border: 1px solid #a5f3fc;
+  color: #0e7490;
+}
+.stat-widget.accent-cyan .stat-label { color: #06b6d4; }
+.stat-widget.accent-cyan .stat-value { color: #0e4c75; }
+.stat-widget.accent-cyan .stat-arrow { color: #06b6d4; background: rgba(255,255,255,0.6); }
 
 .stat-widget.highlight {
   background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%);
@@ -1416,7 +1434,7 @@ input:focus, select:focus {
 .grid-2 { grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); }
 .stats-grid { 
   display: grid; 
-  grid-template-columns: repeat(4, 1fr); 
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); 
   gap: 16px; 
   margin-bottom: 20px;
 }
@@ -1962,7 +1980,7 @@ input:focus, select:focus {
   }
 
   .content-wrapper {
-    padding: 12px;
+    padding: 16px;
     padding-top: calc(56px + 12px);
   }
 
@@ -2156,7 +2174,7 @@ input:focus, select:focus {
   }
 
   .content-wrapper {
-    padding: 10px;
+    padding: 12px;
     padding-top: calc(56px + 10px);
   }
 

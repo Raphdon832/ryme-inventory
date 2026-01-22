@@ -61,6 +61,16 @@ const OrderDetails = () => {
     const isPaid = order.payment_status === 'Paid';
     const status = isPaid ? '✅ PAID' : '⏳ Pending';
     const items = order.items?.map(item => `  • ${item.product_name} x${item.quantity}`).join('\n') || '';
+    const grandTotal = (order.total_sales_price || 0) + (order.vat_amount || 0);
+    
+    let totalSection = '';
+    if (order.include_vat && order.vat_amount > 0) {
+      totalSection = `💰 Subtotal: ${formatCurrency(order.total_sales_price)}
+📊 VAT (7.5%): ${formatCurrency(order.vat_amount)}
+💵 Total: ${formatCurrency(grandTotal)}`;
+    } else {
+      totalSection = `💰 Total: ${formatCurrency(order.total_sales_price)}`;
+    }
     
     return `📦 Order #${order.id?.slice(0, 8).toUpperCase()}
 ━━━━━━━━━━━━━━━━━━━━
@@ -71,7 +81,7 @@ const OrderDetails = () => {
 🛒 Items:
 ${items}
 
-💰 Total: ${formatCurrency(order.total_sales_price)}
+${totalSection}
 ━━━━━━━━━━━━━━━━━━━━
 Sent from Ryme Inventory`;
   };
@@ -227,9 +237,20 @@ Sent from Ryme Inventory`;
     doc.text(safeCurrency(subtotal), totalsRightMargin, currentY, { align: 'right' });
     currentY += 8;
     
+    // VAT row if applicable
+    if (order.include_vat && order.vat_amount > 0) {
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(...secondaryColor);
+      doc.text('VAT (7.5%)', totalsLabelX, currentY, { align: 'right' });
+      doc.setTextColor(...primaryColor);
+      doc.text(safeCurrency(order.vat_amount), totalsRightMargin, currentY, { align: 'right' });
+      currentY += 8;
+    }
+    
     doc.setFont('helvetica', 'bold');
     doc.text('Total', totalsLabelX, currentY, { align: 'right' });
-    doc.text(safeCurrency(order.total_sales_price), totalsRightMargin, currentY, { align: 'right' });
+    const grandTotal = (order.total_sales_price || 0) + (order.vat_amount || 0);
+    doc.text(safeCurrency(grandTotal), totalsRightMargin, currentY, { align: 'right' });
 
     return doc.output('blob');
   };
@@ -576,16 +597,22 @@ Sent from Ryme Inventory`;
         }
     }
     
+    // VAT row if applicable
+    if (order.include_vat && order.vat_amount > 0) {
+        drawTotalRow('VAT (7.5%)', order.vat_amount);
+    }
+    
     // Visual Line before Total
     currentY += 2;
     doc.setDrawColor(240, 240, 240);
     doc.line(totalsRightMargin - 70, currentY - 6, totalsRightMargin, currentY - 6);
     
-    // Total
-    drawTotalRow('Total', order.total_sales_price, true, false);
+    // Total (includes VAT if applicable)
+    const grandTotal = (order.total_sales_price || 0) + (order.vat_amount || 0);
+    drawTotalRow('Total', grandTotal, true, false);
     
     // Amount Due (Grand Total)
-    drawTotalRow('Amount due', order.total_sales_price, true, true);
+    drawTotalRow('Amount due', grandTotal, true, true);
 
     
     // --- Footer Notes ---
@@ -885,6 +912,13 @@ Sent from Ryme Inventory`;
              </div>
           )}
 
+          {order.include_vat && order.vat_amount > 0 && (
+            <div className="totals-row">
+              <span>VAT (7.5%)</span>
+              <span>{formatCurrency(order.vat_amount)}</span>
+            </div>
+          )}
+
           <div className="totals-row">
             <span>Total Cost of Production</span>
             <span className="text-muted">
@@ -897,7 +931,7 @@ Sent from Ryme Inventory`;
           </div>
           <div className="totals-row grand-total">
             <span>Grand Total</span>
-            <span>{formatCurrency(order.total_sales_price || 0)}</span>
+            <span>{formatCurrency((order.total_sales_price || 0) + (order.vat_amount || 0))}</span>
           </div>
         </div>
       </div>

@@ -868,6 +868,72 @@
   padding: 0.5rem 0;
 }
 
+/* VAT Toggle Section */
+.vat-section {
+  margin: 0.75rem 0;
+  padding: 0.75rem;
+  background: var(--bg-body);
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+}
+
+.vat-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  cursor: pointer;
+  user-select: none;
+}
+
+.vat-toggle input {
+  display: none;
+}
+
+.toggle-slider {
+  position: relative;
+  width: 42px;
+  height: 24px;
+  background: var(--border-color);
+  border-radius: 12px;
+  transition: all 0.3s ease;
+  flex-shrink: 0;
+}
+
+.toggle-slider::after {
+  content: '';
+  position: absolute;
+  width: 18px;
+  height: 18px;
+  background: white;
+  border-radius: 50%;
+  top: 3px;
+  left: 3px;
+  transition: transform 0.3s ease;
+}
+
+.vat-toggle input:checked + .toggle-slider {
+  background: var(--primary-color);
+}
+
+.vat-toggle input:checked + .toggle-slider::after {
+  transform: translateX(18px);
+}
+
+.toggle-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.vat-toggle input:checked ~ .toggle-label {
+  color: var(--primary-color);
+}
+
+.vat-row {
+  padding: 0.5rem 0;
+  color: var(--info-text);
+}
+
 .summary-divider {
   height: 1px;
   background: var(--border-color);

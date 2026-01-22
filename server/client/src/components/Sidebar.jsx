@@ -222,6 +222,24 @@ const Sidebar = ({ isOpen, onClose, onOpenCalculator, onOpenConverter, onOpenBar
         </NavLink>
 
         <NavLink
+          to="/expenses"
+          className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
+          onClick={() => onClose && onClose()}
+        >
+          <span className="nav-icon"><FiDollarSign /></span>
+          <span>Expenses</span>
+        </NavLink>
+
+        <NavLink
+          to="/taxes"
+          className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
+          onClick={() => onClose && onClose()}
+        >
+          <span className="nav-icon"><FiPieChart /></span>
+          <span>Taxes</span>
+        </NavLink>
+
+        <NavLink
           to="/team"
           className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
           onClick={() => onClose && onClose()}

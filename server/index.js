@@ -99,6 +99,30 @@ function createTables() {
       FOREIGN KEY (order_id) REFERENCES orders (id),
       FOREIGN KEY (product_id) REFERENCES products (id)
     )`);
+
+    // Expenses Table
+    db.run(`CREATE TABLE IF NOT EXISTS expenses (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      order_id INTEGER,
+      description TEXT NOT NULL,
+      amount REAL NOT NULL,
+      category TEXT,
+      date TEXT DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (order_id) REFERENCES orders (id)
+    )`);
+
+    // Add Net Profit and Total Expenses columns to orders if they don't exist
+    db.run(`ALTER TABLE orders ADD COLUMN total_expenses REAL DEFAULT 0`, (err) => {
+      if (err && !String(err.message || '').includes('duplicate column')) {
+        console.error('Error adding total_expenses column', err.message);
+      }
+    });
+
+    db.run(`ALTER TABLE orders ADD COLUMN net_profit REAL DEFAULT 0`, (err) => {
+      if (err && !String(err.message || '').includes('duplicate column')) {
+        console.error('Error adding net_profit column', err.message);
+      }
+    });
   });
 }
 
@@ -355,8 +379,8 @@ app.post('/api/orders', (req, res) => {
     }
 
     // 2. Insert Order
-    const insertOrderSql = `INSERT INTO orders (customer_name, total_sales_price, total_profit) VALUES (?, ?, ?)`;
-    db.run(insertOrderSql, [customer_name, total_sales_price, total_profit], function(err) {
+    const insertOrderSql = `INSERT INTO orders (customer_name, total_sales_price, total_profit, net_profit) VALUES (?, ?, ?, ?)`;
+    db.run(insertOrderSql, [customer_name, total_sales_price, total_profit, total_profit], function(err) {
       if (err) {
         return res.status(400).json({ error: err.message });
       }
@@ -413,6 +437,71 @@ app.get('/api/orders/:id', (req, res) => {
                 res.json({ data: { ...order, items } });
             }
         );
+    });
+});
+
+// Expense Routes
+app.get('/api/expenses', (req, res) => {
+    db.all('SELECT e.*, o.customer_name FROM expenses e LEFT JOIN orders o ON e.order_id = o.id ORDER BY e.date DESC', [], (err, rows) => {
+        if (err) return res.status(400).json({ error: err.message });
+        res.json({ data: rows });
+    });
+});
+
+app.post('/api/expenses', (req, res) => {
+    const { order_id, description, amount, category } = req.body;
+    if (!description || !amount) return res.status(400).json({ error: 'Description and amount are required' });
+
+    db.run('INSERT INTO expenses (order_id, description, amount, category) VALUES (?, ?, ?, ?)', 
+        [order_id, description, amount, category], 
+        function(err) {
+            if (err) return res.status(400).json({ error: err.message });
+            const expenseId = this.lastID;
+
+            if (order_id) {
+                // Update order's total_expenses and net_profit
+                const updateOrderSql = `
+                    UPDATE orders 
+                    SET total_expenses = (SELECT SUM(amount) FROM expenses WHERE order_id = ?),
+                        net_profit = total_profit - (SELECT SUM(amount) FROM expenses WHERE order_id = ?)
+                    WHERE id = ?
+                `;
+                db.run(updateOrderSql, [order_id, order_id, order_id], (err) => {
+                    if (err) console.error('Error updating order profit after expense:', err);
+                });
+            }
+
+            res.json({ data: { id: expenseId, order_id, description, amount, category } });
+        }
+    );
+});
+
+app.delete('/api/expenses/:id', (req, res) => {
+    const expenseId = req.params.id;
+    
+    // First get the order_id if it exists to update the order profit later
+    db.get('SELECT order_id FROM expenses WHERE id = ?', [expenseId], (err, expense) => {
+        if (err || !expense) return res.status(400).json({ error: 'Expense not found' });
+        
+        const orderId = expense.order_id;
+        
+        db.run('DELETE FROM expenses WHERE id = ?', [expenseId], function(err) {
+            if (err) return res.status(400).json({ error: err.message });
+            
+            if (orderId) {
+                const updateOrderSql = `
+                    UPDATE orders 
+                    SET total_expenses = (SELECT COALESCE(SUM(amount), 0) FROM expenses WHERE order_id = ?),
+                        net_profit = total_profit - (SELECT COALESCE(SUM(amount), 0) FROM expenses WHERE order_id = ?)
+                    WHERE id = ?
+                `;
+                db.run(updateOrderSql, [orderId, orderId, orderId], (err) => {
+                    if (err) console.error('Error updating order profit after expense deletion:', err);
+                });
+            }
+            
+            res.json({ message: 'success' });
+        });
     });
 });
 

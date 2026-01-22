@@ -24,6 +24,7 @@ const productsRef = collection(db, 'products');
 const ordersRef = collection(db, 'orders');
 const customersRef = collection(db, 'customers');
 const vendorsRef = collection(db, 'vendors');
+const expensesRef = collection(db, 'expenses');
 const activityLogRef = collection(db, 'activity_log');
 const recycleBinRef = collection(db, 'recycle_bin');
 const categoriesRef = collection(db, 'categories');
@@ -88,6 +89,11 @@ const computePricing = ({ cost_of_production, markup_percentage, markup_amount }
 
 const api = {
   async get(path) {
+    if (path === '/expenses') {
+      const snapshot = await getDocs(query(expensesRef, orderBy('date', 'desc')));
+      return { data: { data: snapshot.docs.map(normalizeDoc) } };
+    }
+
     if (path === '/customers') {
       const snapshot = await getDocs(query(customersRef, orderBy('created_at', 'desc')));
       return { data: { data: snapshot.docs.map(normalizeDoc) } };
@@ -198,6 +204,13 @@ const api = {
       });
     }
 
+    if (path === '/expenses') {
+      return onSnapshot(query(expensesRef, orderBy('date', 'desc')), (snapshot) => {
+        const data = snapshot.docs.map(normalizeDoc);
+        callback({ data });
+      });
+    }
+
     if (path.startsWith('/vendors/')) {
       const id = path.split('/')[2];
       return onSnapshot(doc(vendorsRef, id), (snapshot) => {
@@ -284,6 +297,14 @@ const api = {
   },
 
   async post(path, payload) {
+    if (path === '/expenses') {
+      const docRef = await addDoc(expensesRef, {
+        ...payload,
+        date: new Date().toISOString()
+      });
+      return { data: { data: { id: docRef.id, ...payload } } };
+    }
+
     if (path === '/customers') {
       const now = new Date().toISOString();
       const docRef = await addDoc(customersRef, {
@@ -352,7 +373,7 @@ const api = {
     }
 
     if (path === '/orders') {
-      const { customer_name, customer_address, items, discount } = payload;
+      const { customer_name, customer_address, items, discount, include_vat, vat_amount } = payload;
       if (!customer_name || !items || items.length === 0) {
         throw new Error('Order must contain items.');
       }
@@ -422,6 +443,8 @@ const api = {
         discount: discount || { type: 'none', value: 0 },
         total_sales_price: final_total_sales_price,
         total_profit: final_total_profit,
+        include_vat: include_vat || false,
+        vat_amount: vat_amount || 0,
         items: orderItems
       });
 
@@ -497,7 +520,7 @@ const api = {
        }
 
        // General order update
-      const { customer_name, customer_address, items, discount, customer_id } = payload;
+      const { customer_name, customer_address, items, discount, customer_id, include_vat, vat_amount } = payload;
        
        // Get the existing order to compare changes
        const existingOrderSnap = await getDoc(doc(ordersRef, id));
@@ -562,6 +585,8 @@ const api = {
          discount: discount || { type: 'none', value: 0 },
          total_sales_price: final_total_sales_price,
          total_profit: final_total_profit,
+         include_vat: include_vat || false,
+         vat_amount: vat_amount || 0,
          items: orderItems,
          updated_at: new Date().toISOString()
        });
@@ -673,21 +698,10 @@ const api = {
   },
 
   async delete(path) {
-    if (path.startsWith('/products/')) {
+    if (path.startsWith('/expenses/')) {
       const id = path.split('/')[2];
-      
-      // Get product data before deleting for activity log
-      const productSnap = await getDoc(doc(productsRef, id));
-      const productData = productSnap.exists() ? normalizeDoc(productSnap) : null;
-      
-      await deleteDoc(doc(productsRef, id));
-      
-      // Log activity
-      if (productData) {
-        await api.logActivity('delete', 'product', productData.name, productData);
-      }
-      
-      return { data: { data: { id } } };
+      await deleteDoc(doc(expensesRef, id));
+      return { data: { success: true } };
     }
 
     if (path.startsWith('/customers/')) {

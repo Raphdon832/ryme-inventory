@@ -17,6 +17,8 @@ import ActivityLog from './pages/ActivityLog';
 import Tasks from './pages/Tasks';
 import Calendar from './pages/Calendar';
 import Analytics from './pages/Analytics';
+import Expenses from './pages/Expenses';
+import Taxes from './pages/Taxes';
 import Team from './pages/Team';
 import Help from './pages/Help';
 import ReloadPrompt from './components/ReloadPrompt';
@@ -41,6 +43,8 @@ function App() {
               <Route path="/customers" element={<Customers />} />
               <Route path="/vendors" element={<Vendors />} />
               <Route path="/activity-log" element={<ActivityLog />} />
+              <Route path="/expenses" element={<Expenses />} />
+              <Route path="/taxes" element={<Taxes />} />
               <Route path="/tasks" element={<Tasks />} />
               <Route path="/calendar" element={<Calendar />} />
               <Route path="/analytics" element={<Analytics />} />

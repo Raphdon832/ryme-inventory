@@ -1,0 +1,424 @@
+.taxes-container {
+    padding: 24px;
+    max-width: 100%;
+    margin: 0;
+}
+
+/* Page Title with Actions Area */
+.taxes-container .page-title--with-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 32px;
+}
+
+.taxes-container .page-title h1 {
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 4px;
+}
+
+.taxes-container .page-title p {
+    color: var(--text-secondary);
+    font-size: 14px;
+}
+
+.badge-small {
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.badge-small.highlight {
+    background: #f3f4f6;
+    color: #1f2937;
+}
+
+/* Layout */
+.tax-layout {
+    display: grid;
+    grid-template-columns: 1fr 320px;
+    gap: 24px;
+}
+
+/* Common Card Styling */
+.taxes-container .card {
+    background: #ffffff;
+    border-radius: 16px;
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    overflow: hidden;
+}
+
+.taxes-container .card-header {
+    padding: 20px 24px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.taxes-container .card-header h3 {
+    font-size: 18px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* Table Enhancements */
+.taxes-container .table-container {
+    overflow-x: auto;
+}
+
+.modern-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.modern-table th {
+    text-align: left;
+    padding: 16px 24px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    background: #f9fafb;
+}
+
+.modern-table td {
+    padding: 20px 24px;
+    font-size: 14px;
+    border-bottom: 1px solid #f3f4f6;
+}
+
+.page-actions-group {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+}
+
+.tax-type-selector {
+    min-width: 240px;
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    font-weight: 600;
+}
+
+.text-green { color: #10b981; }
+
+.status-pill.recurring { background: #dbeafe; color: #1e40af; }
+.status-pill.exempt { background: #ecfdf5; color: #065f46; }
+
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+    .page-actions-group {
+        width: 100%;
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .tax-type-selector {
+        width: 100%;
+    }
+}
+
+.grand-total-row {
+    background: #f9fafb;
+}
+
+.grand-total-row td {
+    font-size: 16px;
+    border-top: 2px solid #e5e7eb;
+}
+
+/* Info Sidebar */
+.tax-sidebar {
+    height: 100%;
+}
+
+.info-card-flat {
+    background: #111827;
+    color: #ffffff;
+    border: none;
+    height: 100%;
+}
+
+.info-card-flat .card-header {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    background: transparent;
+    padding: 24px;
+}
+
+.info-card-flat h3 { 
+    color: #ffffff; 
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 18px;
+}
+
+.info-card-flat h3 svg {
+    color: #9ca3af;
+}
+
+.info-content-modern {
+    padding: 24px;
+}
+
+.info-content-modern ul {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 24px 0;
+}
+
+.info-content-modern li {
+    margin-bottom: 16px;
+}
+
+.info-content-modern li strong {
+    display: block;
+    font-size: 14px;
+    color: #9ca3af;
+    margin-bottom: 4px;
+}
+
+.info-content-modern li p {
+    font-size: 13px;
+    line-height: 1.5;
+    color: #d1d5db;
+}
+
+.firs-link-btn {
+    width: 100%;
+    padding: 12px;
+    border-radius: 10px;
+    background: #ffffff;
+    color: #111827;
+    border: none;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.firs-link-btn:hover {
+    background: #f3f4f6;
+}
+
+/* Mobile Tax Elements */
+.hide-mobile { display: block; }
+.show-mobile { display: none; }
+
+.tax-mobile-item {
+    padding: 16px;
+    border-bottom: 1px solid #f3f4f6;
+}
+
+.tax-mobile-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.tax-mobile-row span {
+    font-size: 14px;
+    color: var(--text-secondary);
+}
+
+.tax-mobile-row strong {
+    font-size: 16px;
+}
+
+.tax-mobile-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.tax-mobile-total {
+    padding: 20px 16px;
+    background: #f9fafb;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.tax-mobile-total span {
+    font-weight: 600;
+}
+
+.tax-mobile-total strong {
+    font-size: 18px;
+}
+
+/* Animations */
+.animate-fade-in { animation: fadeIn 0.4s ease forwards; }
+.animate-slide-up { animation: slideUp 0.4s ease-out forwards; }
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes slideUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@media (max-width: 1024px) {
+    .tax-layout {
+        grid-template-columns: 1fr;
+        gap: 20px;
+    }
+
+    .tax-sidebar {
+        margin-top: 10px;
+    }
+
+    .info-card-flat .card-header {
+        padding: 18px 20px;
+    }
+}
+
+@media (max-width: 768px) {
+    .taxes-container { padding: 16px; }
+    
+    .taxes-container .page-title--with-actions {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 16px;
+    }
+    
+    .taxes-container .hide-mobile { display: none; }
+    .taxes-container .show-mobile { display: block; }
+}
+
+.print-only { display: none; }
+
+@media print {
+    .no-print, .page-title--with-actions, .firs-link-btn, .tax-sidebar, .sidebar, .add-btn-bordered, .tax-type-selector {
+        display: none !important;
+    }
+
+    body {
+        margin: 0;
+        padding: 0;
+        background-color: white !important;
+    }
+
+    .print-only { 
+        display: block !important; 
+    }
+
+    .taxes-container {
+        padding: 0 !important;
+        margin: 0 !important;
+        max-width: 100% !important;
+    }
+
+    .tax-report-header {
+        border-bottom: 2px solid #000;
+        margin-bottom: 30px;
+        padding-bottom: 15px;
+        display: flex !important;
+        justify-content: space-between;
+        align-items: flex-end;
+    }
+
+    .report-badge {
+        background: #000;
+        color: #fff;
+        padding: 4px 12px;
+        font-size: 12px;
+        font-weight: 800;
+        text-transform: uppercase;
+        margin-bottom: 10px;
+    }
+
+    .report-meta h2 {
+        margin: 0;
+        font-size: 24px;
+        letter-spacing: -0.5px;
+    }
+
+    .report-date-container {
+        font-size: 12px;
+        font-weight: 600;
+    }
+
+    .bento-grid {
+        display: grid !important;
+        grid-template-columns: repeat(3, 1fr) !important;
+        gap: 10px !important;
+        margin-bottom: 30px !important;
+    }
+
+    .tax-widget {
+        border: 1px solid #eee !important;
+        break-inside: avoid;
+    }
+
+    .card {
+        border: none !important;
+        box-shadow: none !important;
+    }
+
+    .modern-table {
+        border: 1px solid #eee;
+    }
+
+    .modern-table th {
+        background: #f9fafb !important;
+        color: #000 !important;
+        -webkit-print-color-adjust: exact;
+    }
+
+    .grand-total-row {
+        background: #f0fdf4 !important;
+        -webkit-print-color-adjust: exact;
+    }
+
+    /* Print Footer */
+    .taxes-container::after {
+        content: "Note: This is an automated assessment based on recorded business transactions in RYME Inventory. For official filing, please consult a certified tax professional in Nigeria.";
+        display: block;
+        margin-top: 50px;
+        font-size: 10px;
+        color: #666;
+        font-style: italic;
+        text-align: center;
+        border-top: 1px solid #eee;
+        padding-top: 10px;
+    }
+}
+
+.tax-bracket-details {
+    padding: 12px;
+    background: #f8fafc;
+    border-radius: 8px;
+    margin: 4px 0;
+    font-size: 12px;
+}
+
+.tax-bracket-details summary {
+    cursor: pointer;
+    font-weight: 600;
+    color: #475569;
+}
+
+.bracket-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 8px;
+    margin-top: 10px;
+}
+
+.bracket-item {
+    background: white;
+    padding: 6px 10px;
+    border-radius: 4px;
+    border: 1px solid #e2e8f0;
+}

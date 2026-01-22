@@ -42,8 +42,11 @@ const CreateOrder = () => {
     items: [],
     discount: { type: 'none', value: 0 },
     status: 'pending',
-    order_number: ''
+    order_number: '',
+    include_vat: false
   });
+
+  const VAT_RATE = 0.075; // 7.5% Nigerian VAT
 
   const [currentItem, setCurrentItem] = useState({
     product_id: '',
@@ -130,6 +133,7 @@ const CreateOrder = () => {
             discount: order.discount || { type: 'none', value: 0 },
             status: order.status || 'pending',
             order_number: order.order_number || '',
+            include_vat: order.include_vat || false,
             _offline: order._offline || false
           };
           setOrderData(loadedOrderData);
@@ -310,6 +314,7 @@ const CreateOrder = () => {
 
     try {
       // Prepare order payload with full item details for offline storage
+      const vatAmount = calculateVAT();
       const orderPayload = {
         customer_id: orderData.customer_id || '',
         customer_name: orderData.customer_name,
@@ -322,7 +327,9 @@ const CreateOrder = () => {
           sales_price: item.sales_price,
           cost: item.cost
         })),
-        discount: orderData.discount
+        discount: orderData.discount,
+        include_vat: orderData.include_vat,
+        vat_amount: vatAmount
       };
 
       // Check if we're online
@@ -478,6 +485,16 @@ const CreateOrder = () => {
     const totalSales = calculateSubtotal();
     const totalCost = calculateCost();
     return (totalSales - totalCost) - calculateDiscountAmount();
+  };
+
+  const calculateVAT = () => {
+    if (!orderData.include_vat) return 0;
+    const afterDiscount = calculateSubtotal() - calculateDiscountAmount();
+    return afterDiscount * VAT_RATE;
+  };
+
+  const calculateGrandTotal = () => {
+    return calculateTotal() + calculateVAT();
   };
 
   if (loading || orderLoading) {
@@ -927,11 +944,31 @@ const CreateOrder = () => {
               </div>
             )}
 
+            {/* VAT Toggle */}
+            <div className="vat-section">
+              <label className="vat-toggle">
+                <input
+                  type="checkbox"
+                  checked={orderData.include_vat}
+                  onChange={(e) => setOrderData({...orderData, include_vat: e.target.checked})}
+                />
+                <span className="toggle-slider"></span>
+                <span className="toggle-label">Add VAT (7.5%)</span>
+              </label>
+            </div>
+
+            {orderData.include_vat && (
+              <div className="summary-row vat-row">
+                <span>VAT (7.5%)</span>
+                <span className="value">{formatCurrency(calculateVAT())}</span>
+              </div>
+            )}
+
             <div className="summary-divider"></div>
 
             <div className="summary-row total-row">
               <span>Total</span>
-              <span className="value total">{formatCurrency(calculateTotal())}</span>
+              <span className="value total">{formatCurrency(calculateGrandTotal())}</span>
             </div>
 
             <div className="summary-row profit-row">

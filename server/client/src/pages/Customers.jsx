@@ -136,12 +136,12 @@ const Customers = () => {
         <div className="stat-widget border-blue animate-slide-up delay-100">
           <div className="stat-icon blue"><FiUser /></div>
           <div className="stat-label">Total Customers</div>
-          <div className="stat-value">{totalCustomers}</div>
+          <div className="stat-value">{new Intl.NumberFormat('en-US').format(totalCustomers)}</div>
         </div>
         <div className="stat-widget border-green animate-slide-up delay-200">
           <div className="stat-icon green"><FiUser /></div>
           <div className="stat-label">Total Orders</div>
-          <div className="stat-value">{totalOrders}</div>
+          <div className="stat-value">{new Intl.NumberFormat('en-US').format(totalOrders)}</div>
         </div>
       </div>
 
