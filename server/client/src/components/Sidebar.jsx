@@ -13,13 +13,14 @@ import {
   FiUser,
   FiTruck,
   FiHelpCircle,
-  FiClock
+  FiClock,
+  FiHash
 } from 'react-icons/fi';
 import { collection, onSnapshot, query, where } from 'firebase/firestore';
 import { db } from '../api';
 import './Sidebar.css';
 
-const Sidebar = ({ isOpen, onClose }) => {
+const Sidebar = ({ isOpen, onClose, onOpenCalculator }) => {
   const [pendingTasksCount, setPendingTasksCount] = useState(0);
   const [swipeOffset, setSwipeOffset] = useState(0);
   const [isSwipingNav, setIsSwipingNav] = useState(false);
@@ -247,6 +248,20 @@ const Sidebar = ({ isOpen, onClose }) => {
         <div className="nav-item">
           <span className="nav-icon"><FiLogOut /></span>
           <span>Logout</span>
+        </div>
+
+        <div className="nav-section-label" style={{ marginTop: '2rem' }}>Tools</div>
+        
+        <div 
+          className="nav-item" 
+          onClick={() => {
+            onOpenCalculator && onOpenCalculator();
+            onClose && onClose();
+          }}
+          style={{ cursor: 'pointer' }}
+        >
+          <span className="nav-icon"><FiHash /></span>
+          <span>Calculator</span>
         </div>
       </nav>
     </aside>

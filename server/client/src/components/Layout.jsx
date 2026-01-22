@@ -6,6 +6,7 @@ import OfflineIndicator from './OfflineIndicator';
 import PullToRefresh from './PullToRefresh';
 import GlobalSearch from './GlobalSearch';
 import QuickNavBar from './QuickNavBar';
+import Calculator from './Calculator';
 import { useSettings } from '../contexts/SettingsContext';
 
 const Layout = ({ children }) => {
@@ -13,13 +14,14 @@ const Layout = ({ children }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [showSplash, setShowSplash] = useState(true);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [isCalculatorOpen, setIsCalculatorOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
   
   const hasQuickNav = settings.quickNav?.enabled && settings.quickNav?.items?.length > 0;
 
   // Lock body scroll when sidebar is open on mobile
   useEffect(() => {
-    if (isSidebarOpen || isSearchOpen) {
+    if (isSidebarOpen || isSearchOpen || isCalculatorOpen) {
       document.body.style.overflow = 'hidden';
       document.body.style.touchAction = 'none';
     } else {
@@ -67,7 +69,11 @@ const Layout = ({ children }) => {
         className={`sidebar-overlay ${isSidebarOpen ? 'show' : ''}`}
         onClick={() => setIsSidebarOpen(false)}
       />
-      <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
+      <Sidebar 
+        isOpen={isSidebarOpen} 
+        onClose={() => setIsSidebarOpen(false)} 
+        onOpenCalculator={() => setIsCalculatorOpen(true)}
+      />
       <main className="main-content">
         {showSplash && <Splash duration={900} onDone={() => setShowSplash(false)} />}
         <header className="top-header">
@@ -139,6 +145,12 @@ const Layout = ({ children }) => {
         isOpen={isSearchOpen} 
         onClose={() => setIsSearchOpen(false)}
         isMobile={isMobile}
+      />
+
+      {/* Calculator Modal */}
+      <Calculator 
+        isOpen={isCalculatorOpen} 
+        onClose={() => setIsCalculatorOpen(false)}
       />
     </div>
   );
