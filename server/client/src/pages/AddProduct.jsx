@@ -82,7 +82,7 @@ const AddProduct = () => {
     markup_percentage: '',
     markup_amount: '',
     sales_price: '',
-    pricing_mode: 'cop', // 'cop' or 'sales'
+    pricing_mode: 'sales', // 'cop' or 'sales'
     stock_quantity: ''
   });
   const [lineItems, setLineItems] = useState([]);
@@ -120,7 +120,7 @@ const AddProduct = () => {
     markup_percentage: '',
     markup_amount: '',
     sales_price: '',
-    pricing_mode: 'cop',
+    pricing_mode: 'sales',
     stock_quantity: ''
   });
   const [newBulkProduct, setNewBulkProduct] = useState({
@@ -132,7 +132,7 @@ const AddProduct = () => {
     markup_percentage: '',
     markup_amount: '',
     sales_price: '',
-    pricing_mode: 'cop',
+    pricing_mode: 'sales',
     stock_quantity: ''
   });
   const [useDefaults, setUseDefaults] = useState(true);
@@ -188,7 +188,7 @@ const AddProduct = () => {
         markup_percentage: product.markup_percentage,
         markup_amount: product.markup_amount || '',
         sales_price: product.sales_price || '',
-        pricing_mode: 'cop',
+        pricing_mode: 'sales',
         stock_quantity: product.stock_quantity
       });
       
@@ -415,7 +415,7 @@ const AddProduct = () => {
       markup_percentage: '',
       markup_amount: '',
       sales_price: '',
-      pricing_mode: 'cop',
+      pricing_mode: 'sales',
       stock_quantity: ''
     });
     setPricingError('');
