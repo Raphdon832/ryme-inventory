@@ -32,6 +32,21 @@ const UnitConverter = ({ isOpen, onClose }) => {
       { id: 'kg', label: 'Kilograms', factor: 1 },
       { id: 'lb', label: 'Pounds', factor: 0.453592 },
       { id: 'oz', label: 'Ounces', factor: 0.0283495 }
+    ],
+    volume: [
+      { id: 'ml', label: 'Milliliters', factor: 1 },
+      { id: 'l', label: 'Liters', factor: 1000 },
+      { id: 'floz', label: 'Fluid Oz', factor: 29.5735 }
+    ],
+    glass: [
+      { id: 'ml', label: 'Glass Vol (ml)', factor: 1 },
+      { id: 'g', label: 'Mass (g)', factor: 1 / 2.52 },
+      { id: 'kg', label: 'Mass (kg)', factor: 1000 / 2.52 }
+    ],
+    oil: [
+      { id: 'ml', label: 'Oil Vol (ml)', factor: 1 },
+      { id: 'g', label: 'Mass (g)', factor: 1 / 0.9 },
+      { id: 'kg', label: 'Mass (kg)', factor: 1000 / 0.9 }
     ]
   };
 
