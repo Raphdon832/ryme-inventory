@@ -81,6 +81,8 @@ const AddProduct = () => {
     cost_of_production: '',
     markup_percentage: '',
     markup_amount: '',
+    sales_price: '',
+    pricing_mode: 'cop', // 'cop' or 'sales'
     stock_quantity: ''
   });
   const [lineItems, setLineItems] = useState([]);
@@ -117,6 +119,8 @@ const AddProduct = () => {
     cost_of_production: '',
     markup_percentage: '',
     markup_amount: '',
+    sales_price: '',
+    pricing_mode: 'cop',
     stock_quantity: ''
   });
   const [newBulkProduct, setNewBulkProduct] = useState({
@@ -127,6 +131,8 @@ const AddProduct = () => {
     cost_of_production: '',
     markup_percentage: '',
     markup_amount: '',
+    sales_price: '',
+    pricing_mode: 'cop',
     stock_quantity: ''
   });
   const [useDefaults, setUseDefaults] = useState(true);
@@ -181,6 +187,8 @@ const AddProduct = () => {
         cost_of_production: product.cost_of_production,
         markup_percentage: product.markup_percentage,
         markup_amount: product.markup_amount || '',
+        sales_price: product.sales_price || '',
+        pricing_mode: 'cop',
         stock_quantity: product.stock_quantity
       });
       
@@ -203,7 +211,7 @@ const AddProduct = () => {
     }
     
     // For number fields, allow empty string so user can delete and type
-    const fieldsToFix = ['cost_of_production', 'markup_percentage', 'markup_amount', 'stock_quantity'];
+    const fieldsToFix = ['cost_of_production', 'markup_percentage', 'markup_amount', 'sales_price', 'stock_quantity'];
     if (fieldsToFix.includes(name)) {
       setFormData(prev => ({ ...prev, [name]: value }));
     } else {
@@ -261,24 +269,45 @@ const AddProduct = () => {
   };
 
   const calculatedCoP = lineItems.reduce((sum, item) => sum + Number(item.cost || 0), 0);
-  const finalCoP = lineItems.length > 0 ? calculatedCoP : Number(formData.cost_of_production || 0);
-  const hasMarkupAmount = formData.markup_amount !== '' && formData.markup_amount !== null && formData.markup_amount !== undefined;
-  const hasMarkupPercent = formData.markup_percentage !== '' && formData.markup_percentage !== null && formData.markup_percentage !== undefined;
-  const appliedMarkup = hasMarkupAmount
-    ? Number(formData.markup_amount || 0)
-    : hasMarkupPercent
-      ? (finalCoP * Number(formData.markup_percentage) / 100)
+  
+  // Pricing mode logic
+  let finalCoP, appliedMarkup, estimatedSP, estimatedProfit, hasMarkupAmount, hasMarkupPercent;
+
+  if (formData.pricing_mode === 'sales') {
+    estimatedSP = Number(formData.sales_price || 0);
+    hasMarkupPercent = formData.markup_percentage !== '' && formData.markup_percentage !== null;
+    estimatedProfit = hasMarkupPercent 
+      ? (estimatedSP * Number(formData.markup_percentage) / 100) 
       : 0;
-  const estimatedSP = finalCoP ? finalCoP + appliedMarkup : 0;
-  const estimatedProfit = finalCoP ? estimatedSP - finalCoP : 0;
+    finalCoP = estimatedSP - estimatedProfit;
+    appliedMarkup = estimatedProfit;
+    hasMarkupAmount = false;
+  } else {
+    finalCoP = lineItems.length > 0 ? calculatedCoP : Number(formData.cost_of_production || 0);
+    hasMarkupAmount = formData.markup_amount !== '' && formData.markup_amount !== null;
+    hasMarkupPercent = formData.markup_percentage !== '' && formData.markup_percentage !== null;
+    appliedMarkup = hasMarkupAmount
+      ? Number(formData.markup_amount || 0)
+      : hasMarkupPercent
+        ? (finalCoP * Number(formData.markup_percentage) / 100)
+        : 0;
+    estimatedSP = finalCoP ? finalCoP + appliedMarkup : 0;
+    estimatedProfit = finalCoP ? estimatedSP - finalCoP : 0;
+  }
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     
     try {
-      if (!hasMarkupAmount && !hasMarkupPercent) {
+      if (formData.pricing_mode === 'cop' && !hasMarkupAmount && !hasMarkupPercent) {
         setPricingError('Please provide either a markup percentage or a markup amount.');
+        setLoading(false);
+        return;
+      }
+
+      if (formData.pricing_mode === 'sales' && !formData.sales_price) {
+        setPricingError('Please provide a sales price.');
         setLoading(false);
         return;
       }
@@ -308,9 +337,9 @@ const AddProduct = () => {
         // Combined display name
         name: fullName,
         description: formData.description,
-        cost_of_production: lineItems.length > 0 ? calculatedCoP : formData.cost_of_production,
+        cost_of_production: formData.pricing_mode === 'sales' ? finalCoP : (lineItems.length > 0 ? calculatedCoP : formData.cost_of_production),
         markup_percentage: formData.markup_percentage,
-        markup_amount: formData.markup_amount,
+        markup_amount: formData.pricing_mode === 'sales' ? appliedMarkup : formData.markup_amount,
         stock_quantity: formData.stock_quantity
       };
       
@@ -344,6 +373,23 @@ const AddProduct = () => {
     const sortingCode = generateSortingCode(bulkBrandName, newBulkProduct.product_name, newBulkProduct.volume_size);
     const fullName = generateDisplayName(bulkBrandName, newBulkProduct.product_name, newBulkProduct.volume_size);
 
+    // Get pricing values based on defaults or individual overrides
+    const pricingMode = useDefaults ? bulkDefaults.pricing_mode : newBulkProduct.pricing_mode;
+    let cost, markupPct, markupAmt;
+
+    if (pricingMode === 'sales') {
+      const sp = useDefaults ? Number(bulkDefaults.sales_price || 0) : Number(newBulkProduct.sales_price || 0);
+      const margin = useDefaults ? Number(bulkDefaults.markup_percentage || 0) : Number(newBulkProduct.markup_percentage || 0);
+      const profit = sp * margin / 100;
+      cost = sp - profit;
+      markupPct = 0;
+      markupAmt = profit;
+    } else {
+      cost = useDefaults ? bulkDefaults.cost_of_production : newBulkProduct.cost_of_production;
+      markupPct = useDefaults ? bulkDefaults.markup_percentage : newBulkProduct.markup_percentage;
+      markupAmt = useDefaults ? bulkDefaults.markup_amount : newBulkProduct.markup_amount;
+    }
+
     const productToAdd = {
       id: Date.now(),
       brand_name: bulkBrandName.trim(),
@@ -353,10 +399,9 @@ const AddProduct = () => {
       sorting_code: sortingCode,
       name: fullName,
       description: newBulkProduct.description || '',
-      // Use individual values or defaults
-      cost_of_production: useDefaults ? bulkDefaults.cost_of_production : newBulkProduct.cost_of_production,
-      markup_percentage: useDefaults ? bulkDefaults.markup_percentage : newBulkProduct.markup_percentage,
-      markup_amount: useDefaults ? bulkDefaults.markup_amount : newBulkProduct.markup_amount,
+      cost_of_production: cost,
+      markup_percentage: markupPct,
+      markup_amount: markupAmt,
       stock_quantity: useDefaults ? bulkDefaults.stock_quantity : newBulkProduct.stock_quantity
     };
 
@@ -369,6 +414,8 @@ const AddProduct = () => {
       cost_of_production: '',
       markup_percentage: '',
       markup_amount: '',
+      sales_price: '',
+      pricing_mode: 'cop',
       stock_quantity: ''
     });
     setPricingError('');
@@ -644,106 +691,161 @@ const AddProduct = () => {
               </div>
             </div>
 
-            <div className="form-card">
-              <h3 className="section-title">
-                <FiPackage /> Cost of Production
-              </h3>
-              <p className="section-description">
-                Add materials/ingredients used to make this product. The total will be your Cost of Production.
-              </p>
+            <div className="pricing-mode-toggle">
+              <label className={`mode-option ${formData.pricing_mode === 'cop' ? 'active' : ''}`}>
+                <input 
+                  type="radio" 
+                  name="pricing_mode" 
+                  value="cop" 
+                  checked={formData.pricing_mode === 'cop'} 
+                  onChange={() => setFormData(prev => ({ ...prev, pricing_mode: 'cop' }))}
+                />
+                <span>Manual Cost Entry</span>
+              </label>
+              <label className={`mode-option ${formData.pricing_mode === 'sales' ? 'active' : ''}`}>
+                <input 
+                  type="radio" 
+                  name="pricing_mode" 
+                  value="sales" 
+                  checked={formData.pricing_mode === 'sales'} 
+                  onChange={() => setFormData(prev => ({ ...prev, pricing_mode: 'sales' }))}
+                />
+                <span>Sales Price Target</span>
+              </label>
+            </div>
 
-              {lineItems.length > 0 && (
-                <div className="line-items-list">
-                  {lineItems.map((item) => (
-                    <div key={item.id} className="line-item">
-                      <div className="line-item-content">
-                        <span className="line-item-name">{item.item_name}</span>
-                        <span className="line-item-cost">{formatCurrency(item.cost)}</span>
+            {formData.pricing_mode === 'cop' ? (
+              <div className="form-card">
+                <h3 className="section-title">
+                  <FiPackage /> Cost of Production
+                </h3>
+                <p className="section-description">
+                  Add materials/ingredients used to make this product. The total will be your Cost of Production.
+                </p>
+
+                {lineItems.length > 0 && (
+                  <div className="line-items-list">
+                    {lineItems.map((item) => (
+                      <div key={item.id} className="line-item">
+                        <div className="line-item-content">
+                          <span className="line-item-name">{item.item_name}</span>
+                          <span className="line-item-cost">{formatCurrency(item.cost)}</span>
+                        </div>
+                        <button 
+                          type="button"
+                          onClick={() => removeLineItem(item.id)}
+                          className="btn-remove"
+                        >
+                          <FiX />
+                        </button>
                       </div>
-                      <button 
-                        type="button"
-                        onClick={() => removeLineItem(item.id)}
-                        className="btn-remove"
-                      >
-                        <FiX />
-                      </button>
+                    ))}
+                    <div className="line-items-total">
+                      <span>Total CoP:</span>
+                      <span className="total-amount">{formatCurrency(calculatedCoP)}</span>
                     </div>
-                  ))}
-                  <div className="line-items-total">
-                    <span>Total CoP:</span>
-                    <span className="total-amount">{formatCurrency(calculatedCoP)}</span>
                   </div>
-                </div>
-              )}
+                )}
 
-              <div className="add-line-item-form">
-                <input 
-                  type="text" 
-                  placeholder="Item/Material name" 
-                  value={newLineItem.item_name}
-                  onChange={(e) => setNewLineItem({ ...newLineItem, item_name: e.target.value })}
-                  className="line-item-input"
-                />
-                <input 
-                  type="number" 
-                  placeholder="Cost" 
-                  step="0.01"
-                  value={newLineItem.cost}
-                  onChange={(e) => setNewLineItem({ ...newLineItem, cost: e.target.value })}
-                  className="line-item-cost-input"
-                />
-                <button 
-                  type="button"
-                  onClick={addLineItem}
-                  className="btn-add-item"
-                >
-                  <FiPlus /> Add Item
-                </button>
-              </div>
-
-              {lineItems.length === 0 && (
-                <div className="form-group" style={{ marginTop: '1rem' }}>
-                  <label>Or enter Cost of Production directly ({currencySymbol}) <span className="required">*</span></label>
+                <div className="add-line-item-form">
+                  <input 
+                    type="text" 
+                    placeholder="Item/Material name" 
+                    value={newLineItem.item_name}
+                    onChange={(e) => setNewLineItem({ ...newLineItem, item_name: e.target.value })}
+                    className="line-item-input"
+                  />
                   <input 
                     type="number" 
-                    name="cost_of_production" 
-                    placeholder="0.00" 
+                    placeholder="Cost" 
                     step="0.01"
-                    value={formData.cost_of_production} 
-                    onChange={handleChange} 
-                    required={lineItems.length === 0}
+                    value={newLineItem.cost}
+                    onChange={(e) => setNewLineItem({ ...newLineItem, cost: e.target.value })}
+                    className="line-item-cost-input"
                   />
+                  <button 
+                    type="button"
+                    onClick={addLineItem}
+                    className="btn-add-item"
+                  >
+                    <FiPlus /> Add Item
+                  </button>
                 </div>
-              )}
-            </div>
+
+                {lineItems.length === 0 && (
+                  <div className="form-group" style={{ marginTop: '1rem' }}>
+                    <label>Or enter Cost of Production directly ({currencySymbol}) <span className="required">*</span></label>
+                    <input 
+                      type="number" 
+                      name="cost_of_production" 
+                      placeholder="0.00" 
+                      step="0.01"
+                      value={formData.cost_of_production} 
+                      onChange={handleChange} 
+                      required={lineItems.length === 0}
+                    />
+                  </div>
+                )}
+              </div>
+            ) : null}
 
             <div className="form-card">
               <h3 className="section-title">Pricing & Stock</h3>
               
               <div className="form-row">
-                <div className="form-group">
-                  <label>Markup Percentage (%)</label>
-                  <input 
-                    type="number" 
-                    name="markup_percentage" 
-                    placeholder="e.g., 50" 
-                    value={formData.markup_percentage} 
-                    onChange={handleChange} 
-                  />
-                  <small className="helper-text">Use percentage or amount — one is required.</small>
-                </div>
+                {formData.pricing_mode === 'sales' ? (
+                  <>
+                    <div className="form-group">
+                      <label>Sales Price ({currencySymbol}) <span className="required">*</span></label>
+                      <input 
+                        type="number" 
+                        name="sales_price" 
+                        placeholder="0.00" 
+                        step="0.01"
+                        value={formData.sales_price} 
+                        onChange={handleChange}
+                        required 
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label>Profit Margin (%)</label>
+                      <input 
+                        type="number" 
+                        name="markup_percentage" 
+                        placeholder="e.g., 30" 
+                        value={formData.markup_percentage} 
+                        onChange={handleChange} 
+                      />
+                      <small className="helper-text">{formData.markup_percentage}% of Sales Price is profit</small>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="form-group">
+                      <label>Markup Percentage (%)</label>
+                      <input 
+                        type="number" 
+                        name="markup_percentage" 
+                        placeholder="e.g., 50" 
+                        value={formData.markup_percentage} 
+                        onChange={handleChange} 
+                      />
+                      <small className="helper-text">Use percentage or amount — one is required.</small>
+                    </div>
 
-                <div className="form-group">
-                  <label>Markup Amount ({currencySymbol})</label>
-                  <input
-                    type="number"
-                    name="markup_amount"
-                    placeholder="e.g., 1500"
-                    step="0.01"
-                    value={formData.markup_amount}
-                    onChange={handleChange}
-                  />
-                </div>
+                    <div className="form-group">
+                      <label>Markup Amount ({currencySymbol})</label>
+                      <input
+                        type="number"
+                        name="markup_amount"
+                        placeholder="e.g., 1500"
+                        step="0.01"
+                        value={formData.markup_amount}
+                        onChange={handleChange}
+                      />
+                    </div>
+                  </>
+                )}
                 
                 <div className="form-group">
                   <label>Stock Quantity <span className="required">*</span></label>
@@ -761,6 +863,22 @@ const AddProduct = () => {
               {pricingError && (
                 <div className="pricing-error">{pricingError}</div>
               )}
+            </div>
+
+            {/* Pricing Summary */}
+            <div className="pricing-summary-card">
+              <div className="summary-item">
+                <span className="summary-label">Estimated CoP:</span>
+                <span className="summary-value">{formatCurrency(finalCoP)}</span>
+              </div>
+              <div className="summary-item">
+                <span className="summary-label">Markup/Profit:</span>
+                <span className="summary-value">{formatCurrency(appliedMarkup)}</span>
+              </div>
+              <div className="summary-item total">
+                <span className="summary-label">Target Sales Price:</span>
+                <span className="summary-value">{formatCurrency(estimatedSP)}</span>
+              </div>
             </div>
 
             <div className="form-actions">
@@ -876,36 +994,83 @@ const AddProduct = () => {
                   <span>Use these defaults for all products</span>
                 </label>
 
+                <div className="pricing-mode-toggle" style={{ marginBottom: '1rem' }}>
+                  <label className={`mode-option ${bulkDefaults.pricing_mode === 'cop' ? 'active' : ''}`}>
+                    <input 
+                      type="radio" 
+                      name="bulk_pricing_mode" 
+                      checked={bulkDefaults.pricing_mode === 'cop'} 
+                      onChange={() => setBulkDefaults(prev => ({ ...prev, pricing_mode: 'cop' }))}
+                    />
+                    <span>Manual Cost</span>
+                  </label>
+                  <label className={`mode-option ${bulkDefaults.pricing_mode === 'sales' ? 'active' : ''}`}>
+                    <input 
+                      type="radio" 
+                      name="bulk_pricing_mode" 
+                      checked={bulkDefaults.pricing_mode === 'sales'} 
+                      onChange={() => setBulkDefaults(prev => ({ ...prev, pricing_mode: 'sales' }))}
+                    />
+                    <span>Sales Price Target</span>
+                  </label>
+                </div>
+
                 <div className="form-row">
-                  <div className="form-group">
-                    <label>Cost of Production ({currencySymbol})</label>
-                    <input 
-                      type="number" 
-                      placeholder="0.00" 
-                      step="0.01"
-                      value={bulkDefaults.cost_of_production} 
-                      onChange={(e) => setBulkDefaults({ ...bulkDefaults, cost_of_production: e.target.value })}
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label>Markup %</label>
-                    <input 
-                      type="number" 
-                      placeholder="e.g., 50" 
-                      value={bulkDefaults.markup_percentage} 
-                      onChange={(e) => setBulkDefaults({ ...bulkDefaults, markup_percentage: e.target.value })}
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label>Or Markup Amount ({currencySymbol})</label>
-                    <input 
-                      type="number" 
-                      placeholder="e.g., 1500" 
-                      step="0.01"
-                      value={bulkDefaults.markup_amount} 
-                      onChange={(e) => setBulkDefaults({ ...bulkDefaults, markup_amount: e.target.value })}
-                    />
-                  </div>
+                  {bulkDefaults.pricing_mode === 'sales' ? (
+                    <>
+                      <div className="form-group">
+                        <label>Default Sales Price ({currencySymbol})</label>
+                        <input 
+                          type="number" 
+                          placeholder="0.00" 
+                          step="0.01"
+                          value={bulkDefaults.sales_price} 
+                          onChange={(e) => setBulkDefaults({ ...bulkDefaults, sales_price: e.target.value })}
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label>Default Profit Margin (%)</label>
+                        <input 
+                          type="number" 
+                          placeholder="e.g., 30" 
+                          value={bulkDefaults.markup_percentage} 
+                          onChange={(e) => setBulkDefaults({ ...bulkDefaults, markup_percentage: e.target.value })}
+                        />
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="form-group">
+                        <label>Cost of Production ({currencySymbol})</label>
+                        <input 
+                          type="number" 
+                          placeholder="0.00" 
+                          step="0.01"
+                          value={bulkDefaults.cost_of_production} 
+                          onChange={(e) => setBulkDefaults({ ...bulkDefaults, cost_of_production: e.target.value })}
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label>Markup %</label>
+                        <input 
+                          type="number" 
+                          placeholder="e.g., 50" 
+                          value={bulkDefaults.markup_percentage} 
+                          onChange={(e) => setBulkDefaults({ ...bulkDefaults, markup_percentage: e.target.value })}
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label>Or Markup Amount ({currencySymbol})</label>
+                        <input 
+                          type="number" 
+                          placeholder="e.g., 1500" 
+                          step="0.01"
+                          value={bulkDefaults.markup_amount} 
+                          onChange={(e) => setBulkDefaults({ ...bulkDefaults, markup_amount: e.target.value })}
+                        />
+                      </div>
+                    </>
+                  )}
                   <div className="form-group">
                     <label>Stock Qty</label>
                     <input 
@@ -970,44 +1135,93 @@ const AddProduct = () => {
                   </div>
 
                   {!useDefaults && (
-                    <div className="form-row" style={{ marginTop: '0.75rem' }}>
-                      <div className="form-group">
-                        <label>Cost ({currencySymbol})</label>
-                        <input 
-                          type="number" 
-                          placeholder="0.00" 
-                          step="0.01"
-                          value={newBulkProduct.cost_of_production}
-                          onChange={(e) => setNewBulkProduct({ ...newBulkProduct, cost_of_production: e.target.value })}
-                        />
+                    <div style={{ marginTop: '0.75rem' }}>
+                      <div className="pricing-mode-toggle" style={{ marginBottom: '0.75rem' }}>
+                        <label className={`mode-option ${newBulkProduct.pricing_mode === 'cop' ? 'active' : ''}`}>
+                          <input 
+                            type="radio" 
+                            name="new_bulk_pricing_mode" 
+                            checked={newBulkProduct.pricing_mode === 'cop'} 
+                            onChange={() => setNewBulkProduct(prev => ({ ...prev, pricing_mode: 'cop' }))}
+                          />
+                          <span>Manual Cost</span>
+                        </label>
+                        <label className={`mode-option ${newBulkProduct.pricing_mode === 'sales' ? 'active' : ''}`}>
+                          <input 
+                            type="radio" 
+                            name="new_bulk_pricing_mode" 
+                            checked={newBulkProduct.pricing_mode === 'sales'} 
+                            onChange={() => setNewBulkProduct(prev => ({ ...prev, pricing_mode: 'sales' }))}
+                          />
+                          <span>Sales Price Target</span>
+                        </label>
                       </div>
-                      <div className="form-group">
-                        <label>Markup %</label>
-                        <input 
-                          type="number" 
-                          placeholder="50"
-                          value={newBulkProduct.markup_percentage}
-                          onChange={(e) => setNewBulkProduct({ ...newBulkProduct, markup_percentage: e.target.value })}
-                        />
-                      </div>
-                      <div className="form-group">
-                        <label>Or Amount ({currencySymbol})</label>
-                        <input 
-                          type="number" 
-                          placeholder="1500" 
-                          step="0.01"
-                          value={newBulkProduct.markup_amount}
-                          onChange={(e) => setNewBulkProduct({ ...newBulkProduct, markup_amount: e.target.value })}
-                        />
-                      </div>
-                      <div className="form-group">
-                        <label>Stock</label>
-                        <input 
-                          type="number" 
-                          placeholder="0"
-                          value={newBulkProduct.stock_quantity}
-                          onChange={(e) => setNewBulkProduct({ ...newBulkProduct, stock_quantity: e.target.value })}
-                        />
+
+                      <div className="form-row">
+                        {newBulkProduct.pricing_mode === 'sales' ? (
+                          <>
+                            <div className="form-group">
+                              <label>Sales Price ({currencySymbol})</label>
+                              <input 
+                                type="number" 
+                                placeholder="0.00" 
+                                step="0.01"
+                                value={newBulkProduct.sales_price}
+                                onChange={(e) => setNewBulkProduct({ ...newBulkProduct, sales_price: e.target.value })}
+                              />
+                            </div>
+                            <div className="form-group">
+                              <label>Profit Margin (%)</label>
+                              <input 
+                                type="number" 
+                                placeholder="30"
+                                value={newBulkProduct.markup_percentage}
+                                onChange={(e) => setNewBulkProduct({ ...newBulkProduct, markup_percentage: e.target.value })}
+                              />
+                            </div>
+                          </>
+                        ) : (
+                          <>
+                            <div className="form-group">
+                              <label>Cost ({currencySymbol})</label>
+                              <input 
+                                type="number" 
+                                placeholder="0.00" 
+                                step="0.01"
+                                value={newBulkProduct.cost_of_production}
+                                onChange={(e) => setNewBulkProduct({ ...newBulkProduct, cost_of_production: e.target.value })}
+                              />
+                            </div>
+                            <div className="form-group">
+                              <label>Markup %</label>
+                              <input 
+                                type="number" 
+                                placeholder="50"
+                                value={newBulkProduct.markup_percentage}
+                                onChange={(e) => setNewBulkProduct({ ...newBulkProduct, markup_percentage: e.target.value })}
+                              />
+                            </div>
+                            <div className="form-group">
+                              <label>Or Amount ({currencySymbol})</label>
+                              <input 
+                                type="number" 
+                                placeholder="1500" 
+                                step="0.01"
+                                value={newBulkProduct.markup_amount}
+                                onChange={(e) => setNewBulkProduct({ ...newBulkProduct, markup_amount: e.target.value })}
+                              />
+                            </div>
+                          </>
+                        )}
+                        <div className="form-group">
+                          <label>Stock</label>
+                          <input 
+                            type="number" 
+                            placeholder="0"
+                            value={newBulkProduct.stock_quantity}
+                            onChange={(e) => setNewBulkProduct({ ...newBulkProduct, stock_quantity: e.target.value })}
+                          />
+                        </div>
                       </div>
                     </div>
                   )}
