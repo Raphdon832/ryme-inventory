@@ -15,23 +15,21 @@
     <script>
       (function() {
         try {
-          var localSettings = localStorage.getItem('ryme_settings');
-          if (localSettings) {
-             var parsed = JSON.parse(localSettings);
-             if (parsed.display && parsed.display.darkMode) {
-               var isDark = false;
-               if (parsed.display.darkMode === 'dark' || parsed.display.darkMode === true) {
-                 isDark = true;
-               } else if (parsed.display.darkMode === 'auto') {
-                 isDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-               }
-               
-               if (isDark) {
-                 document.documentElement.classList.add('theme-dark');
-               }
-             }
+          var s = localStorage.getItem('ryme_settings');
+          if (s) {
+            var p = JSON.parse(s);
+            var m = p && p.display && p.display.darkMode;
+            if (m) {
+              var d = (m === 'dark' || m === true) || (m === 'auto' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+              var el = document.documentElement;
+              if (d && el) {
+                el.classList.add('theme-dark');
+              }
+            }
           }
-        } catch (e) { console.error(e); }
+        } catch (e) {
+          console.warn('Theme init error', e);
+        }
       })();
     </script>
     <style>

@@ -4,6 +4,7 @@ import api from '../api';
 import { addDoc, collection, Timestamp } from 'firebase/firestore';
 import { db } from '../api';
 import { useSettings } from '../contexts/SettingsContext';
+import { useUI } from '../contexts/UIContext';
 import { SkeletonStatsGrid, SkeletonCard } from '../components/Skeleton';
 import useScrollLock from '../hooks/useScrollLock';
 import {
@@ -18,12 +19,19 @@ import {
   FiPlus,
   FiDownload,
   FiCheckCircle,
-  FiShoppingCart
+  FiShoppingCart,
+  FiHash,
+  FiRefreshCw,
+  FiCpu,
+  FiDollarSign,
+  FiPieChart,
+  FiEdit3
 } from 'react-icons/fi';
 
 const Dashboard = () => {
   const navigate = useNavigate();
   const { settings, formatCurrency } = useSettings();
+  const { openTool } = useUI();
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({
     totalProducts: 0,
@@ -183,7 +191,7 @@ const Dashboard = () => {
     : 0;
 
   return (
-    <div className="dashboard-page">
+    <div className="dashboard-container">
       <div className="page-title page-title--with-actions">
         <div>
           <h1>Dashboard</h1>
@@ -208,7 +216,7 @@ const Dashboard = () => {
             <span className="stat-label">Total Products</span>
             <span className="stat-arrow"><FiArrowUpRight /></span>
           </div>
-          <div className="stat-value auto-fit">{stats.totalProducts}</div>
+          <div className="stat-value auto-fit">{new Intl.NumberFormat('en-US').format(stats.totalProducts)}</div>
           <div className="stat-footnote">Inventory count</div>
         </div>
 
@@ -217,7 +225,7 @@ const Dashboard = () => {
             <span className="stat-label">Total Orders</span>
             <span className="stat-arrow"><FiArrowUpRight /></span>
           </div>
-          <div className="stat-value auto-fit">{stats.totalOrders}</div>
+          <div className="stat-value auto-fit">{new Intl.NumberFormat('en-US').format(stats.totalOrders)}</div>
           <div className="stat-footnote">Orders processed</div>
         </div>
 
@@ -328,7 +336,7 @@ const Dashboard = () => {
       </div>
 
       <div className="dashboard-grid bottom-grid animate-fade-in delay-300">
-        <div className="card team-card hover-lift">
+        <div className="card recent-orders-card hover-lift">
           <div className="card-header">
             <h3>Recent Orders</h3>
             <button className="chip-button btn-animate" onClick={() => navigate('/orders')}>View All</button>
@@ -387,6 +395,40 @@ const Dashboard = () => {
           <div className="timer-meta">
             Potential revenue: {formatCurrencyCompact(potentialRevenue)}
           </div>
+        </div>
+      </div>
+
+      {/* Quick Tools Section */}
+      <div className="card tools-card animate-fade-in delay-200" style={{ marginTop: '2rem' }}>
+        <div className="card-header">
+          <h3>Quick Utility Tools</h3>
+          <p className="card-subtitle">Fast access to business essentials</p>
+        </div>
+        <div className="tools-shortcuts">
+          <button className="tool-shortcut btn-animate" onClick={() => openTool('calculator')}>
+            <div className="tool-icon calc"><FiHash /></div>
+            <span>Calculator</span>
+          </button>
+          <button className="tool-shortcut btn-animate" onClick={() => openTool('converter')}>
+            <div className="tool-icon unit"><FiRefreshCw /></div>
+            <span>Units</span>
+          </button>
+          <button className="tool-shortcut btn-animate" onClick={() => openTool('barcode')}>
+            <div className="tool-icon asset"><FiCpu /></div>
+            <span>Asset Tags</span>
+          </button>
+          <button className="tool-shortcut btn-animate" onClick={() => openTool('currency')}>
+            <div className="tool-icon currency"><FiDollarSign /></div>
+            <span>Currency</span>
+          </button>
+          <button className="tool-shortcut btn-animate" onClick={() => openTool('pricing')}>
+            <div className="tool-icon pricing"><FiPieChart /></div>
+            <span>Simulator</span>
+          </button>
+          <button className="tool-shortcut btn-animate" onClick={() => openTool('scratchpad')}>
+            <div className="tool-icon scratch"><FiEdit3 /></div>
+            <span>Scratchpad</span>
+          </button>
         </div>
       </div>
 

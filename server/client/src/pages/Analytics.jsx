@@ -222,7 +222,7 @@ const Analytics = () => {
           <div className="stat-header">
             <div className="stat-icon purple"><FiShoppingCart /></div>
           </div>
-          <div className="stat-value">{totalOrders}</div>
+          <div className="stat-value">{new Intl.NumberFormat('en-US').format(totalOrders)}</div>
           <div className="stat-label">Total Orders</div>
         </div>
 
@@ -292,7 +292,7 @@ const Analytics = () => {
                 <div className="product-rank">{index + 1}</div>
                 <div className="product-info">
                   <div className="product-name">{product.name}</div>
-                  <div className="product-quantity">{product.quantity} sold</div>
+                  <div className="product-quantity">{new Intl.NumberFormat('en-US').format(product.quantity)} sold</div>
                 </div>
                 <div className="product-revenue">{formatCurrency(product.revenue, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</div>
               </div>

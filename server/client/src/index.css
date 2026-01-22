@@ -64,6 +64,11 @@
   height: 6px;
 }
 
+/* Global Shadow Removal */
+* {
+  box-shadow: none !important;
+}
+
 ::-webkit-scrollbar-track {
   background: transparent;
 }
@@ -1459,7 +1464,7 @@ input:focus, select:focus {
 }
 
 .bottom-grid {
-  grid-template-columns: 1.2fr 0.8fr 0.8fr;
+  grid-template-columns: 1.2fr 0.9fr 0.9fr;
 }
 
 .card-header {
@@ -1601,23 +1606,37 @@ input:focus, select:focus {
   display: flex;
   align-items: center;
   justify-content: center;
-  margin: 12px 0 20px;
+  margin: 16px auto;
+  min-height: 130px;
 }
 
 .progress-ring {
-  width: 160px;
-  height: 160px;
+  width: 130px;
+  height: 130px;
   border-radius: 50%;
-  background: conic-gradient(var(--primary-color) var(--progress), #e8ecef 0deg);
+  background: conic-gradient(var(--primary-color) var(--progress), var(--bg-body) 0deg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.progress-ring::after {
+  content: '';
+  width: 110px;
+  height: 110px;
+  background: var(--bg-surface);
+  border-radius: 50%;
+  position: absolute;
 }
 
 .progress-center {
   position: absolute;
   text-align: center;
+  z-index: 2;
 }
 
 .progress-value {
-  font-size: 28px;
+  font-size: 24px;
   font-weight: 800;
   color: var(--text-primary);
 }
@@ -1653,24 +1672,32 @@ input:focus, select:focus {
 .dot-pending { background: #d5dce1; }
 
 .timer-card {
-  background: linear-gradient(145deg, #1e3a8a, #2563eb);
-  color: white;
-  border: none;
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  display: flex;
+  flex-direction: column;
+}
+
+.timer-card .card-header {
+  margin-bottom: auto;
 }
 
 .timer-card h3 {
-  color: white;
+  color: var(--text-primary);
 }
 
 .timer-display {
-  font-size: 30px;
+  font-size: 28px;
   font-weight: 700;
-  margin: 20px 0;
+  margin: 16px 0 8px;
+  color: var(--primary-color);
+  line-height: 1;
 }
 
 .timer-meta {
-  font-size: 12px;
-  color: rgba(255, 255, 255, 0.8);
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-bottom: 4px;
 }
 
 .timer-controls {
@@ -1947,6 +1974,17 @@ input:focus, select:focus {
   .dashboard-grid,
   .bottom-grid {
     grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .timer-card {
+    min-height: 140px;
+    justify-content: center;
+  }
+
+  .timer-display {
+    font-size: 24px;
+    margin: 8px 0;
   }
 
   .stat-widget {
@@ -2388,6 +2426,65 @@ input:focus, select:focus {
 .stat-modal-footnote {
   font-size: 14px;
   color: var(--text-secondary);
+}
+
+/* Quick Tools Dashboard Section */
+.tools-shortcuts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+  gap: 16px;
+  padding: 12px 4px;
+}
+
+.tool-shortcut {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 16px 12px;
+  background: var(--bg-body);
+  border: 1px solid var(--border-color);
+  border-radius: 16px;
+  color: var(--text-primary);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.tool-shortcut:hover {
+  border-color: var(--primary-color);
+  background: var(--bg-surface);
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-md);
+}
+
+.tool-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.25rem;
+  transition: transform 0.2s;
+}
+
+.tool-shortcut:hover .tool-icon {
+  transform: scale(1.1);
+}
+
+.tool-icon.calc { background: rgba(59, 130, 246, 0.1); color: #3b82f6; }
+.tool-icon.unit { background: rgba(16, 185, 129, 0.1); color: #10b981; }
+.tool-icon.asset { background: rgba(139, 92, 246, 0.1); color: #8b5cf6; }
+.tool-icon.currency { background: rgba(245, 158, 11, 0.1); color: #f59e0b; }
+.tool-icon.pricing { background: rgba(236, 72, 153, 0.1); color: #ec4899; }
+.tool-icon.scratch { background: rgba(100, 116, 139, 0.1); color: #64748b; }
+
+@media (max-width: 480px) {
+  .tools-shortcuts {
+    grid-template-columns: repeat(3, 1fr);
+  }
 }
 
 /* ========================================

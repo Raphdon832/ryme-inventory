@@ -14,13 +14,18 @@ import {
   FiTruck,
   FiHelpCircle,
   FiClock,
-  FiHash
+  FiHash,
+  FiRefreshCw,
+  FiCpu,
+  FiDollarSign,
+  FiPieChart,
+  FiEdit3
 } from 'react-icons/fi';
 import { collection, onSnapshot, query, where } from 'firebase/firestore';
 import { db } from '../api';
 import './Sidebar.css';
 
-const Sidebar = ({ isOpen, onClose, onOpenCalculator }) => {
+const Sidebar = ({ isOpen, onClose, onOpenCalculator, onOpenConverter, onOpenBarcode, onOpenCurrency, onOpenPricing, onOpenScratchpad }) => {
   const [pendingTasksCount, setPendingTasksCount] = useState(0);
   const [swipeOffset, setSwipeOffset] = useState(0);
   const [isSwipingNav, setIsSwipingNav] = useState(false);
@@ -262,6 +267,66 @@ const Sidebar = ({ isOpen, onClose, onOpenCalculator }) => {
         >
           <span className="nav-icon"><FiHash /></span>
           <span>Calculator</span>
+        </div>
+
+        <div 
+          className="nav-item" 
+          onClick={() => {
+            onOpenConverter && onOpenConverter();
+            onClose && onClose();
+          }}
+          style={{ cursor: 'pointer' }}
+        >
+          <span className="nav-icon"><FiRefreshCw /></span>
+          <span>Unit Converter</span>
+        </div>
+
+        <div 
+          className="nav-item" 
+          onClick={() => {
+            onOpenBarcode && onOpenBarcode();
+            onClose && onClose();
+          }}
+          style={{ cursor: 'pointer' }}
+        >
+          <span className="nav-icon"><FiCpu /></span>
+          <span>Asset Tag Tool</span>
+        </div>
+
+        <div 
+          className="nav-item" 
+          onClick={() => {
+            onOpenCurrency && onOpenCurrency();
+            onClose && onClose();
+          }}
+          style={{ cursor: 'pointer' }}
+        >
+          <span className="nav-icon"><FiDollarSign /></span>
+          <span>Currency Converter</span>
+        </div>
+
+        <div 
+          className="nav-item" 
+          onClick={() => {
+            onOpenPricing && onOpenPricing();
+            onClose && onClose();
+          }}
+          style={{ cursor: 'pointer' }}
+        >
+          <span className="nav-icon"><FiPieChart /></span>
+          <span>Pricing Simulator</span>
+        </div>
+
+        <div 
+          className="nav-item" 
+          onClick={() => {
+            onOpenScratchpad && onOpenScratchpad();
+            onClose && onClose();
+          }}
+          style={{ cursor: 'pointer' }}
+        >
+          <span className="nav-icon"><FiEdit3 /></span>
+          <span>Scratchpad</span>
         </div>
       </nav>
     </aside>

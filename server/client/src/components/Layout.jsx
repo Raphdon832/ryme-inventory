@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { FiMenu, FiSearch, FiBell, FiMail } from 'react-icons/fi';
 import Sidebar from './Sidebar';
 import Splash from './Splash';
@@ -7,21 +7,27 @@ import PullToRefresh from './PullToRefresh';
 import GlobalSearch from './GlobalSearch';
 import QuickNavBar from './QuickNavBar';
 import Calculator from './Calculator';
+import UnitConverter from './UnitConverter';
+import BarcodeGenerator from './BarcodeGenerator';
+import CurrencyConverter from './CurrencyConverter';
+import PricingSimulator from './PricingSimulator';
+import QuickScratchpad from './QuickScratchpad';
 import { useSettings } from '../contexts/SettingsContext';
+import { useUI } from '../contexts/UIContext';
 
 const Layout = ({ children }) => {
   const { settings } = useSettings();
+  const { activeTool, openTool, closeTool } = useUI();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [showSplash, setShowSplash] = useState(true);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
-  const [isCalculatorOpen, setIsCalculatorOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
   
   const hasQuickNav = settings.quickNav?.enabled && settings.quickNav?.items?.length > 0;
 
-  // Lock body scroll when sidebar is open on mobile
+  // Lock body scroll
   useEffect(() => {
-    if (isSidebarOpen || isSearchOpen || isCalculatorOpen) {
+    if (isSidebarOpen || isSearchOpen || activeTool) {
       document.body.style.overflow = 'hidden';
       document.body.style.touchAction = 'none';
     } else {
@@ -33,7 +39,7 @@ const Layout = ({ children }) => {
       document.body.style.overflow = '';
       document.body.style.touchAction = '';
     };
-  }, [isSidebarOpen, isSearchOpen]);
+  }, [isSidebarOpen, isSearchOpen, activeTool]);
 
   // Track window resize for mobile detection
   useEffect(() => {
@@ -72,7 +78,12 @@ const Layout = ({ children }) => {
       <Sidebar 
         isOpen={isSidebarOpen} 
         onClose={() => setIsSidebarOpen(false)} 
-        onOpenCalculator={() => setIsCalculatorOpen(true)}
+        onOpenCalculator={() => openTool('calculator')}
+        onOpenConverter={() => openTool('converter')}
+        onOpenBarcode={() => openTool('barcode')}
+        onOpenCurrency={() => openTool('currency')}
+        onOpenPricing={() => openTool('pricing')}
+        onOpenScratchpad={() => openTool('scratchpad')}
       />
       <main className="main-content">
         {showSplash && <Splash duration={900} onDone={() => setShowSplash(false)} />}
@@ -127,7 +138,9 @@ const Layout = ({ children }) => {
           </div>
         </header>
         <PullToRefresh onRefresh={handleRefresh} disabled={isSidebarOpen || isSearchOpen}>
-          <div className="content-wrapper">{children}</div>
+          <div className="content-wrapper">
+            {children}
+          </div>
         </PullToRefresh>
         <OfflineIndicator />
       </main>
@@ -149,8 +162,38 @@ const Layout = ({ children }) => {
 
       {/* Calculator Modal */}
       <Calculator 
-        isOpen={isCalculatorOpen} 
-        onClose={() => setIsCalculatorOpen(false)}
+        isOpen={activeTool === 'calculator'} 
+        onClose={closeTool}
+      />
+
+      {/* Unit Converter Modal */}
+      <UnitConverter 
+        isOpen={activeTool === 'converter'} 
+        onClose={closeTool}
+      />
+
+      {/* Barcode Generator Modal */}
+      <BarcodeGenerator 
+        isOpen={activeTool === 'barcode'} 
+        onClose={closeTool}
+      />
+
+      {/* Currency Converter Modal */}
+      <CurrencyConverter 
+        isOpen={activeTool === 'currency'} 
+        onClose={closeTool}
+      />
+
+      {/* Pricing Simulator Modal */}
+      <PricingSimulator 
+        isOpen={activeTool === 'pricing'} 
+        onClose={closeTool}
+      />
+
+      {/* Quick Scratchpad Modal */}
+      <QuickScratchpad 
+        isOpen={activeTool === 'scratchpad'} 
+        onClose={closeTool}
       />
     </div>
   );

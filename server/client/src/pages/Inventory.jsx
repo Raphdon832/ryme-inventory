@@ -830,7 +830,7 @@ const Inventory = () => {
                                 <td style={{ fontWeight: 600, color: 'var(--success-text)' }}>{formatCurrency(product.profit, { showSign: true })}</td>
                                 <td>
                                   <span className={`badge ${product.stock_quantity < lowStockThreshold ? 'badge-danger' : product.stock_quantity < warningThreshold ? 'badge-warning' : 'badge-success'}`}>
-                                    {product.stock_quantity} units
+                                    {new Intl.NumberFormat('en-US').format(product.stock_quantity)} units
                                   </span>
                                 </td>
                                 {!selectionMode && (
@@ -965,7 +965,7 @@ const Inventory = () => {
                       <td style={{ fontWeight: 600, color: 'var(--success-text)' }}>{formatCurrency(product.profit, { showSign: true })}</td>
                       <td>
                         <span className={`badge ${product.stock_quantity < lowStockThreshold ? 'badge-danger' : product.stock_quantity < warningThreshold ? 'badge-warning' : 'badge-success'}`}>
-                          {product.stock_quantity} units
+                          {new Intl.NumberFormat('en-US').format(product.stock_quantity)} units
                         </span>
                       </td>
                       {!selectionMode && (
