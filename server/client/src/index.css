@@ -1940,6 +1940,10 @@ input:focus, select:focus {
 }
 
 @media (max-width: 768px) {
+  .dashboard-container {
+    padding: 0;
+  }
+
   :root {
     --sidebar-width: 280px;
     --header-height: 56px;

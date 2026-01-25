@@ -284,7 +284,7 @@
 }
 
 @media (max-width: 768px) {
-    .taxes-container { padding: 16px; }
+    .taxes-container { padding: 0; }
     
     .taxes-container .page-title--with-actions {
         flex-direction: column;

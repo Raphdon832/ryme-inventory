@@ -1,0 +1,185 @@
+/* Using the same layout and variables as Expenses and Inventory */
+
+.income-page {
+    padding: 24px;
+    max-width: 100%;
+    margin: 0;
+}
+
+.category-badge.income-badge {
+    background: #dcfce7;
+    color: #15803d;
+}
+
+.text-green {
+    color: #10b981;
+}
+
+.text-cyan {
+    color: #06b6d4;
+}
+
+.expense-mobile-amounts {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 2px;
+}
+
+.expense-mobile-profit {
+    font-size: 0.75rem;
+    font-weight: 500;
+}
+
+.source-cell {
+    color: var(--text-secondary);
+    font-size: 0.875rem;
+}
+
+.notes-hint {
+    font-size: 0.75rem;
+    color: var(--text-tertiary);
+    margin-top: 4px;
+    font-weight: 400;
+}
+
+.description-cell strong {
+    color: var(--text-primary);
+    font-weight: 600;
+}
+
+/* Modal Enhancements */
+.input-with-icon {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.input-with-icon .input-icon {
+    position: absolute;
+    left: 12px;
+    color: var(--text-tertiary);
+    pointer-events: none;
+}
+
+.input-with-icon input {
+    padding-left: 36px !important;
+}
+
+.header-badge {
+    background: var(--bg-secondary);
+    color: var(--text-secondary);
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.page-title-actions {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+}
+
+/* Filter Dropdown Styling (Consistent with Inventory) */
+.filter-dropdown-container {
+    position: relative;
+}
+
+.filter-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 16px;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    color: var(--text-secondary);
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.filter-btn:hover {
+    border-color: var(--accent-color);
+    color: var(--accent-color);
+}
+
+.filter-btn.active {
+    background: rgba(37, 99, 235, 0.05);
+    border-color: var(--accent-color);
+    color: var(--accent-color);
+}
+
+.filter-dropdown {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    width: 240px;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    box-shadow: var(--shadow-lg);
+    z-index: 100;
+    padding: 16px;
+}
+
+.dropdown-section {
+    margin-bottom: 16px;
+}
+
+.dropdown-section label {
+    display: block;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--text-tertiary);
+    margin-bottom: 8px;
+    text-transform: uppercase;
+}
+
+.dropdown-section select {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    font-size: 0.875rem;
+}
+
+.dropdown-footer {
+    display: flex;
+    justify-content: flex-end;
+    padding-top: 12px;
+    border-top: 1px solid var(--border-color);
+}
+
+.dropdown-footer button {
+    background: none;
+    border: none;
+    color: var(--text-tertiary);
+    font-size: 0.75rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.dropdown-footer button:hover {
+    color: var(--accent-color);
+}
+
+@media (max-width: 768px) {
+    .income-page {
+        padding: 0;
+    }
+
+    .page-title--with-actions {
+        flex-direction: column;
+        align-items: stretch !important;
+        gap: 20px;
+    }
+    
+    .page-title-actions {
+        justify-content: flex-end;
+    }
+}

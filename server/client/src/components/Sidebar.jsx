@@ -19,7 +19,9 @@ import {
   FiCpu,
   FiDollarSign,
   FiPieChart,
-  FiEdit3
+  FiEdit3,
+  FiTrendingUp,
+  FiGift
 } from 'react-icons/fi';
 import { collection, onSnapshot, query, where } from 'firebase/firestore';
 import { db } from '../api';
@@ -36,18 +38,32 @@ const Sidebar = ({ isOpen, onClose, onOpenCalculator, onOpenConverter, onOpenBar
   const isSwiping = useRef(false);
 
   useEffect(() => {
-    const q = query(collection(db, 'tasks'), where('status', '==', 'pending'));
-    const unsub = onSnapshot(
-      q,
-      (snapshot) => {
-        setPendingTasksCount(snapshot.size);
-      },
-      (error) => {
-        console.error('Error subscribing to tasks:', error);
-      }
-    );
+    if (!db) {
+      console.error('Firestore db instance is not initialized');
+      return;
+    }
 
-    return () => unsub();
+    let unsub;
+    try {
+      const q = query(collection(db, 'tasks'), where('status', '==', 'pending'));
+      unsub = onSnapshot(
+        q,
+        (snapshot) => {
+          setPendingTasksCount(snapshot.size);
+        },
+        (error) => {
+          console.error('Sidebar: Error subscribing to tasks:', error);
+          // If permission is denied, fallback to 0 instead of crashing if possible
+          if (error.code === 'permission-denied') {
+            setPendingTasksCount(0);
+          }
+        }
+      );
+    } catch (err) {
+      console.error('Sidebar: Error setting up task listener:', err);
+    }
+
+    return () => unsub && unsub();
   }, []);
 
   // Swipe to close handlers
@@ -231,12 +247,30 @@ const Sidebar = ({ isOpen, onClose, onOpenCalculator, onOpenConverter, onOpenBar
         </NavLink>
 
         <NavLink
+          to="/income"
+          className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
+          onClick={() => onClose && onClose()}
+        >
+          <span className="nav-icon"><FiTrendingUp /></span>
+          <span>Income</span>
+        </NavLink>
+
+        <NavLink
           to="/taxes"
           className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
           onClick={() => onClose && onClose()}
         >
           <span className="nav-icon"><FiPieChart /></span>
           <span>Taxes</span>
+        </NavLink>
+
+        <NavLink
+          to="/vouchers"
+          className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
+          onClick={() => onClose && onClose()}
+        >
+          <span className="nav-icon"><FiGift /></span>
+          <span>Vouchers</span>
         </NavLink>
 
         <NavLink

@@ -25,6 +25,8 @@ const ordersRef = collection(db, 'orders');
 const customersRef = collection(db, 'customers');
 const vendorsRef = collection(db, 'vendors');
 const expensesRef = collection(db, 'expenses');
+const incomeRef = collection(db, 'income');
+const vouchersRef = collection(db, 'vouchers');
 const activityLogRef = collection(db, 'activity_log');
 const recycleBinRef = collection(db, 'recycle_bin');
 const categoriesRef = collection(db, 'categories');
@@ -92,6 +94,22 @@ const api = {
     if (path === '/expenses') {
       const snapshot = await getDocs(query(expensesRef, orderBy('date', 'desc')));
       return { data: { data: snapshot.docs.map(normalizeDoc) } };
+    }
+
+    if (path === '/income') {
+      const snapshot = await getDocs(query(incomeRef, orderBy('date', 'desc')));
+      return { data: { data: snapshot.docs.map(normalizeDoc) } };
+    }
+
+    if (path === '/vouchers') {
+      const snapshot = await getDocs(query(vouchersRef, orderBy('createdAt', 'desc')));
+      return { data: { data: snapshot.docs.map(normalizeDoc) } };
+    }
+
+    if (path.startsWith('/vouchers/')) {
+      const id = path.split('/')[2];
+      const snapshot = await getDoc(doc(vouchersRef, id));
+      return { data: { data: snapshot.exists() ? normalizeDoc(snapshot) : null } };
     }
 
     if (path === '/customers') {
@@ -211,6 +229,20 @@ const api = {
       });
     }
 
+    if (path === '/income') {
+      return onSnapshot(query(incomeRef, orderBy('date', 'desc')), (snapshot) => {
+        const data = snapshot.docs.map(normalizeDoc);
+        callback({ data });
+      });
+    }
+
+    if (path === '/vouchers') {
+      return onSnapshot(query(vouchersRef, orderBy('createdAt', 'desc')), (snapshot) => {
+        const data = snapshot.docs.map(normalizeDoc);
+        callback({ data });
+      });
+    }
+
     if (path.startsWith('/vendors/')) {
       const id = path.split('/')[2];
       return onSnapshot(doc(vendorsRef, id), (snapshot) => {
@@ -301,6 +333,23 @@ const api = {
       const docRef = await addDoc(expensesRef, {
         ...payload,
         date: new Date().toISOString()
+      });
+      return { data: { data: { id: docRef.id, ...payload } } };
+    }
+
+    if (path === '/income') {
+      const docRef = await addDoc(incomeRef, {
+        ...payload,
+        date: payload.date || new Date().toISOString()
+      });
+      return { data: { data: { id: docRef.id, ...payload } } };
+    }
+
+    if (path === '/vouchers') {
+      const docRef = await addDoc(vouchersRef, {
+        ...payload,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
       });
       return { data: { data: { id: docRef.id, ...payload } } };
     }
@@ -694,6 +743,24 @@ const api = {
       return { data: { data } };
     }
 
+    if (path.startsWith('/income/')) {
+      const id = path.split('/')[2];
+      await updateDoc(doc(incomeRef, id), {
+        ...payload,
+        updated_at: new Date().toISOString()
+      });
+      return { data: { data: { id, ...payload } } };
+    }
+
+    if (path.startsWith('/vouchers/')) {
+      const id = path.split('/')[2];
+      await updateDoc(doc(vouchersRef, id), {
+        ...payload,
+        updatedAt: new Date().toISOString()
+      });
+      return { data: { data: { id, ...payload } } };
+    }
+
     throw new Error(`Unknown PUT endpoint: ${path}`);
   },
 
@@ -763,6 +830,18 @@ const api = {
       await api.logActivity('permanent_delete', 'recycle_bin', `Permanently deleted item #${id.slice(0, 8)}`);
       
       return { data: { data: { id } } };
+    }
+
+    if (path.startsWith('/income/')) {
+      const id = path.split('/')[2];
+      await deleteDoc(doc(incomeRef, id));
+      return { data: { success: true } };
+    }
+
+    if (path.startsWith('/vouchers/')) {
+      const id = path.split('/')[2];
+      await deleteDoc(doc(vouchersRef, id));
+      return { data: { success: true } };
     }
 
     throw new Error(`Unknown DELETE endpoint: ${path}`);

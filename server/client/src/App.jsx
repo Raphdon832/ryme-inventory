@@ -21,6 +21,8 @@ import Expenses from './pages/Expenses';
 import Taxes from './pages/Taxes';
 import Team from './pages/Team';
 import Help from './pages/Help';
+import Income from './pages/Income';
+import Vouchers from './pages/Vouchers';
 import ReloadPrompt from './components/ReloadPrompt';
 import './App.css';
 
@@ -44,6 +46,8 @@ function App() {
               <Route path="/vendors" element={<Vendors />} />
               <Route path="/activity-log" element={<ActivityLog />} />
               <Route path="/expenses" element={<Expenses />} />
+              <Route path="/income" element={<Income />} />
+              <Route path="/vouchers" element={<Vouchers />} />
               <Route path="/taxes" element={<Taxes />} />
               <Route path="/tasks" element={<Tasks />} />
               <Route path="/calendar" element={<Calendar />} />

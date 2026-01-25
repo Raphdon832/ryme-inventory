@@ -3,52 +3,60 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     // Public app collections (no auth in the client yet)
-    match /products/{docId} {
+    match /products/{document=**} {
       allow read, write: if true;
     }
 
-    match /orders/{docId} {
+    match /orders/{document=**} {
       allow read, write: if true;
     }
 
-    match /tasks/{docId} {
+    match /tasks/{document=**} {
       allow read, write: if true;
     }
 
-    match /events/{docId} {
+    match /events/{document=**} {
       allow read, write: if true;
     }
 
-    match /team_members/{docId} {
+    match /team_members/{document=**} {
       allow read, write: if true;
     }
 
-    match /customers/{docId} {
+    match /customers/{document=**} {
       allow read, write: if true;
     }
 
-    match /vendors/{docId} {
+    match /vendors/{document=**} {
       allow read, write: if true;
     }
 
-    match /activity_log/{docId} {
+    match /activity_log/{document=**} {
       allow read, write: if true;
     }
 
-    match /recycle_bin/{docId} {
+    match /recycle_bin/{document=**} {
       allow read, write: if true;
     }
 
-    match /categories/{docId} {
+    match /categories/{document=**} {
       allow read, write: if true;
     }
 
-    match /expenses/{docId} {
+    match /expenses/{document=**} {
+      allow read, write: if true;
+    }
+
+    match /income/{document=**} {
+      allow read, write: if true;
+    }
+
+    match /vouchers/{document=**} {
       allow read, write: if true;
     }
 
     // App settings (single doc)
-    match /app_settings/{docId} {
+    match /app_settings/{document=**} {
       allow read, write: if true;
     }
 

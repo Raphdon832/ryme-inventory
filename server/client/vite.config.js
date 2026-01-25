@@ -11,6 +11,7 @@ export default defineConfig({
       includeAssets: ['Ryme Icon.png', 'RymeLogoPDF.png', 'Ryme Logo Black.png'],
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
+        maximumFileSizeToCacheInBytes: 3 * 1024 * 1024, // 3 MB
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/firestore\.googleapis\.com\/.*/i,

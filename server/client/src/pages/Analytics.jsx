@@ -7,10 +7,13 @@ import { useSettings } from '../contexts/SettingsContext';
 import { exportFinancialReport } from '../utils/exportUtils';
 import './Analytics.css';
 
+const incomeRef = collection(db, 'income');
+
 const Analytics = () => {
   const { formatCurrency } = useSettings();
   const [orders, setOrders] = useState([]);
   const [products, setProducts] = useState([]);
+  const [incomeRecords, setIncomeRecords] = useState([]);
   const [dateRange, setDateRange] = useState('30');
   const [loading, setLoading] = useState(true);
 
@@ -20,9 +23,10 @@ const Analytics = () => {
 
   const fetchData = async () => {
     try {
-      const [ordersSnap, productsSnap] = await Promise.all([
+      const [ordersSnap, productsSnap, incomeSnap] = await Promise.all([
         getDocs(query(collection(db, 'orders'), orderBy('order_date', 'desc'))),
-        getDocs(collection(db, 'products'))
+        getDocs(collection(db, 'products')),
+        getDocs(query(incomeRef, orderBy('date', 'desc')))
       ]);
       
       setOrders(ordersSnap.docs.map(doc => ({
@@ -32,6 +36,12 @@ const Analytics = () => {
       })));
       
       setProducts(productsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      
+      setIncomeRecords(incomeSnap.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })));
+      
       setLoading(false);
     } catch (error) {
       console.error('Error fetching data:', error);
@@ -47,11 +57,23 @@ const Analytics = () => {
     return items.filter(item => new Date(item.order_date) >= daysAgo);
   };
 
-  const filteredOrders = filterByDateRange(orders);
+  // Filter income by date range
+  const filterIncomeByDateRange = (items) => {
+    if (dateRange === 'all') return items;
+    const now = new Date();
+    const daysAgo = new Date(now.setDate(now.getDate() - parseInt(dateRange)));
+    return items.filter(item => new Date(item.date) >= daysAgo);
+  };
 
-  // Calculate stats
-  const totalRevenue = filteredOrders.reduce((sum, o) => sum + (o.total_sales_price || 0), 0);
-  const totalProfit = filteredOrders.reduce((sum, o) => sum + (o.total_profit || 0), 0);
+  const filteredOrders = filterByDateRange(orders);
+  const filteredIncome = filterIncomeByDateRange(incomeRecords);
+
+  // Calculate stats (including manual income)
+  const orderRevenue = filteredOrders.reduce((sum, o) => sum + (o.total_sales_price || 0), 0);
+  const manualIncomeRevenue = filteredIncome.reduce((sum, i) => sum + (i.amount || 0), 0);
+  const manualIncomeProfit = filteredIncome.reduce((sum, i) => sum + (i.profit || 0), 0);
+  const totalRevenue = orderRevenue + manualIncomeRevenue;
+  const totalProfit = filteredOrders.reduce((sum, o) => sum + (o.total_profit || 0), 0) + manualIncomeProfit;
   const totalOrders = filteredOrders.length;
   const avgOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
 

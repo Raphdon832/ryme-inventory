@@ -314,7 +314,7 @@
 
 /* Mobile Breakpoints */
 @media (max-width: 768px) {
-    .expenses-container { padding: 16px; }
+    .expenses-container { padding: 0; }
     
     .expenses-container .page-title--with-actions {
         flex-direction: column;

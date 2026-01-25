@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../api';
-import { addDoc, collection, Timestamp } from 'firebase/firestore';
+import { addDoc, collection, Timestamp, getDocs, query, orderBy } from 'firebase/firestore';
 import { db } from '../api';
 import { useSettings } from '../contexts/SettingsContext';
 import { useUI } from '../contexts/UIContext';
@@ -28,6 +28,8 @@ import {
   FiEdit3
 } from 'react-icons/fi';
 
+const incomeRef = collection(db, 'income');
+
 const Dashboard = () => {
   const navigate = useNavigate();
   const { settings, formatCurrency } = useSettings();
@@ -39,6 +41,7 @@ const Dashboard = () => {
     totalRevenue: 0,
     totalProfit: 0,
     totalExpenses: 0,
+    totalIncome: 0,
     netProfit: 0,
     lowStockItems: [],
     revenueChart: [],
@@ -72,22 +75,28 @@ const Dashboard = () => {
       const totalRevenue = orders.reduce((acc, order) => acc + order.total_sales_price, 0);
       const totalProfit = orders.reduce((acc, order) => acc + order.total_profit, 0);
 
-      // Fetch expenses to calculate net profit
-      api.get('/expenses')
-        .then(res => {
-          const totalExpenses = res.data.data.reduce((sum, item) => sum + item.amount, 0);
+      // Fetch expenses and income to calculate net profit
+      Promise.all([
+        api.get('/expenses'),
+        getDocs(query(incomeRef, orderBy('date', 'desc')))
+      ])
+        .then(([expensesRes, incomeSnapshot]) => {
+          const totalExpenses = expensesRes.data.data.reduce((sum, item) => sum + item.amount, 0);
+          const totalIncomeRevenue = incomeSnapshot.docs.reduce((sum, doc) => sum + (doc.data().amount || 0), 0);
+          const totalIncomeProfit = incomeSnapshot.docs.reduce((sum, doc) => sum + (doc.data().profit || 0), 0);
           setStats(prev => ({
             ...prev,
-            totalRevenue,
-            totalProfit,
+            totalRevenue: totalRevenue + totalIncomeRevenue,
+            totalProfit: totalProfit + totalIncomeProfit,
             totalExpenses,
-            netProfit: totalProfit - totalExpenses,
+            totalIncome: totalIncomeRevenue,
+            netProfit: totalProfit + totalIncomeProfit - totalExpenses,
             totalOrders: orders.length,
             orders
           }));
         })
         .catch(err => {
-          console.error("Dashboard: Error fetching expenses", err);
+          console.error("Dashboard: Error fetching expenses/income", err);
           setStats(prev => ({
             ...prev,
             totalRevenue,
