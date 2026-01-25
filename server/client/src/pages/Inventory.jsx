@@ -531,6 +531,7 @@ const Inventory = () => {
                   boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
                   zIndex: 100,
                   minWidth: '220px',
+                  maxWidth: 'calc(100vw - 32px)',
                   padding: '8px 0',
                   maxHeight: '400px',
                   overflowY: 'auto'
