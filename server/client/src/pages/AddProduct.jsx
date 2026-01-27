@@ -1,11 +1,28 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import api from '../api';
-import { FiArrowLeft, FiPlus, FiX, FiSave, FiPackage, FiTag, FiCopy, FiCheck, FiLayers, FiTrash2 } from 'react-icons/fi';
+import {
+  ArrowLeftIcon,
+  PlusIcon,
+  CloseIcon,
+  SaveIcon,
+  PackageIcon,
+  TagsIcon,
+  CopyIcon,
+  CheckIcon,
+  LayersIcon,
+  DeleteIcon
+} from '../components/CustomIcons';
 import { useSettings } from '../contexts/SettingsContext';
 import { useToast } from '../components/Toast';
 import soundManager from '../utils/soundManager';
+import { usePageState } from '../hooks/usePageState';
 import './AddProduct.css';
+
+// Persist scroll position for AddProduct form (but not form data)
+const useAddProductScroll = () => {
+  usePageState('addProduct', {}, { persistScroll: true, scrollContainerSelector: '.main-content' });
+};
 
 /**
  * Generate sorting code from product details:
@@ -67,6 +84,9 @@ const AddProduct = () => {
   const isEditing = Boolean(id);
   const { currencySymbol, formatCurrency } = useSettings();
   const toast = useToast();
+
+  // Persist scroll position
+  useAddProductScroll();
 
   // Mode: 'single' or 'bulk'
   const [mode, setMode] = useState('single');
@@ -489,7 +509,7 @@ const AddProduct = () => {
     <div className="add-product-page">
       <div className="add-product-header">
         <Link to="/inventory" className="back-link">
-          <FiArrowLeft />
+          <ArrowLeftIcon size={20} />
           <span>Back to Inventory</span>
         </Link>
       </div>
@@ -509,7 +529,7 @@ const AddProduct = () => {
                 className={`mode-btn ${mode === 'single' ? 'active' : ''}`}
                 onClick={() => setMode('single')}
               >
-                <FiPackage size={18} />
+                <PackageIcon size={18} />
                 <span>Single Product</span>
               </button>
               <button 
@@ -517,7 +537,7 @@ const AddProduct = () => {
                 className={`mode-btn ${mode === 'bulk' ? 'active' : ''}`}
                 onClick={() => setMode('bulk')}
               >
-                <FiLayers size={18} />
+                <LayersIcon size={18} />
                 <span>Bulk Add</span>
               </button>
             </div>
@@ -529,7 +549,7 @@ const AddProduct = () => {
             {/* Product Identity Card */}
             <div className="form-card">
               <h3 className="section-title">
-                <FiTag /> Product Identity
+                <TagsIcon size={18} /> Product Identity
               </h3>
               <p className="section-description">
                 Enter the brand and product details. The sorting code will be auto-generated.
@@ -662,7 +682,7 @@ const AddProduct = () => {
                       onClick={copyCode}
                       title="Copy code"
                     >
-                      {codeCopied ? <FiCheck /> : <FiCopy />}
+                      {codeCopied ? <CheckIcon size={18} /> : <CopyIcon size={18} />}
                     </button>
                   </div>
                   <small className="helper-text">
@@ -717,7 +737,7 @@ const AddProduct = () => {
             {formData.pricing_mode === 'cop' ? (
               <div className="form-card">
                 <h3 className="section-title">
-                  <FiPackage /> Cost of Production
+                  <PackageIcon size={18} /> Cost of Production
                 </h3>
                 <p className="section-description">
                   Add materials/ingredients used to make this product. The total will be your Cost of Production.
@@ -736,7 +756,7 @@ const AddProduct = () => {
                           onClick={() => removeLineItem(item.id)}
                           className="btn-remove"
                         >
-                          <FiX />
+                          <CloseIcon size={16} />
                         </button>
                       </div>
                     ))}
@@ -768,7 +788,7 @@ const AddProduct = () => {
                     onClick={addLineItem}
                     className="btn-add-item"
                   >
-                    <FiPlus /> Add Item
+                    <PlusIcon size={16} /> Add Item
                   </button>
                 </div>
 
@@ -894,7 +914,7 @@ const AddProduct = () => {
                 className="btn-primary"
                 disabled={loading}
               >
-                <FiSave /> {loading ? 'Saving...' : (isEditing ? 'Update Product' : 'Add Product')}
+                <SaveIcon size={18} /> {loading ? 'Saving...' : (isEditing ? 'Update Product' : 'Add Product')}
               </button>
             </div>
           </form>
@@ -906,7 +926,7 @@ const AddProduct = () => {
               {/* Brand & Category Card */}
               <div className="form-card">
                 <h3 className="section-title">
-                  <FiTag /> Brand & Category
+                  <TagsIcon size={18} /> Brand & Category
                 </h3>
                 <p className="section-description">
                   Set the brand and category once. All products below will use these.
@@ -978,7 +998,7 @@ const AddProduct = () => {
               {/* Default Pricing Card */}
               <div className="form-card">
                 <h3 className="section-title">
-                  <FiPackage /> Default Pricing & Stock
+                  <PackageIcon size={18} /> Default Pricing & Stock
                 </h3>
                 <p className="section-description">
                   Set default values that will apply to all products (can be overridden per product).
@@ -1086,7 +1106,7 @@ const AddProduct = () => {
               {/* Add Product Card */}
               <div className="form-card">
                 <h3 className="section-title">
-                  <FiPlus /> Add Products
+                  <PlusIcon size={18} /> Add Products
                 </h3>
                 <p className="section-description">
                   Add products one by one. They will all use the brand name above.
@@ -1232,7 +1252,7 @@ const AddProduct = () => {
                     onClick={addBulkProduct}
                     disabled={!bulkBrandName.trim() || !newBulkProduct.product_name.trim()}
                   >
-                    <FiPlus /> Add to List
+                    <PlusIcon size={16} /> Add to List
                   </button>
                 </div>
               </div>
@@ -1241,7 +1261,7 @@ const AddProduct = () => {
               {bulkProducts.length > 0 && (
                 <div className="form-card">
                   <h3 className="section-title">
-                    <FiLayers /> Products to Add ({bulkProducts.length})
+                    <LayersIcon size={18} /> Products to Add ({bulkProducts.length})
                   </h3>
 
                   <div className="bulk-products-list">
@@ -1265,7 +1285,7 @@ const AddProduct = () => {
                           className="btn-remove-bulk"
                           onClick={() => removeBulkProduct(product.id)}
                         >
-                          <FiTrash2 size={16} />
+                          <DeleteIcon size={16} />
                         </button>
                       </div>
                     ))}
@@ -1291,7 +1311,7 @@ const AddProduct = () => {
                   onClick={handleBulkSubmit}
                   disabled={loading || bulkProducts.length === 0}
                 >
-                  <FiSave /> {loading ? 'Saving...' : `Add ${bulkProducts.length} Product${bulkProducts.length !== 1 ? 's' : ''}`}
+                  <SaveIcon size={18} /> {loading ? 'Saving...' : `Add ${bulkProducts.length} Product${bulkProducts.length !== 1 ? 's' : ''}`}
                 </button>
               </div>
             </div>

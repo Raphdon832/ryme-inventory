@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { FiX, FiDivide, FiMinus, FiPlus, FiHash, FiCopy, FiCheck, FiTrash2, FiMenu } from 'react-icons/fi';
+import { CloseIcon, MinusIcon, PlusIcon, HashIcon, CopyIcon, CheckIcon, DeleteIcon, MenuIcon } from './CustomIcons';
 import { LuTableProperties } from "react-icons/lu";
 import './Calculator.css';
 
@@ -166,18 +166,18 @@ const Calculator = ({ isOpen, onClose }) => {
               onClick={() => setShowHistory(!showHistory)}
               title="Toggle History"
             >
-              <FiMenu size={18} />
+              <MenuIcon size={18} />
             </button>
-            <h3><FiHash /> Business Calculator</h3>
+            <h3><HashIcon size={18} /> Business Calculator</h3>
           </div>
-          <button className="calc-close" onClick={onClose}><FiX size={20} /></button>
+          <button className="calc-close" onClick={onClose}><CloseIcon size={20} /></button>
         </div>
         
         <div className="calc-main">
           <div className="calc-body">
             <div className="calc-display">
               <button className="calc-copy-btn" onClick={copyToClipboard} title="Copy result">
-                {copying ? <FiCheck /> : <FiCopy />}
+                {copying ? <CheckIcon size={16} /> : <CopyIcon size={16} />}
               </button>
               <div className="calc-prev-value">
                 {prevValue !== null ? `${formatNumber(prevValue)} ${operation || ''}` : ''}
@@ -221,7 +221,7 @@ const Calculator = ({ isOpen, onClose }) => {
               <span>History</span>
               {history.length > 0 && (
                 <button className="clear-history" onClick={clearHistory} title="Clear history">
-                  <FiTrash2 size={12} />
+                  <DeleteIcon size={12} />
                 </button>
               )}
             </div>

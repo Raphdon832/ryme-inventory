@@ -1,11 +1,26 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { FiPlus, FiEdit2, FiTrash2, FiUser, FiMail, FiPhone } from 'react-icons/fi';
+import {
+  PlusIcon,
+  EditIcon,
+  DeleteIcon,
+  ProfileIcon,
+  MailIcon,
+  PhoneIcon
+} from '../components/CustomIcons';
 import api from '../api';
 import { useToast } from '../components/Toast';
 import soundManager from '../utils/soundManager';
+import { usePageState } from '../hooks/usePageState';
 
 const Customers = () => {
   const toast = useToast();
+  
+  // Persisted scroll state
+  const { } = usePageState('customers', {}, { 
+    persistScroll: true, 
+    scrollContainerSelector: '.main-content' 
+  });
+
   const [customers, setCustomers] = useState([]);
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -128,18 +143,18 @@ const Customers = () => {
           <p>Manage customer profiles and track their orders</p>
         </div>
         <button className="btn-primary btn-animate hover-lift" onClick={openCreateModal}>
-          <FiPlus /> Add Customer
+          <PlusIcon /> Add Customer
         </button>
       </div>
 
       <div className="stats-grid">
         <div className="stat-widget border-blue animate-slide-up delay-100">
-          <div className="stat-icon blue"><FiUser /></div>
+          <div className="stat-icon blue"><ProfileIcon /></div>
           <div className="stat-label">Total Customers</div>
           <div className="stat-value">{new Intl.NumberFormat('en-US').format(totalCustomers)}</div>
         </div>
         <div className="stat-widget border-green animate-slide-up delay-200">
-          <div className="stat-icon green"><FiUser /></div>
+          <div className="stat-icon green"><ProfileIcon /></div>
           <div className="stat-label">Total Orders</div>
           <div className="stat-value">{new Intl.NumberFormat('en-US').format(totalOrders)}</div>
         </div>
@@ -179,12 +194,12 @@ const Customers = () => {
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                           {customer.email && (
                             <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                              <FiMail size={14} /> {customer.email}
+                              <MailIcon size={14} /> {customer.email}
                             </span>
                           )}
                           {customer.phone && (
                             <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                              <FiPhone size={14} /> {customer.phone}
+                              <PhoneIcon size={14} /> {customer.phone}
                             </span>
                           )}
                           {!customer.email && !customer.phone && (
@@ -204,7 +219,7 @@ const Customers = () => {
                             onClick={() => openEditModal(customer)}
                             title="Edit customer"
                           >
-                            <FiEdit2 size={16} />
+                            <EditIcon size={16} />
                           </button>
                           <button
                             className="secondary btn-animate"
@@ -213,7 +228,7 @@ const Customers = () => {
                             disabled={deletingId === customer.id}
                             title="Delete customer"
                           >
-                            <FiTrash2 size={16} />
+                            <DeleteIcon size={16} />
                           </button>
                         </div>
                       </td>

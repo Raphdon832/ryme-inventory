@@ -1,9 +1,24 @@
 import React, { useState, useEffect } from 'react';
-import { FiBell, FiDatabase, FiSave, FiMoon, FiRefreshCw, FiVolume2, FiPlay, FiNavigation, FiPlus, FiX, FiCheck, FiDownloadCloud, FiAlertTriangle } from 'react-icons/fi';
+import {
+  NotificationsIcon,
+  DatabaseIcon,
+  SaveIcon,
+  MoonIcon,
+  RefreshIcon,
+  VolumeIcon,
+  PlayIcon,
+  NavigationIcon,
+  PlusIcon,
+  CloseIcon,
+  CheckIcon,
+  CloudDownloadIcon,
+  AlertIcon
+} from '../components/CustomIcons';
 import { useSettings } from '../contexts/SettingsContext';
 import { AVAILABLE_NAV_OPTIONS, ICON_MAP } from '../components/QuickNavBar';
 import api from '../api';
 import soundManager from '../utils/soundManager';
+import { usePageState } from '../hooks/usePageState';
 import './Settings.css';
 
 const Settings = () => {
@@ -15,6 +30,9 @@ const Settings = () => {
     loading,
     error
   } = useSettings();
+
+  // Persist scroll position
+  usePageState('settings', {}, { persistScroll: true, scrollContainerSelector: '.main-content' });
 
   const [saved, setSaved] = useState(false);
   const [migrating, setMigrating] = useState(false);
@@ -289,7 +307,7 @@ const Settings = () => {
               justifyContent: 'center',
               color: 'var(--info-text)'
             }}>
-              <FiBell size={20} />
+              <NotificationsIcon size={20} />
             </div>
             <div>
               <h3 style={{ margin: 0 }}>Notifications</h3>
@@ -345,7 +363,7 @@ const Settings = () => {
               justifyContent: 'center',
               color: 'var(--warning-text)'
             }}>
-              <FiMoon size={20} />
+              <MoonIcon size={20} />
             </div>
             <div>
               <h3 style={{ margin: 0 }}>Display</h3>
@@ -458,7 +476,7 @@ const Settings = () => {
               justifyContent: 'center',
               color: 'white'
             }}>
-              <FiNavigation size={20} />
+              <NavigationIcon size={20} />
             </div>
             <div>
               <h3 style={{ margin: 0 }}>Quick Navigation</h3>
@@ -496,7 +514,7 @@ const Settings = () => {
                           cursor: 'pointer'
                         }}
                       >
-                        <FiPlus size={14} /> Add Item
+                        <PlusIcon size={14} /> Add Item
                       </button>
                     )}
                   </div>
@@ -600,7 +618,7 @@ const Settings = () => {
                                   justifyContent: 'center'
                                 }}
                               >
-                                <FiX size={14} />
+                                <CloseIcon size={14} />
                               </button>
                             </div>
                           </div>
@@ -664,7 +682,7 @@ const Settings = () => {
                             justifyContent: 'center'
                           }}
                         >
-                          <FiX size={18} />
+                          <CloseIcon size={18} />
                         </button>
                       </div>
                       <div style={{ flex: 1, overflow: 'auto', padding: '12px' }}>
@@ -714,7 +732,7 @@ const Settings = () => {
                                     <p style={{ margin: 0, fontWeight: 500, fontSize: '14px', color: 'var(--text-primary)' }}>{option.label}</p>
                                     <p style={{ margin: 0, fontSize: '12px', color: 'var(--text-tertiary)' }}>{option.path}</p>
                                   </div>
-                                  <FiPlus size={18} style={{ color: 'var(--text-tertiary)' }} />
+                                  <PlusIcon size={18} style={{ color: 'var(--text-tertiary)' }} />
                                 </button>
                               );
                             })}
@@ -742,7 +760,7 @@ const Settings = () => {
               justifyContent: 'center',
               color: 'var(--success-text)'
             }}>
-              <FiDatabase size={20} />
+              <DatabaseIcon size={20} />
             </div>
             <div>
               <h3 style={{ margin: 0 }}>Inventory</h3>
@@ -791,7 +809,7 @@ const Settings = () => {
               justifyContent: 'center',
               color: 'white'
             }}>
-              <FiVolume2 size={20} />
+              <VolumeIcon size={20} />
             </div>
             <div>
               <h3 style={{ margin: 0 }}>Sound Notifications</h3>
@@ -856,7 +874,7 @@ const Settings = () => {
                     opacity: soundEnabled ? 1 : 0.5
                   }}
                 >
-                  <FiPlay size={12} /> Success
+                  <PlayIcon size={12} /> Success
                 </button>
                 <button
                   onClick={() => testSound('sync')}
@@ -875,7 +893,7 @@ const Settings = () => {
                     opacity: soundEnabled ? 1 : 0.5
                   }}
                 >
-                  <FiPlay size={12} /> Sync Complete
+                  <PlayIcon size={12} /> Sync Complete
                 </button>
                 <button
                   onClick={() => testSound('error')}
@@ -894,7 +912,7 @@ const Settings = () => {
                     opacity: soundEnabled ? 1 : 0.5
                   }}
                 >
-                  <FiPlay size={12} /> Error
+                  <PlayIcon size={12} /> Error
                 </button>
                 <button
                   onClick={() => testSound('lowStock')}
@@ -913,7 +931,7 @@ const Settings = () => {
                     opacity: soundEnabled ? 1 : 0.5
                   }}
                 >
-                  <FiPlay size={12} /> Low Stock
+                  <PlayIcon size={12} /> Low Stock
                 </button>
               </div>
             </div>
@@ -933,7 +951,7 @@ const Settings = () => {
               justifyContent: 'center',
               color: 'var(--info-text)'
             }}>
-              <FiRefreshCw size={20} />
+              <RefreshIcon size={20} />
             </div>
             <div>
               <h3 style={{ margin: 0 }}>Data Migration</h3>
@@ -967,7 +985,7 @@ const Settings = () => {
                   whiteSpace: 'nowrap'
                 }}
               >
-                <FiRefreshCw size={14} style={{ animation: migrating ? 'spin 1s linear infinite' : 'none' }} />
+                <RefreshIcon size={14} style={{ animation: migrating ? 'spin 1s linear infinite' : 'none' }} />
                 {migrating ? 'Migrating...' : 'Run Migration'}
               </button>
             </div>
@@ -1026,7 +1044,7 @@ const Settings = () => {
               justifyContent: 'center',
               color: 'white'
             }}>
-              <FiDownloadCloud size={20} />
+              <CloudDownloadIcon size={20} />
             </div>
             <div>
               <h3 style={{ margin: 0 }}>App Update</h3>
@@ -1060,7 +1078,7 @@ const Settings = () => {
                   whiteSpace: 'nowrap'
                 }}
               >
-                <FiDownloadCloud size={14} style={{ animation: updating ? 'spin 1s linear infinite' : 'none' }} />
+                <CloudDownloadIcon size={14} style={{ animation: updating ? 'spin 1s linear infinite' : 'none' }} />
                 {updating ? 'Updating...' : 'Update Now'}
               </button>
             </div>
@@ -1091,7 +1109,7 @@ const Settings = () => {
             cursor: saving || loading ? 'not-allowed' : 'pointer'
           }}
         >
-          <FiSave size={14} /> {saving ? 'Saving...' : saved ? 'Saved!' : 'Save Changes'}
+          <SaveIcon size={14} /> {saving ? 'Saving...' : saved ? 'Saved!' : 'Save Changes'}
         </button>
       </div>
 
@@ -1100,14 +1118,14 @@ const Settings = () => {
         <div className="custom-dialog-overlay">
           <div className="custom-dialog">
             <div className="custom-dialog-icon warning">
-              <FiDownloadCloud size={32} />
+              <CloudDownloadIcon size={32} />
             </div>
             <h3 className="custom-dialog-title">Update App?</h3>
             <p className="custom-dialog-message">
               This will clear all local cache and offline data, then reload the app to download fresh assets.
             </p>
             <div className="custom-dialog-info">
-              <FiCheck size={14} />
+              <CheckIcon size={14} />
               <span>Your cloud data will NOT be affected</span>
             </div>
             <div className="custom-dialog-actions">
@@ -1121,7 +1139,7 @@ const Settings = () => {
                 className="custom-dialog-btn confirm"
                 onClick={executeForceUpdate}
               >
-                <FiDownloadCloud size={16} />
+                <CloudDownloadIcon size={16} />
                 Update Now
               </button>
             </div>

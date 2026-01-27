@@ -1,21 +1,43 @@
 import React, { useState, useEffect } from 'react';
-import { FiTrendingUp, FiTrendingDown, FiDollarSign, FiShoppingCart, FiPackage, FiBarChart2, FiPieChart, FiCalendar, FiDownload, FiFileText } from 'react-icons/fi';
+import {
+  TrendingUpIcon,
+  TrendingDownIcon,
+  CartIcon,
+  PackageIcon,
+  AnalyticsIcon,
+  PieChartIcon,
+  CalendarIcon,
+  DownloadIcon,
+  ReportsIcon
+} from '../components/CustomIcons';
 import { collection, getDocs, query, orderBy } from 'firebase/firestore';
 import { db } from '../api';
 import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { useSettings } from '../contexts/SettingsContext';
 import { exportFinancialReport } from '../utils/exportUtils';
+import { usePageState } from '../hooks/usePageState';
 import './Analytics.css';
 
 const incomeRef = collection(db, 'income');
 
 const Analytics = () => {
-  const { formatCurrency } = useSettings();
+  const { formatCurrency, currencySymbol } = useSettings();
+
+  // Persist date range selection
+  const { state: pageState, updateState: updatePageState } = usePageState('analytics', {
+    dateRange: '30',
+  }, { persistScroll: true, scrollContainerSelector: '.main-content' });
+
   const [orders, setOrders] = useState([]);
   const [products, setProducts] = useState([]);
   const [incomeRecords, setIncomeRecords] = useState([]);
-  const [dateRange, setDateRange] = useState('30');
+  const [dateRange, setDateRange] = useState(pageState.dateRange);
   const [loading, setLoading] = useState(true);
+
+  // Persist date range changes
+  useEffect(() => {
+    updatePageState({ dateRange });
+  }, [dateRange]);
 
   useEffect(() => {
     fetchData();
@@ -194,7 +216,7 @@ const Analytics = () => {
               title="Export Full Financial Report (CSV)"
               style={{ padding: '0 16px', display: 'flex', alignItems: 'center', gap: '8px', height: '42px', borderRadius: '10px', background: 'var(--bg-surface)', border: '1px solid var(--border-color)', color: 'var(--text-secondary)', cursor: 'pointer', transition: 'all 0.2s' }}
             >
-              <FiFileText size={16} /> <span className="hide-mobile">CSV</span>
+              <ReportsIcon size={16} /> <span className="hide-mobile">CSV</span>
             </button>
             <button 
               className="secondary" 
@@ -202,11 +224,11 @@ const Analytics = () => {
               title="Export Full Financial Report (PDF)"
               style={{ padding: '0 16px', display: 'flex', alignItems: 'center', gap: '8px', height: '42px', borderRadius: '10px', background: 'var(--bg-surface)', border: '1px solid var(--border-color)', color: 'var(--text-secondary)', cursor: 'pointer', transition: 'all 0.2s' }}
             >
-              <FiDownload size={16} /> <span className="hide-mobile">PDF Report</span>
+              <DownloadIcon size={16} /> <span className="hide-mobile">PDF Report</span>
             </button>
           </div>
           <div className="date-filter">
-            <FiCalendar />
+            <CalendarIcon />
             <select value={dateRange} onChange={e => setDateRange(e.target.value)}>
               <option value="7">Last 7 days</option>
               <option value="30">Last 30 days</option>
@@ -222,9 +244,9 @@ const Analytics = () => {
       <div className="stats-grid">
         <div className="stat-widget border-blue animate-slide-up delay-100">
           <div className="stat-header">
-            <div className="stat-icon blue"><FiDollarSign /></div>
+            <div className="stat-icon blue"><span className="currency-icon-text">{currencySymbol}</span></div>
             <span className={`stat-change ${revenueChange >= 0 ? 'positive' : 'negative'}`}>
-              {revenueChange >= 0 ? <FiTrendingUp /> : <FiTrendingDown />}
+              {revenueChange >= 0 ? <TrendingUpIcon /> : <TrendingDownIcon />}
               {Math.abs(revenueChange).toFixed(1)}%
             </span>
           </div>
@@ -234,7 +256,7 @@ const Analytics = () => {
 
         <div className="stat-widget border-green animate-slide-up delay-200">
           <div className="stat-header">
-            <div className="stat-icon green"><FiTrendingUp /></div>
+            <div className="stat-icon green"><TrendingUpIcon /></div>
           </div>
           <div className="stat-label">Total Profit</div>
           <div className="stat-value">{formatCurrency(totalProfit)}</div>
@@ -242,7 +264,7 @@ const Analytics = () => {
 
         <div className="stat-widget border-purple animate-slide-up delay-300">
           <div className="stat-header">
-            <div className="stat-icon purple"><FiShoppingCart /></div>
+            <div className="stat-icon purple"><CartIcon /></div>
           </div>
           <div className="stat-label">Total Orders</div>
           <div className="stat-value">{new Intl.NumberFormat('en-US').format(totalOrders)}</div>
@@ -250,7 +272,7 @@ const Analytics = () => {
 
         <div className="stat-widget border-orange animate-slide-up delay-400">
           <div className="stat-header">
-            <div className="stat-icon orange"><FiBarChart2 /></div>
+            <div className="stat-icon orange"><AnalyticsIcon /></div>
           </div>
           <div className="stat-label">Avg. Order Value</div>
           <div className="stat-value">{formatCurrency(avgOrderValue)}</div>
@@ -260,7 +282,7 @@ const Analytics = () => {
       {/* Charts Row */}
       <div className="charts-grid">
         <div className="chart-card">
-          <h3><FiBarChart2 /> Revenue Over Time</h3>
+          <h3><AnalyticsIcon /> Revenue Over Time</h3>
           <div className="chart-container">
             <ResponsiveContainer width="100%" height={280}>
               <BarChart data={getSalesByDay()}>
@@ -282,7 +304,7 @@ const Analytics = () => {
         </div>
 
         <div className="chart-card">
-          <h3><FiTrendingUp /> Profit Trend</h3>
+          <h3><TrendingUpIcon /> Profit Trend</h3>
           <div className="chart-container">
             <ResponsiveContainer width="100%" height={280}>
               <LineChart data={getSalesByDay()}>
@@ -307,7 +329,7 @@ const Analytics = () => {
       {/* Bottom Row */}
       <div className="charts-grid">
         <div className="chart-card">
-          <h3><FiPackage /> Top Products</h3>
+          <h3><PackageIcon /> Top Products</h3>
           <div className="top-products-list">
             {getTopProducts().map((product, index) => (
               <div key={index} className="top-product-item">
@@ -326,7 +348,7 @@ const Analytics = () => {
         </div>
 
         <div className="chart-card">
-          <h3><FiPieChart /> Product Categories</h3>
+          <h3><PieChartIcon /> Product Categories</h3>
           <div className="chart-container pie-chart">
             <ResponsiveContainer width="100%" height={220}>
               <PieChart>

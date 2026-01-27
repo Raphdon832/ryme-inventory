@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { FiMenu, FiSearch, FiBell, FiMail } from 'react-icons/fi';
+import { MenuIcon, SearchIcon, NotificationsIcon, MailIcon } from './CustomIcons';
 import Sidebar from './Sidebar';
 import Splash from './Splash';
 import OfflineIndicator from './OfflineIndicator';
@@ -94,7 +94,7 @@ const Layout = ({ children }) => {
               onClick={() => setIsSidebarOpen(!isSidebarOpen)}
               aria-label="Toggle menu"
             >
-              <FiMenu />
+              <MenuIcon size={20} />
             </button>
             {/* Desktop Search Bar */}
             <div 
@@ -102,7 +102,7 @@ const Layout = ({ children }) => {
               onClick={() => setIsSearchOpen(true)}
               style={{ cursor: 'pointer' }}
             >
-              <FiSearch color="var(--text-tertiary)" size={18} />
+              <SearchIcon color="var(--text-tertiary)" size={18} />
               <input 
                 type="text" 
                 placeholder="Search anything..." 
@@ -117,16 +117,16 @@ const Layout = ({ children }) => {
               onClick={() => setIsSearchOpen(true)}
               aria-label="Search"
             >
-              <FiSearch size={20} />
+              <SearchIcon size={20} />
             </button>
           </div>
 
           <div className="header-right">
             <button className="icon-button" aria-label="Messages">
-              <FiMail size={18} />
+              <MailIcon size={18} />
             </button>
             <button className="icon-button" aria-label="Notifications">
-              <FiBell size={18} />
+              <NotificationsIcon size={18} />
             </button>
             <div className="header-profile">
               <div className="avatar">RI</div>

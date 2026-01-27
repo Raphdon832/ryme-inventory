@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { FiX, FiDollarSign, FiRefreshCcw, FiTrendingUp } from 'react-icons/fi';
+import { CloseIcon, RefreshIcon, TrendingUpIcon } from './CustomIcons';
+import { useSettings } from '../contexts/SettingsContext';
 import './CurrencyConverter.css';
 
 const CurrencyConverter = ({ isOpen, onClose }) => {
+  const { currencySymbol } = useSettings();
   const [amount, setAmount] = useState('1');
   const [fromCurrency, setFromCurrency] = useState('USD');
   const [toCurrency, setToCurrency] = useState('EUR');
@@ -99,8 +101,8 @@ const CurrencyConverter = ({ isOpen, onClose }) => {
     <div className="currency-modal" onClick={onClose}>
       <div className="currency-container" onClick={e => e.stopPropagation()}>
         <div className="currency-header">
-          <h3><FiDollarSign /> Currency Converter</h3>
-          <button className="currency-close" onClick={onClose}><FiX size={20} /></button>
+          <h3><span className="currency-icon-text">{currencySymbol}</span> Currency Converter</h3>
+          <button className="currency-close" onClick={onClose}><CloseIcon size={20} /></button>
         </div>
 
         <div className="currency-content">
@@ -126,7 +128,7 @@ const CurrencyConverter = ({ isOpen, onClose }) => {
 
           <div className="curr-divider">
             <button className="curr-swap-btn" onClick={swapCurrencies} title="Swap Currencies">
-              <FiRefreshCcw />
+              <RefreshIcon size={16} />
             </button>
           </div>
 
@@ -144,7 +146,7 @@ const CurrencyConverter = ({ isOpen, onClose }) => {
         </div>
 
         <div className="currency-footer">
-          <p><FiTrendingUp size={12} /> Live rates provided by Frankfurter API</p>
+          <p><TrendingUpIcon size={12} /> Live rates provided by Frankfurter API</p>
         </div>
       </div>
     </div>

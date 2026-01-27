@@ -1,21 +1,39 @@
 import React, { useState, useEffect } from 'react';
 import api from '../api';
-import { FiPieChart, FiInfo, FiHash, FiDownload, FiArrowUpRight, FiArrowDownRight } from 'react-icons/fi';
+import {
+  PieChartIcon,
+  InfoIcon,
+  HashIcon,
+  DownloadIcon,
+  ArrowUpRightIcon,
+  ArrowDownRightIcon
+} from '../components/CustomIcons';
 import { exportTaxReport } from '../utils/exportUtils';
+import { usePageState } from '../hooks/usePageState';
 import './Taxes.css';
 
 const Taxes = () => {
+    // Persist tax type selection
+    const { state: pageState, updateState: updatePageState } = usePageState('taxes', {
+        taxType: 'PIT',
+    }, { persistScroll: true, scrollContainerSelector: '.main-content' });
+
     const [revenue, setRevenue] = useState(0);
     const [profit, setProfit] = useState(0);
     const [vatCollected, setVatCollected] = useState(0);
     const [vatOrdersCount, setVatOrdersCount] = useState(0);
     const [loading, setLoading] = useState(true);
-    const [taxType, setTaxType] = useState('PIT'); // Default to PIT based on user request
+    const [taxType, setTaxType] = useState(pageState.taxType);
     
     // Nigerian Tax Constants (2024 Guidelines)
     const VAT_RATE = 0.075; 
     const EDT_RATE = 0.03;  
     const PENSION_RATE = 0.08; // Based on PwC sample
+
+    // Persist tax type changes
+    useEffect(() => {
+        updatePageState({ taxType });
+    }, [taxType]);
     
     useEffect(() => {
         fetchFinancialData();
@@ -182,7 +200,7 @@ const Taxes = () => {
                         <option value="CIT">Corporate Income Tax (Company)</option>
                     </select>
                     <button className="add-btn-bordered btn-animate hover-lift" onClick={handleExport}>
-                        <FiDownload size={16} /> Export PDF
+                        <DownloadIcon size={16} /> Export PDF
                     </button>
                 </div>
             </div>
@@ -190,7 +208,7 @@ const Taxes = () => {
             <div className="stats-grid">
                 <div className="stat-widget border-blue animate-slide-up delay-100">
                     <div className="stat-header">
-                        <div className="stat-icon blue"><FiArrowUpRight /></div>
+                        <div className="stat-icon blue"><ArrowUpRightIcon /></div>
                     </div>
                     <div className="stat-label">{taxType === 'CIT' ? 'Annual Revenue' : 'Business Profit'}</div>
                     <div className="stat-value">{formatCurrency(taxType === 'CIT' ? revenue : profit)}</div>
@@ -198,7 +216,7 @@ const Taxes = () => {
 
                 <div className="stat-widget border-red animate-slide-up delay-200">
                     <div className="stat-header">
-                        <div className="stat-icon red"><FiHash /></div>
+                        <div className="stat-icon red"><HashIcon /></div>
                     </div>
                     <div className="stat-label">Tax Liability</div>
                     <div className="stat-value">{formatCurrency(totalTaxLiability)}</div>
@@ -206,7 +224,7 @@ const Taxes = () => {
 
                 <div className="stat-widget border-purple animate-slide-up delay-300">
                     <div className="stat-header">
-                        <div className="stat-icon purple"><FiPieChart /></div>
+                        <div className="stat-icon purple"><PieChartIcon /></div>
                     </div>
                     <div className="stat-label">VAT Collected</div>
                     <div className="stat-value">{formatCurrency(calculateVAT())}</div>
@@ -407,7 +425,7 @@ const Taxes = () => {
                 <div className="tax-sidebar">
                     <div className="card info-card-flat">
                         <div className="card-header">
-                            <h3><FiInfo /> {taxType} Compliance</h3>
+                            <h3><InfoIcon /> {taxType} Compliance</h3>
                         </div>
                         <div className="info-content-modern">
                             <ul>

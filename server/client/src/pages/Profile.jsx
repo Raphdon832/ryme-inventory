@@ -1,7 +1,19 @@
 import React, { useState } from 'react';
-import { FiUser, FiMail, FiPhone, FiBriefcase, FiEdit2, FiSave, FiX } from 'react-icons/fi';
+import {
+  ProfileIcon,
+  MailIcon,
+  PhoneIcon,
+  BriefcaseIcon,
+  EditIcon,
+  SaveIcon,
+  CloseIcon
+} from '../components/CustomIcons';
+import { usePageState } from '../hooks/usePageState';
 
 const Profile = () => {
+  // Persist scroll position
+  usePageState('profile', {}, { persistScroll: true, scrollContainerSelector: '.main-content' });
+
   const [isEditing, setIsEditing] = useState(false);
   const [profile, setProfile] = useState({
     name: 'John Doe',
@@ -32,15 +44,15 @@ const Profile = () => {
         </div>
         {!isEditing ? (
           <button onClick={() => setIsEditing(true)} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <FiEdit2 size={16} /> Edit Profile
+            <EditIcon size={16} /> Edit Profile
           </button>
         ) : (
           <div style={{ display: 'flex', gap: '8px' }}>
             <button onClick={handleCancel} className="secondary" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <FiX size={16} /> Cancel
+              <CloseIcon size={16} /> Cancel
             </button>
             <button onClick={handleSave} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <FiSave size={16} /> Save Changes
+              <SaveIcon size={16} /> Save Changes
             </button>
           </div>
         )}
@@ -89,7 +101,7 @@ const Profile = () => {
           <div style={{ display: 'grid', gap: '20px' }}>
             <div>
               <label style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary)' }}>
-                <FiUser size={14} /> Full Name
+                <ProfileIcon size={14} /> Full Name
               </label>
               {isEditing ? (
                 <input
@@ -104,7 +116,7 @@ const Profile = () => {
 
             <div>
               <label style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary)' }}>
-                <FiMail size={14} /> Email Address
+                <MailIcon size={14} /> Email Address
               </label>
               {isEditing ? (
                 <input
@@ -119,7 +131,7 @@ const Profile = () => {
 
             <div>
               <label style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary)' }}>
-                <FiPhone size={14} /> Phone Number
+                <PhoneIcon size={14} /> Phone Number
               </label>
               {isEditing ? (
                 <input
@@ -134,7 +146,7 @@ const Profile = () => {
 
             <div>
               <label style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary)' }}>
-                <FiBriefcase size={14} /> Role
+                <BriefcaseIcon size={14} /> Role
               </label>
               <p style={{ fontSize: '15px', color: 'var(--text-primary)' }}>{profile.role}</p>
             </div>

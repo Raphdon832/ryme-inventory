@@ -7,6 +7,7 @@ import { useSettings } from '../contexts/SettingsContext';
 import { useUI } from '../contexts/UIContext';
 import { SkeletonStatsGrid, SkeletonCard } from '../components/Skeleton';
 import useScrollLock from '../hooks/useScrollLock';
+import { usePageState } from '../hooks/usePageState';
 import {
   BarChart,
   Bar,
@@ -15,25 +16,28 @@ import {
   Tooltip
 } from 'recharts';
 import {
-  FiArrowUpRight,
-  FiPlus,
-  FiDownload,
-  FiCheckCircle,
-  FiShoppingCart,
-  FiHash,
-  FiRefreshCw,
-  FiCpu,
-  FiDollarSign,
-  FiPieChart,
-  FiEdit3
-} from 'react-icons/fi';
+  ArrowUpRightIcon,
+  PlusIcon,
+  DownloadIcon,
+  CheckCircleIcon,
+  CartIcon,
+  CalculatorIcon,
+  UnitConverterIcon,
+  BarcodeIcon,
+  PricingIcon,
+  NotepadIcon
+} from '../components/CustomIcons';
 
 const incomeRef = collection(db, 'income');
 
 const Dashboard = () => {
   const navigate = useNavigate();
-  const { settings, formatCurrency } = useSettings();
+  const { settings, formatCurrency, currencySymbol } = useSettings();
   const { openTool } = useUI();
+  
+  // Persist scroll position
+  usePageState('dashboard', {}, { persistScroll: true, scrollContainerSelector: '.main-content' });
+
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({
     totalProducts: 0,
@@ -235,10 +239,10 @@ const Dashboard = () => {
         </div>
         <div className="page-actions">
           <button className="add-btn-bordered btn-animate hover-lift" onClick={() => navigate('/inventory/add')}>
-            <FiPlus size={16} className="icon-spin" /> Add Product
+            <PlusIcon size={16} className="icon-spin" /> Add Product
           </button>
           <button className="secondary btn-animate hover-lift" onClick={() => setShowImportModal(true)}>
-            <FiDownload size={16} /> Import Products
+            <DownloadIcon size={16} /> Import Products
           </button>
         </div>
       </div>
@@ -250,7 +254,7 @@ const Dashboard = () => {
         <div className="stat-widget accent-blue animate-slide-up delay-100">
           <div className="stat-header">
             <span className="stat-label">Total Products</span>
-            <span className="stat-arrow"><FiArrowUpRight /></span>
+            <span className="stat-arrow"><ArrowUpRightIcon /></span>
           </div>
           <div className="stat-value auto-fit">{new Intl.NumberFormat('en-US').format(stats.totalProducts)}</div>
           <div className="stat-footnote">Inventory count</div>
@@ -259,7 +263,7 @@ const Dashboard = () => {
         <div className="stat-widget accent-purple animate-slide-up delay-200">
           <div className="stat-header">
             <span className="stat-label">Total Orders</span>
-            <span className="stat-arrow"><FiArrowUpRight /></span>
+            <span className="stat-arrow"><ArrowUpRightIcon /></span>
           </div>
           <div className="stat-value auto-fit">{new Intl.NumberFormat('en-US').format(stats.totalOrders)}</div>
           <div className="stat-footnote">Orders processed</div>
@@ -268,7 +272,7 @@ const Dashboard = () => {
         <div className="stat-widget accent-green animate-slide-up delay-300">
           <div className="stat-header">
             <span className="stat-label">Total Revenue</span>
-            <span className="stat-arrow"><FiArrowUpRight /></span>
+            <span className="stat-arrow"><ArrowUpRightIcon /></span>
           </div>
           <div className="stat-value auto-fit">{formatCurrencyCompact(stats.totalRevenue)}</div>
           <div className="stat-footnote">Total sales value</div>
@@ -277,7 +281,7 @@ const Dashboard = () => {
         <div className="stat-widget accent-orange animate-slide-up delay-400">
           <div className="stat-header">
             <span className="stat-label">Gross Profit</span>
-            <span className="stat-arrow"><FiArrowUpRight /></span>
+            <span className="stat-arrow"><ArrowUpRightIcon /></span>
           </div>
           <div className="stat-value auto-fit">{formatCurrencyCompact(stats.totalProfit)}</div>
           <div className="stat-footnote">Before expenses</div>
@@ -286,7 +290,7 @@ const Dashboard = () => {
         <div className="stat-widget accent-red animate-slide-up delay-500">
           <div className="stat-header">
             <span className="stat-label">Total Expenses</span>
-            <span className="stat-arrow"><FiArrowUpRight /></span>
+            <span className="stat-arrow"><ArrowUpRightIcon /></span>
           </div>
           <div className="stat-value auto-fit">{formatCurrencyCompact(stats.totalExpenses || 0)}</div>
           <div className="stat-footnote">Overheads & costs</div>
@@ -295,7 +299,7 @@ const Dashboard = () => {
         <div className="stat-widget accent-cyan animate-slide-up delay-600">
           <div className="stat-header">
             <span className="stat-label">Net Profit</span>
-            <span className="stat-arrow"><FiArrowUpRight /></span>
+            <span className="stat-arrow"><ArrowUpRightIcon /></span>
           </div>
           <div className="stat-value auto-fit">{formatCurrencyCompact(stats.netProfit || 0)}</div>
           <div className="stat-footnote">Actual earnings</div>
@@ -375,7 +379,7 @@ const Dashboard = () => {
               topProducts.map((item, index) => (
                 <div className="list-item list-item-hover animate-slide-up" style={{ animationDelay: `${index * 100}ms` }} key={`${item.name}-${index}`}>
                   <div className="list-icon">
-                    <FiCheckCircle />
+                    <CheckCircleIcon />
                   </div>
                   <div className="list-content">
                     <div className="list-title">{item.name}</div>
@@ -402,7 +406,7 @@ const Dashboard = () => {
               recentOrders.map((order, index) => (
                 <div className="list-item list-item-hover animate-slide-up" style={{ animationDelay: `${index * 100}ms` }} key={order.id}>
                   <div className="list-icon">
-                    <FiShoppingCart />
+                    <CartIcon />
                   </div>
                   <div className="list-content">
                     <div className="list-title">{order.customer_name}</div>
@@ -460,27 +464,27 @@ const Dashboard = () => {
         </div>
         <div className="tools-shortcuts">
           <button className="tool-shortcut btn-animate" onClick={() => openTool('calculator')}>
-            <div className="tool-icon calc"><FiHash /></div>
+            <div className="tool-icon calc"><CalculatorIcon size={20} /></div>
             <span>Calculator</span>
           </button>
           <button className="tool-shortcut btn-animate" onClick={() => openTool('converter')}>
-            <div className="tool-icon unit"><FiRefreshCw /></div>
+            <div className="tool-icon unit"><UnitConverterIcon size={20} /></div>
             <span>Units</span>
           </button>
           <button className="tool-shortcut btn-animate" onClick={() => openTool('barcode')}>
-            <div className="tool-icon asset"><FiCpu /></div>
+            <div className="tool-icon asset"><BarcodeIcon size={20} /></div>
             <span>Asset Tags</span>
           </button>
           <button className="tool-shortcut btn-animate" onClick={() => openTool('currency')}>
-            <div className="tool-icon currency"><FiDollarSign /></div>
+            <div className="tool-icon currency"><span className="currency-symbol-text">{currencySymbol}</span></div>
             <span>Currency</span>
           </button>
           <button className="tool-shortcut btn-animate" onClick={() => openTool('pricing')}>
-            <div className="tool-icon pricing"><FiPieChart /></div>
+            <div className="tool-icon pricing"><PricingIcon size={20} /></div>
             <span>Simulator</span>
           </button>
           <button className="tool-shortcut btn-animate" onClick={() => openTool('scratchpad')}>
-            <div className="tool-icon scratch"><FiEdit3 /></div>
+            <div className="tool-icon scratch"><NotepadIcon size={20} /></div>
             <span>Scratchpad</span>
           </button>
         </div>

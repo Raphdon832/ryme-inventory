@@ -2551,6 +2551,12 @@ input:focus, select:focus {
 .tool-icon.pricing { background: rgba(236, 72, 153, 0.1); color: #ec4899; }
 .tool-icon.scratch { background: rgba(100, 116, 139, 0.1); color: #64748b; }
 
+.currency-symbol-text, .currency-icon-text {
+  font-weight: 800;
+  font-size: 1.1rem;
+  line-height: 1;
+}
+
 @media (max-width: 480px) {
   .tools-shortcuts {
     grid-template-columns: repeat(3, 1fr);

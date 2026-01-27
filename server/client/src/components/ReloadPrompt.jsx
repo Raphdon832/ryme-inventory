@@ -1,7 +1,7 @@
 import React from 'react';
 import './ReloadPrompt.css';
 import { useRegisterSW } from 'virtual:pwa-register/react';
-import { FiRefreshCw, FiX } from 'react-icons/fi';
+import { RefreshIcon, CloseIcon } from './CustomIcons';
 
 function ReloadPrompt() {
   const {
@@ -29,7 +29,7 @@ function ReloadPrompt() {
       <div className="pwa-toast">
         <div className="pwa-toast-content">
           <div className="pwa-toast-icon">
-            <FiRefreshCw className={needRefresh ? 'spin-icon' : ''} size={20} />
+            <RefreshIcon className={needRefresh ? 'spin-icon' : ''} size={20} />
           </div>
           <div className="pwa-toast-message">
             {offlineReady ? (
@@ -46,7 +46,7 @@ function ReloadPrompt() {
             </button>
           )}
           <button className="pwa-close-btn" onClick={() => close()}>
-            <FiX size={18} />
+            <CloseIcon size={18} />
           </button>
         </div>
       </div>

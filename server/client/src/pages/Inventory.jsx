@@ -2,9 +2,26 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../api';
 import { SkeletonTable } from '../components/Skeleton.jsx';
-import { FiPlus, FiEdit2, FiTrash2, FiPackage, FiTag, FiTrendingUp, FiX, FiCheck, FiPercent, FiDollarSign, FiFilter, FiChevronDown, FiChevronUp, FiChevronRight, FiDownload, FiFileText } from 'react-icons/fi';
+import {
+  PlusIcon,
+  EditIcon,
+  DeleteIcon,
+  PackageIcon,
+  TagsIcon,
+  TrendingUpIcon,
+  CloseIcon,
+  CheckIcon,
+  PercentageIcon,
+  FilterIcon,
+  ChevronDownIcon,
+  ChevronUpIcon,
+  ChevronRightIcon,
+  DownloadIcon,
+  ReportsIcon
+} from '../components/CustomIcons';
 import { useSettings } from '../contexts/SettingsContext';
 import useScrollLock from '../hooks/useScrollLock';
+import { usePageState } from '../hooks/usePageState';
 import soundManager from '../utils/soundManager';
 import { useToast } from '../components/Toast';
 import { exportInventory } from '../utils/exportUtils';
@@ -13,6 +30,15 @@ const Inventory = () => {
   const navigate = useNavigate();
   const toast = useToast();
   const { formatCurrency, settings, currencySymbol } = useSettings();
+  
+  // Persisted page state (filters, sort, pagination, expanded brands)
+  const { state: pageState, updateState: updatePageState, scrollRef } = usePageState('inventory', {
+    sortBy: 'name_asc',
+    filterCategory: 'all',
+    currentPage: 1,
+    expandedBrands: {},
+  }, { persistScroll: true, scrollContainerSelector: '.main-content' });
+
   const [products, setProducts] = useState([]);
   const [categoriesList, setCategoriesList] = useState([]); // Real category list from DB
   const [selectionMode, setSelectionMode] = useState(false);
@@ -23,7 +49,6 @@ const Inventory = () => {
   const [deletingId, setDeletingId] = useState(null);
   const [bulkDeleting, setBulkDeleting] = useState(false);
   const [bulkUpdating, setBulkUpdating] = useState(false);
-  const [currentPage, setCurrentPage] = useState(1);
   const [isAddingNewBulkCategory, setIsAddingNewBulkCategory] = useState(false);
   const [newBulkCategoryName, setNewBulkCategoryName] = useState('');
   const [bulkUpdateForm, setBulkUpdateForm] = useState({
@@ -36,11 +61,21 @@ const Inventory = () => {
     stockMode: 'add' // add, subtract, set
   });
 
+  // Use persisted state for filters/sort
+  const sortBy = pageState.sortBy;
+  const filterCategory = pageState.filterCategory;
+  const currentPage = pageState.currentPage;
+  const expandedBrands = pageState.expandedBrands;
+
+  const setSortBy = (value) => updatePageState({ sortBy: value });
+  const setFilterCategory = (value) => updatePageState({ filterCategory: value, currentPage: 1 });
+  const setCurrentPage = (value) => updatePageState({ currentPage: value });
+  const setExpandedBrands = (value) => updatePageState({ 
+    expandedBrands: typeof value === 'function' ? value(expandedBrands) : value 
+  });
+
   // Filter/Sort state
   const [showFilterDropdown, setShowFilterDropdown] = useState(false);
-  const [sortBy, setSortBy] = useState('name_asc'); // default sort
-  const [filterCategory, setFilterCategory] = useState('all');
-  const [expandedBrands, setExpandedBrands] = useState({}); // for grouped view
   const filterDropdownRef = useRef(null);
 
   // Get unique categories for filtering
@@ -427,7 +462,7 @@ const Inventory = () => {
               title="Export as CSV"
               style={{ padding: '0 10px', display: 'flex', alignItems: 'center', gap: '6px', height: '42px', borderRadius: '10px' }}
             >
-              <FiFileText size={16} /> <span className="hide-mobile">CSV</span>
+              <ReportsIcon size={16} /> <span className="hide-mobile">CSV</span>
             </button>
             <button 
               className="secondary" 
@@ -435,7 +470,7 @@ const Inventory = () => {
               title="Export as PDF"
               style={{ padding: '0 10px', display: 'flex', alignItems: 'center', gap: '6px', height: '42px', borderRadius: '10px' }}
             >
-              <FiDownload size={16} /> <span className="hide-mobile">PDF</span>
+              <DownloadIcon size={16} /> <span className="hide-mobile">PDF</span>
             </button>
           </div>
 
@@ -458,7 +493,7 @@ const Inventory = () => {
                 cursor: 'pointer'
               }}
             >
-              <FiFilter size={18} />
+              <FilterIcon size={18} />
             </button>
             
             {showFilterDropdown && (
@@ -507,7 +542,7 @@ const Inventory = () => {
                     }}
                   >
                     <span>{option.label}</span>
-                    {sortBy === option.value && <FiCheck size={16} />}
+                    {sortBy === option.value && <CheckIcon size={16} />}
                   </button>
                 ))}
 
@@ -540,7 +575,7 @@ const Inventory = () => {
                         }}
                       >
                         <span style={{ textTransform: 'capitalize' }}>{cat === 'all' ? 'All Categories' : cat}</span>
-                        {filterCategory === cat && <FiCheck size={16} />}
+                        {filterCategory === cat && <CheckIcon size={16} />}
                       </button>
                     ))}
                   </>
@@ -550,7 +585,7 @@ const Inventory = () => {
           </div>
 
           <button className="add-btn-bordered btn-animate hover-lift add-btn-compact" onClick={() => navigate('/inventory/add')} style={{ height: '42px' }}>
-            <FiPlus size={18} /> <span className="btn-text-full">Add Product</span><span className="btn-text-short">Product</span>
+            <PlusIcon size={18} /> <span className="btn-text-full">Add Product</span><span className="btn-text-short">Product</span>
           </button>
         </div>
       </div>
@@ -560,7 +595,7 @@ const Inventory = () => {
         <div className="stat-widget border-blue">
           <div className="stat-header">
             <div className="stat-icon blue">
-              <FiPackage />
+              <PackageIcon />
             </div>
           </div>
           <div className="stat-label">Total Products</div>
@@ -570,7 +605,7 @@ const Inventory = () => {
         <div className="stat-widget border-purple">
           <div className="stat-header">
             <div className="stat-icon purple">
-              <FiTag />
+              <TagsIcon />
             </div>
           </div>
           <div className="stat-label">Stock Value (Cost)</div>
@@ -580,7 +615,7 @@ const Inventory = () => {
         <div className="stat-widget border-green">
           <div className="stat-header">
             <div className="stat-icon green">
-              <FiTrendingUp />
+              <TrendingUpIcon />
             </div>
           </div>
           <div className="stat-label">Potential Revenue</div>
@@ -590,7 +625,7 @@ const Inventory = () => {
         <div className={`stat-widget ${lowStockCount > 0 ? 'border-red' : 'border-green'}`}>
           <div className="stat-header">
             <div className={`stat-icon ${lowStockCount > 0 ? 'red' : 'green'}`}>
-              <FiPackage />
+              <PackageIcon />
             </div>
           </div>
           <div className="stat-label">Low Stock Items</div>
@@ -623,7 +658,7 @@ const Inventory = () => {
                   title="Cancel"
                   style={{ width: '40px', height: '40px', borderRadius: '50%', padding: 0, background: 'var(--bg-surface)', border: '1px solid var(--border-color)', color: 'var(--text-secondary)' }}
                 >
-                  <FiX size={18} />
+                  <CloseIcon size={18} />
                 </button>
                 <button 
                   className="icon-btn-circle"
@@ -632,7 +667,7 @@ const Inventory = () => {
                   title={`Update ${selectedProducts.length} selected`}
                   style={{ width: '40px', height: '40px', borderRadius: '50%', padding: 0, background: selectedProducts.length > 0 ? 'var(--info-bg)' : 'var(--bg-surface)', border: '1px solid var(--border-color)', color: 'var(--primary-color)' }}
                 >
-                  <FiTag size={18} />
+                  <TagsIcon size={18} />
                 </button>
                 <button 
                   className="icon-btn-circle danger"
@@ -641,7 +676,7 @@ const Inventory = () => {
                   title={`Delete ${selectedProducts.length} selected`}
                   style={{ width: '40px', height: '40px', borderRadius: '50%', padding: 0, background: selectedProducts.length > 0 ? 'var(--danger-bg)' : 'var(--bg-surface)', border: '1px solid var(--border-color)', color: 'var(--danger-text)', position: 'relative' }}
                 >
-                  <FiTrash2 size={18} />
+                  <DeleteIcon size={18} />
                   {selectedProducts.length > 0 && (
                     <span style={{ position: 'absolute', top: '-4px', right: '-4px', background: 'var(--danger-text)', color: 'white', fontSize: '10px', fontWeight: 700, width: '18px', height: '18px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{selectedProducts.length}</span>
                   )}
@@ -653,7 +688,7 @@ const Inventory = () => {
                 title="Select products for bulk actions"
                 style={{ width: '40px', height: '40px', borderRadius: '50%', padding: 0, background: 'var(--bg-surface)', border: '1px solid var(--border-color)', color: 'var(--text-secondary)' }}
               >
-                <FiCheck size={18} />
+                <CheckIcon size={18} />
               </button>
             )}
           </div>
@@ -686,7 +721,7 @@ const Inventory = () => {
               <SkeletonTable rows={8} cols={6} />
             ) : products.length === 0 ? (
               <div style={{ textAlign: 'center', padding: '48px', color: 'var(--text-secondary)' }}>
-                <FiPackage size={40} style={{ opacity: 0.3, marginBottom: '12px' }} />
+                <PackageIcon size={40} style={{ opacity: 0.3, marginBottom: '12px' }} />
                 <p style={{ margin: 0, fontWeight: 500 }}>No products yet</p>
                 <p style={{ margin: '4px 0 0 0', fontSize: '13px' }}>Add your first product to get started</p>
               </div>
@@ -723,7 +758,7 @@ const Inventory = () => {
                           transition: 'transform 0.2s',
                           color: 'var(--text-secondary)'
                         }}>
-                          <FiChevronRight size={18} />
+                          <ChevronRightIcon size={18} />
                         </div>
                         <div style={{ textAlign: 'left' }}>
                           <div style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: '15px' }}>
@@ -782,7 +817,7 @@ const Inventory = () => {
                                       justifyContent: 'center',
                                       color: 'white'
                                     }}>
-                                      {selectedProducts.includes(product.id) && <FiCheck size={12} />}
+                                      {selectedProducts.includes(product.id) && <CheckIcon size={12} />}
                                     </div>
                                   </td>
                                 )}
@@ -852,14 +887,14 @@ const Inventory = () => {
                                         style={{ padding: '8px', width: '36px', height: '36px', borderRadius: '50%' }}
                                         onClick={() => navigate(`/inventory/edit/${product.id}`)}
                                       >
-                                        <FiEdit2 size={16} />
+                                        <EditIcon size={16} />
                                       </button>
                                       <button 
                                         className="secondary" 
                                         style={{ padding: '8px', width: '36px', height: '36px', borderRadius: '50%', color: 'var(--danger-text)' }}
                                         onClick={() => handleDelete(product.id)}
                                       >
-                                        <FiTrash2 size={16} />
+                                        <DeleteIcon size={16} />
                                       </button>
                                     </div>
                                   </td>
@@ -917,7 +952,7 @@ const Inventory = () => {
                               justifyContent: 'center',
                               color: 'white'
                             }}>
-                              {selectedProducts.includes(product.id) && <FiCheck size={12} />}
+                              {selectedProducts.includes(product.id) && <CheckIcon size={12} />}
                             </div>
                           </td>
                         )}
@@ -987,14 +1022,14 @@ const Inventory = () => {
                               style={{ padding: '8px', width: '36px', height: '36px', borderRadius: '50%' }}
                               onClick={() => navigate(`/inventory/edit/${product.id}`)}
                             >
-                              <FiEdit2 size={16} />
+                              <EditIcon size={16} />
                             </button>
                             <button 
                               className="secondary" 
                               style={{ padding: '8px', width: '36px', height: '36px', borderRadius: '50%', color: 'var(--danger-text)' }}
                               onClick={() => handleDelete(product.id)}
                             >
-                              <FiTrash2 size={16} />
+                              <DeleteIcon size={16} />
                             </button>
                           </div>
                         </td>
@@ -1004,7 +1039,7 @@ const Inventory = () => {
                   {products.length === 0 && (
                     <tr>
                       <td colSpan="9" style={{ textAlign: 'center', padding: '48px', color: 'var(--text-secondary)' }}>
-                        <FiPackage size={40} style={{ opacity: 0.3, marginBottom: '12px' }} />
+                        <PackageIcon size={40} style={{ opacity: 0.3, marginBottom: '12px' }} />
                         <p style={{ margin: 0, fontWeight: 500 }}>No products yet</p>
                         <p style={{ margin: '4px 0 0 0', fontSize: '13px' }}>Add your first product to get started</p>
                       </td>
@@ -1048,7 +1083,7 @@ const Inventory = () => {
         <div className="modal-overlay" style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100dvh', background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px', boxSizing: 'border-box', transform: 'none' }}>
           <div style={{ background: 'var(--bg-surface)', borderRadius: '16px', padding: '24px', maxWidth: '400px', width: '90%', textAlign: 'center' }}>
             <div style={{ width: '56px', height: '56px', borderRadius: '50%', background: 'rgba(239, 68, 68, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px', color: '#EF4444' }}>
-              <FiTrash2 size={24} />
+              <DeleteIcon size={24} />
             </div>
             <h3 style={{ margin: '0 0 8px' }}>Delete {selectedProducts.length} Product{selectedProducts.length > 1 ? 's' : ''}?</h3>
             <p style={{ margin: '0 0 24px', color: 'var(--text-secondary)', fontSize: '14px' }}>

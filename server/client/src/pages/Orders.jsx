@@ -2,9 +2,25 @@ import React, { useState, useEffect } from 'react';
 import api from '../api';
 import { SkeletonTable, SkeletonOrderCardList } from '../components/Skeleton.jsx';
 import { Link, useNavigate } from 'react-router-dom';
-import { FiPlus, FiShoppingCart, FiTag, FiTrendingUp, FiX, FiTrash2, FiEye, FiAlertCircle, FiEdit2, FiWifiOff, FiRefreshCw, FiCheck, FiDownload, FiFileText } from 'react-icons/fi';
+import {
+  PlusIcon,
+  CartIcon,
+  TagsIcon,
+  TrendingUpIcon,
+  CloseIcon,
+  DeleteIcon,
+  EyeIcon,
+  AlertCircleIcon,
+  EditIcon,
+  WifiOffIcon,
+  RefreshIcon,
+  CheckIcon,
+  DownloadIcon,
+  ReportsIcon
+} from '../components/CustomIcons';
 import { useSettings } from '../contexts/SettingsContext';
 import useScrollLock from '../hooks/useScrollLock';
+import { usePageState } from '../hooks/usePageState';
 import offlineManager from '../utils/offlineManager';
 import { exportOrders } from '../utils/exportUtils';
 import './Orders.css';
@@ -12,9 +28,14 @@ import './Orders.css';
 const Orders = () => {
   const { formatCurrency } = useSettings();
   const navigate = useNavigate();
+  
+  // Persisted page state
+  const { state: pageState, updateState: updatePageState } = usePageState('orders', {
+    showAllOrders: false,
+  }, { persistScroll: true, scrollContainerSelector: '.main-content' });
+
   const [orders, setOrders] = useState([]);
   const [offlineOrders, setOfflineOrders] = useState([]);
-  const [showAllOrders, setShowAllOrders] = useState(false);
   const [deleteMode, setDeleteMode] = useState(false);
   const [selectedOrders, setSelectedOrders] = useState([]);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -22,6 +43,10 @@ const Orders = () => {
   const [deleting, setDeleting] = useState(false);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [syncing, setSyncing] = useState(false);
+
+  // Use persisted state
+  const showAllOrders = pageState.showAllOrders;
+  const setShowAllOrders = (value) => updatePageState({ showAllOrders: value });
 
   // Lock scroll when any modal is open
   useScrollLock(showDeleteConfirm);
@@ -169,7 +194,7 @@ const Orders = () => {
               title="Export as CSV"
               style={{ padding: '0 16px', display: 'flex', alignItems: 'center', gap: '8px', height: '42px', borderRadius: '10px', background: 'var(--bg-surface)', border: '1px solid var(--border-color)', color: 'var(--text-secondary)', cursor: 'pointer' }}
             >
-              <FiFileText size={16} /> <span className="hide-mobile">CSV</span>
+              <ReportsIcon size={16} /> <span className="hide-mobile">CSV</span>
             </button>
             <button 
               className="secondary" 
@@ -177,11 +202,11 @@ const Orders = () => {
               title="Export as PDF"
               style={{ padding: '0 16px', display: 'flex', alignItems: 'center', gap: '8px', height: '42px', borderRadius: '10px', background: 'var(--bg-surface)', border: '1px solid var(--border-color)', color: 'var(--text-secondary)', cursor: 'pointer' }}
             >
-              <FiDownload size={16} /> <span className="hide-mobile">PDF</span>
+              <DownloadIcon size={16} /> <span className="hide-mobile">PDF</span>
             </button>
           </div>
           <Link to="/orders/new" className="btn-primary btn-animate hover-lift" style={{ height: '42px', display: 'flex', alignItems: 'center' }}>
-            <FiPlus size={16} /> New Order
+            <PlusIcon size={16} /> New Order
           </Link>
         </div>
       </div>
@@ -191,7 +216,7 @@ const Orders = () => {
         <div className="stat-widget border-blue animate-slide-up delay-100">
           <div className="stat-header">
             <div className="stat-icon blue">
-              <FiShoppingCart />
+              <CartIcon />
             </div>
           </div>
           <div className="stat-label">Total Orders</div>
@@ -201,7 +226,7 @@ const Orders = () => {
         <div className="stat-widget border-purple animate-slide-up delay-200">
           <div className="stat-header">
             <div className="stat-icon purple">
-              <FiTag />
+              <TagsIcon />
             </div>
           </div>
           <div className="stat-label">Total Revenue</div>
@@ -211,7 +236,7 @@ const Orders = () => {
         <div className="stat-widget border-green animate-slide-up delay-300">
           <div className="stat-header">
             <div className="stat-icon green">
-              <FiTrendingUp />
+              <TrendingUpIcon />
             </div>
           </div>
           <div className="stat-label">Total Profit</div>
@@ -221,7 +246,7 @@ const Orders = () => {
         <div className="stat-widget border-orange animate-slide-up delay-400">
           <div className="stat-header">
             <div className="stat-icon orange">
-              <FiTag />
+              <TagsIcon />
             </div>
           </div>
           <div className="stat-label">Avg. Order Value</div>
@@ -238,7 +263,7 @@ const Orders = () => {
               {allOrders.length} orders
               {offlineOrders.length > 0 && (
                 <span className="offline-count-badge">
-                  <FiWifiOff size={10} /> {offlineOrders.length} offline
+                  <WifiOffIcon size={10} /> {offlineOrders.length} offline
                 </span>
               )}
             </span>
@@ -251,7 +276,7 @@ const Orders = () => {
                 disabled={syncing}
                 title="Sync offline orders"
               >
-                <FiRefreshCw size={18} className={syncing ? 'spinning' : ''} />
+                <RefreshIcon size={18} className={syncing ? 'spinning' : ''} />
               </button>
             )}
             {deleteMode ? (
@@ -261,7 +286,7 @@ const Orders = () => {
                   onClick={cancelDeleteMode}
                   title="Cancel"
                 >
-                  <FiX size={18} />
+                  <CloseIcon size={18} />
                 </button>
                 <button 
                   className="icon-btn-circle danger btn-animate"
@@ -269,7 +294,7 @@ const Orders = () => {
                   disabled={selectedOrders.length === 0}
                   title={`Delete ${selectedOrders.length} selected`}
                 >
-                  <FiTrash2 size={18} />
+                  <DeleteIcon size={18} />
                   {selectedOrders.length > 0 && (
                     <span className="delete-count animate-pop-in">{selectedOrders.length}</span>
                   )}
@@ -281,7 +306,7 @@ const Orders = () => {
                 onClick={() => setDeleteMode(true)}
                 title="Delete orders"
               >
-                <FiTrash2 size={18} />
+                <DeleteIcon size={18} />
               </button>
             )}
           </div>
@@ -319,14 +344,14 @@ const Orders = () => {
                   {deleteMode && (
                     <td>
                       <div className={`table-checkbox ${isSelected ? 'checked' : ''}`}>
-                        {isSelected && <FiCheck size={12} />}
+                        {isSelected && <CheckIcon size={12} />}
                       </div>
                     </td>
                   )}
                   <td>
                     <span className={`badge ${isOffline ? 'badge-offline' : 'badge-info'}`}>
                       {isOffline ? (
-                        <><FiWifiOff size={10} /> Offline</>
+                        <><WifiOffIcon size={10} /> Offline</>
                       ) : (
                         <>#{String(order.id).slice(0, 8)}...</>
                       )}
@@ -351,7 +376,7 @@ const Orders = () => {
                   <td>
                     {isOffline ? (
                       <span className="badge badge-offline-status">
-                        <FiWifiOff size={10} /> Pending Sync
+                        <WifiOffIcon size={10} /> Pending Sync
                       </span>
                     ) : (
                     (() => {
@@ -382,7 +407,7 @@ const Orders = () => {
                           title="View Details"
                           style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                         >
-                          <FiEye size={18} />
+                          <EyeIcon size={18} />
                         </Link>
                         {order.payment_status !== 'Paid' && (
                           <Link
@@ -391,7 +416,7 @@ const Orders = () => {
                             title="Edit Order"
                             style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--primary-color)' }}
                           >
-                            <FiEdit2 size={16} />
+                            <EditIcon size={16} />
                           </Link>
                         )}
                       </div>
@@ -402,7 +427,7 @@ const Orders = () => {
               {orders.length === 0 && (
                 <tr>
                   <td colSpan={deleteMode ? 7 : 7} style={{ textAlign: 'center', padding: '48px', color: 'var(--text-secondary)' }}>
-                    <FiShoppingCart size={40} style={{ opacity: 0.3, marginBottom: '12px' }} />
+                    <CartIcon size={40} style={{ opacity: 0.3, marginBottom: '12px' }} />
                     <p style={{ margin: 0, fontWeight: 500 }}>No orders yet</p>
                     <p style={{ margin: '4px 0 0 0', fontSize: '13px' }}>Create your first order to get started</p>
                   </td>
@@ -420,7 +445,7 @@ const Orders = () => {
         <div className="orders-list-mobile mobile-only">
           {sortedAllOrders.length === 0 ? (
             <div className="empty-orders-mobile">
-              <FiShoppingCart size={40} style={{ opacity: 0.3, marginBottom: '12px' }} />
+              <CartIcon size={40} style={{ opacity: 0.3, marginBottom: '12px' }} />
               <p style={{ margin: 0, fontWeight: 500 }}>No orders yet</p>
               <p style={{ margin: '4px 0 0 0', fontSize: '13px' }}>Create your first order to get started</p>
             </div>
@@ -443,19 +468,19 @@ const Orders = () => {
                       >
                         <div className="order-card-checkbox">
                           <div className={`checkbox ${isSelected ? 'checked' : ''}`}>
-                            {isSelected && <FiCheck size={14} />}
+                            {isSelected && <CheckIcon size={14} />}
                           </div>
                         </div>
                         <div className="order-card-content">
                           <div className="order-card-header">
                             <span className="order-card-customer">{order.customer_name}</span>
                             <span className={`order-card-status ${isOffline ? 'offline' : (isPaid ? 'paid' : 'pending')}`}>
-                              {isOffline && <FiWifiOff size={10} />} {status}
+                              {isOffline && <WifiOffIcon size={10} />} {status}
                             </span>
                           </div>
                           <div className="order-card-id">
                             {isOffline ? (
-                              <><FiWifiOff size={10} /> Offline Order</>
+                              <><WifiOffIcon size={10} /> Offline Order</>
                             ) : (
                               <>#{String(order.id).slice(0, 8)}</>
                             )}
@@ -491,11 +516,11 @@ const Orders = () => {
                         <div className="order-card-header">
                           <span className="order-card-customer">{order.customer_name}</span>
                           <span className="order-card-status offline">
-                            <FiWifiOff size={10} /> Pending Sync
+                            <WifiOffIcon size={10} /> Pending Sync
                           </span>
                         </div>
                         <div className="order-card-id">
-                          <FiWifiOff size={10} /> Offline Order
+                          <WifiOffIcon size={10} /> Offline Order
                         </div>
                         <div className="order-card-date">
                           {new Date(order.order_date).toLocaleDateString('en-US', { 
@@ -514,7 +539,7 @@ const Orders = () => {
                             <span className="order-card-profit-value">{order.items?.length || 0}</span>
                           </div>
                           <div style={{ display: 'flex', gap: '12px', alignItems: 'center', marginLeft: 'auto' }}>
-                            <FiEdit2 size={16} style={{ color: 'var(--primary-color)' }} />
+                            <EditIcon size={16} style={{ color: 'var(--primary-color)' }} />
                           </div>
                         </div>
                       </div>
@@ -558,10 +583,10 @@ const Orders = () => {
                               onClick={(e) => { e.preventDefault(); e.stopPropagation(); navigate(`/orders/edit/${order.id}`); }}
                               style={{ background: 'none', border: 'none', color: 'var(--primary-color)', padding: '4px', display: 'flex' }}
                             >
-                              <FiEdit2 size={16} />
+                              <EditIcon size={16} />
                             </button>
                           )}
-                          <FiEye className="order-card-arrow" style={{ margin: 0 }} />
+                          <EyeIcon className="order-card-arrow" style={{ margin: 0 }} />
                         </div>
                       </div>
                     </Link>
@@ -601,7 +626,7 @@ const Orders = () => {
           <div className="modal-content delete-confirm-modal">
             <div className="modal-header">
               <h3 style={{ margin: 0, color: 'var(--danger-text)' }}>
-                <FiAlertCircle style={{ marginRight: '8px', verticalAlign: 'middle' }} />
+                <AlertCircleIcon style={{ marginRight: '8px', verticalAlign: 'middle' }} />
                 Delete Orders
               </h3>
             </div>
@@ -621,7 +646,7 @@ const Orders = () => {
                 {deleting ? (
                   <><span className="btn-spinner"></span> Deleting...</>
                 ) : (
-                  <><FiTrash2 size={16} /> Delete</>
+                  <><DeleteIcon size={16} /> Delete</>
                 )}
               </button>
             </div>

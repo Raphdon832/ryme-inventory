@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { FiX, FiEdit3, FiTrash2, FiCopy, FiCheck } from 'react-icons/fi';
+import { CloseIcon, EditIcon, DeleteIcon, CopyIcon, CheckIcon } from './CustomIcons';
 import './QuickScratchpad.css';
 
 const QuickScratchpad = ({ isOpen, onClose }) => {
@@ -39,7 +39,7 @@ const QuickScratchpad = ({ isOpen, onClose }) => {
       <div className="scratchpad-container" onClick={e => e.stopPropagation()}>
         <div className="scratchpad-header">
           <div className="header-title">
-            <FiEdit3 className="header-icon" />
+            <EditIcon className="header-icon" size={18} />
             <h3>Quick Scratchpad</h3>
           </div>
           <div className="header-actions">
@@ -49,7 +49,7 @@ const QuickScratchpad = ({ isOpen, onClose }) => {
               disabled={!notes}
               title="Copy to clipboard"
             >
-              {copying ? <FiCheck /> : <FiCopy />}
+              {copying ? <CheckIcon size={16} /> : <CopyIcon size={16} />}
             </button>
             <button 
               className="action-btn delete" 
@@ -57,10 +57,10 @@ const QuickScratchpad = ({ isOpen, onClose }) => {
               disabled={!notes}
               title="Clear notes"
             >
-              <FiTrash2 />
+              <DeleteIcon size={16} />
             </button>
             <button className="scratchpad-close" onClick={onClose}>
-              <FiX size={20} />
+              <CloseIcon size={20} />
             </button>
           </div>
         </div>

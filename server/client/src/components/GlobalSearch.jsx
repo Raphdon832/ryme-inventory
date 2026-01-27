@@ -1,25 +1,41 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FiSearch, FiX, FiBox, FiShoppingCart, FiUsers, FiTruck, FiHome, FiSettings, FiCheckSquare, FiCalendar, FiBarChart2, FiClock, FiHelpCircle, FiUser, FiArrowRight } from 'react-icons/fi';
+import { 
+  SearchIcon, 
+  CloseIcon, 
+  BoxIcon, 
+  CartIcon, 
+  UsersIcon, 
+  ShippingIcon, 
+  DashboardIcon, 
+  SettingsIcon, 
+  TasksIcon, 
+  CalendarIcon, 
+  AnalyticsIcon, 
+  ClockIcon, 
+  HelpIcon, 
+  ProfileIcon, 
+  ArrowRightIcon 
+} from './CustomIcons';
 import api from '../api';
 import './GlobalSearch.css';
 
 // Navigation pages for quick access
 const navigationPages = [
-  { name: 'Dashboard', path: '/', icon: FiHome, type: 'page' },
-  { name: 'Inventory', path: '/inventory', icon: FiBox, type: 'page' },
-  { name: 'Add Product', path: '/inventory/add', icon: FiBox, type: 'page' },
-  { name: 'Orders', path: '/orders', icon: FiShoppingCart, type: 'page' },
-  { name: 'Create Order', path: '/orders/new', icon: FiShoppingCart, type: 'page' },
-  { name: 'Customers', path: '/customers', icon: FiUsers, type: 'page' },
-  { name: 'Vendors', path: '/vendors', icon: FiTruck, type: 'page' },
-  { name: 'Tasks', path: '/tasks', icon: FiCheckSquare, type: 'page' },
-  { name: 'Calendar', path: '/calendar', icon: FiCalendar, type: 'page' },
-  { name: 'Analytics', path: '/analytics', icon: FiBarChart2, type: 'page' },
-  { name: 'Activity Log', path: '/activity-log', icon: FiClock, type: 'page' },
-  { name: 'Settings', path: '/settings', icon: FiSettings, type: 'page' },
-  { name: 'Profile', path: '/profile', icon: FiUser, type: 'page' },
-  { name: 'Help', path: '/help', icon: FiHelpCircle, type: 'page' },
+  { name: 'Dashboard', path: '/', icon: DashboardIcon, type: 'page' },
+  { name: 'Inventory', path: '/inventory', icon: BoxIcon, type: 'page' },
+  { name: 'Add Product', path: '/inventory/add', icon: BoxIcon, type: 'page' },
+  { name: 'Orders', path: '/orders', icon: CartIcon, type: 'page' },
+  { name: 'Create Order', path: '/orders/new', icon: CartIcon, type: 'page' },
+  { name: 'Customers', path: '/customers', icon: UsersIcon, type: 'page' },
+  { name: 'Vendors', path: '/vendors', icon: ShippingIcon, type: 'page' },
+  { name: 'Tasks', path: '/tasks', icon: TasksIcon, type: 'page' },
+  { name: 'Calendar', path: '/calendar', icon: CalendarIcon, type: 'page' },
+  { name: 'Analytics', path: '/analytics', icon: AnalyticsIcon, type: 'page' },
+  { name: 'Activity Log', path: '/activity-log', icon: ClockIcon, type: 'page' },
+  { name: 'Settings', path: '/settings', icon: SettingsIcon, type: 'page' },
+  { name: 'Profile', path: '/profile', icon: ProfileIcon, type: 'page' },
+  { name: 'Help', path: '/help', icon: HelpIcon, type: 'page' },
 ];
 
 const GlobalSearch = ({ isOpen, onClose, isMobile = false }) => {
@@ -326,7 +342,7 @@ const GlobalSearch = ({ isOpen, onClose, isMobile = false }) => {
       >
         {/* Search Input */}
         <div className="global-search-input-wrapper">
-          <FiSearch className="global-search-icon" size={20} />
+          <SearchIcon className="global-search-icon" size={20} />
           <input
             ref={inputRef}
             type="text"
@@ -342,7 +358,7 @@ const GlobalSearch = ({ isOpen, onClose, isMobile = false }) => {
           />
           {query && (
             <button className="global-search-clear" onClick={() => setQuery('')}>
-              <FiX size={18} />
+              <CloseIcon size={18} />
             </button>
           )}
           <button className="global-search-close" onClick={onClose}>
@@ -385,7 +401,7 @@ const GlobalSearch = ({ isOpen, onClose, isMobile = false }) => {
           {results.pages.length > 0 && (
             <div className="search-result-group">
               <div className="search-result-group-header">
-                <FiHome size={14} />
+                <DashboardIcon size={14} />
                 <span>Pages</span>
               </div>
               {results.pages.map((page) => {
@@ -404,7 +420,7 @@ const GlobalSearch = ({ isOpen, onClose, isMobile = false }) => {
                       <span className="search-result-title">{page.name}</span>
                       <span className="search-result-subtitle">{page.path}</span>
                     </div>
-                    <FiArrowRight className="search-result-arrow" size={16} />
+                    <ArrowRightIcon className="search-result-arrow" size={16} />
                   </div>
                 );
               })}
@@ -415,7 +431,7 @@ const GlobalSearch = ({ isOpen, onClose, isMobile = false }) => {
           {results.products.length > 0 && (
             <div className="search-result-group">
               <div className="search-result-group-header">
-                <FiBox size={14} />
+                <BoxIcon size={14} />
                 <span>Products</span>
               </div>
               {results.products.map((product) => {
@@ -428,7 +444,7 @@ const GlobalSearch = ({ isOpen, onClose, isMobile = false }) => {
                     onMouseEnter={() => setSelectedIndex(idx)}
                   >
                     <div className="search-result-icon product">
-                      <FiBox size={16} />
+                      <BoxIcon size={16} />
                     </div>
                     <div className="search-result-info">
                       <span className="search-result-title">{product.name || product.product_name}</span>
@@ -438,7 +454,7 @@ const GlobalSearch = ({ isOpen, onClose, isMobile = false }) => {
                         Stock: {product.stock_quantity || 0}
                       </span>
                     </div>
-                    <FiArrowRight className="search-result-arrow" size={16} />
+                    <ArrowRightIcon className="search-result-arrow" size={16} />
                   </div>
                 );
               })}
@@ -449,7 +465,7 @@ const GlobalSearch = ({ isOpen, onClose, isMobile = false }) => {
           {results.orders.length > 0 && (
             <div className="search-result-group">
               <div className="search-result-group-header">
-                <FiShoppingCart size={14} />
+                <CartIcon size={14} />
                 <span>Orders</span>
               </div>
               {results.orders.map((order) => {
@@ -462,7 +478,7 @@ const GlobalSearch = ({ isOpen, onClose, isMobile = false }) => {
                     onMouseEnter={() => setSelectedIndex(idx)}
                   >
                     <div className="search-result-icon order">
-                      <FiShoppingCart size={16} />
+                      <CartIcon size={16} />
                     </div>
                     <div className="search-result-info">
                       <span className="search-result-title">
@@ -486,7 +502,7 @@ const GlobalSearch = ({ isOpen, onClose, isMobile = false }) => {
           {results.customers.length > 0 && (
             <div className="search-result-group">
               <div className="search-result-group-header">
-                <FiUsers size={14} />
+                <UsersIcon size={14} />
                 <span>Customers</span>
               </div>
               {results.customers.map((customer) => {
@@ -499,7 +515,7 @@ const GlobalSearch = ({ isOpen, onClose, isMobile = false }) => {
                     onMouseEnter={() => setSelectedIndex(idx)}
                   >
                     <div className="search-result-icon customer">
-                      <FiUsers size={16} />
+                      <UsersIcon size={16} />
                     </div>
                     <div className="search-result-info">
                       <span className="search-result-title">{customer.name}</span>
@@ -507,7 +523,7 @@ const GlobalSearch = ({ isOpen, onClose, isMobile = false }) => {
                         {customer.email || customer.phone || 'No contact info'}
                       </span>
                     </div>
-                    <FiArrowRight className="search-result-arrow" size={16} />
+                    <ArrowRightIcon className="search-result-arrow" size={16} />
                   </div>
                 );
               })}
@@ -518,7 +534,7 @@ const GlobalSearch = ({ isOpen, onClose, isMobile = false }) => {
           {results.vendors.length > 0 && (
             <div className="search-result-group">
               <div className="search-result-group-header">
-                <FiTruck size={14} />
+                <ShippingIcon size={14} />
                 <span>Vendors</span>
               </div>
               {results.vendors.map((vendor) => {
@@ -531,7 +547,7 @@ const GlobalSearch = ({ isOpen, onClose, isMobile = false }) => {
                     onMouseEnter={() => setSelectedIndex(idx)}
                   >
                     <div className="search-result-icon vendor">
-                      <FiTruck size={16} />
+                      <ShippingIcon size={16} />
                     </div>
                     <div className="search-result-info">
                       <span className="search-result-title">{vendor.name}</span>
@@ -539,7 +555,7 @@ const GlobalSearch = ({ isOpen, onClose, isMobile = false }) => {
                         {vendor.company || vendor.email || 'No details'}
                       </span>
                     </div>
-                    <FiArrowRight className="search-result-arrow" size={16} />
+                    <ArrowRightIcon className="search-result-arrow" size={16} />
                   </div>
                 );
               })}

@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { FiX, FiDownload, FiMaximize2, FiCpu } from 'react-icons/fi';
+import { CloseIcon, DownloadIcon, MaximizeIcon, CpuIcon } from './CustomIcons';
 import Barcode from 'react-barcode';
 import { QRCodeSVG } from 'qrcode.react';
 import './BarcodeGenerator.css';
@@ -43,8 +43,8 @@ const BarcodeGenerator = ({ isOpen, onClose }) => {
     <div className="barcode-modal" onClick={onClose}>
       <div className="barcode-container" onClick={e => e.stopPropagation()}>
         <div className="barcode-header">
-          <h3><FiCpu /> Asset Tag Generator</h3>
-          <button className="barcode-close" onClick={onClose}><FiX size={20} /></button>
+          <h3><CpuIcon size={18} /> Asset Tag Generator</h3>
+          <button className="barcode-close" onClick={onClose}><CloseIcon size={20} /></button>
         </div>
 
         <div className="barcode-content">
@@ -97,7 +97,7 @@ const BarcodeGenerator = ({ isOpen, onClose }) => {
               </div>
             ) : (
               <div className="result-placeholder">
-                <FiMaximize2 size={40} />
+                <MaximizeIcon size={40} />
                 <p>Enter text to generate code</p>
               </div>
             )}
@@ -105,7 +105,7 @@ const BarcodeGenerator = ({ isOpen, onClose }) => {
 
           {text && (
             <button className="btn-download" onClick={downloadAsset}>
-              <FiDownload /> Download PNG
+              <DownloadIcon size={16} /> Download PNG
             </button>
           )}
         </div>

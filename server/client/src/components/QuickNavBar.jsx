@@ -1,44 +1,47 @@
 import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import {
-  FiHome,
-  FiBox,
-  FiShoppingCart,
-  FiUsers,
-  FiTruck,
-  FiCheckSquare,
-  FiCalendar,
-  FiBarChart2,
-  FiClock,
-  FiSettings,
-  FiHelpCircle,
-  FiUser,
-  FiPlus,
-  FiSearch,
-  FiPlusSquare,
-  FiFilePlus
-} from 'react-icons/fi';
+  DashboardIcon,
+  BoxIcon,
+  CartIcon,
+  UsersIcon,
+  ShippingIcon,
+  TasksIcon,
+  CalendarIcon,
+  AnalyticsIcon,
+  ClockIcon,
+  SettingsIcon,
+  HelpIcon,
+  ProfileIcon,
+  AddIcon,
+  OrdersIcon,
+  PlusIcon,
+  SearchIcon
+} from './CustomIcons';
 import { useSettings } from '../contexts/SettingsContext';
 import './QuickNavBar.css';
 
+// Custom icon wrapper to match react-icons API
+const createCustomIconComponent = (IconComponent) => ({ size = 24 }) => <IconComponent size={size} />;
+
 // Icon mapping for dynamic rendering
 export const ICON_MAP = {
-  FiHome,
-  FiBox,
-  FiShoppingCart,
-  FiUsers,
-  FiTruck,
-  FiCheckSquare,
-  FiCalendar,
-  FiBarChart2,
-  FiClock,
-  FiSettings,
-  FiHelpCircle,
-  FiUser,
-  FiPlus,
-  FiSearch,
-  FiPlusSquare,
-  FiFilePlus
+  FiHome: createCustomIconComponent(DashboardIcon),
+  FiBox: createCustomIconComponent(BoxIcon),
+  FiShoppingCart: createCustomIconComponent(CartIcon),
+  FiUsers: createCustomIconComponent(UsersIcon),
+  FiTruck: createCustomIconComponent(ShippingIcon),
+  FiCheckSquare: createCustomIconComponent(TasksIcon),
+  FiCalendar: createCustomIconComponent(CalendarIcon),
+  FiBarChart2: createCustomIconComponent(AnalyticsIcon),
+  FiClock: createCustomIconComponent(ClockIcon),
+  FiSettings: createCustomIconComponent(SettingsIcon),
+  FiHelpCircle: createCustomIconComponent(HelpIcon),
+  FiUser: createCustomIconComponent(ProfileIcon),
+  FiPlus: createCustomIconComponent(PlusIcon),
+  FiSearch: createCustomIconComponent(SearchIcon),
+  FiPlusSquare: createCustomIconComponent(AddIcon),
+  FiFilePlus: createCustomIconComponent(OrdersIcon)
 };
 
 // Available navigation options for configuration
@@ -73,7 +76,7 @@ const QuickNavBar = ({ onSearchClick, isHidden }) => {
   return (
     <nav className={`quick-nav-bar ${isHidden ? 'hidden' : ''}`}>
       {navItems.map((item) => {
-        const IconComponent = ICON_MAP[item.icon] || FiHome;
+        const IconComponent = ICON_MAP[item.icon] || ICON_MAP.FiHome;
         
         // Special handling for search action
         if (item.id === 'search' && onSearchClick) {

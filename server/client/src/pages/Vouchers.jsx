@@ -2,21 +2,46 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import api from '../api';
 import { useSettings } from '../contexts/SettingsContext';
 import { SkeletonTable, SkeletonStatsGrid } from '../components/Skeleton';
-import { 
-    FiPlus, FiTrash2, FiTag, FiCalendar, FiPercent, FiDollarSign, 
-    FiEdit2, FiFilter, FiChevronDown, FiX, FiCheck, FiCopy, FiUsers,
-    FiGift, FiClock, FiCheckCircle, FiXCircle, FiRefreshCw, FiShare2, FiDownload
-} from 'react-icons/fi';
+import {
+    PlusIcon,
+    DeleteIcon,
+    TagsIcon,
+    CalendarIcon,
+    PercentageIcon,
+    EditIcon,
+    FilterIcon,
+    ChevronDownIcon,
+    CloseIcon,
+    CheckIcon,
+    CopyIcon,
+    UsersIcon,
+    VoucherIcon,
+    ClockIcon,
+    CheckCircleIcon,
+    AlertCircleIcon,
+    RefreshIcon,
+    ShareIcon,
+    DownloadIcon,
+    ReportsIcon
+} from '../components/CustomIcons';
 import { useToast } from '../components/Toast';
 import soundManager from '../utils/soundManager';
 import useScrollLock from '../hooks/useScrollLock';
+import { usePageState } from '../hooks/usePageState';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 import './Vouchers.css';
 
 const Vouchers = () => {
-    const { formatCurrency } = useSettings();
+    const { formatCurrency, currencySymbol } = useSettings();
     const toast = useToast();
+    
+    // Persisted page state
+    const { state: pageState, updateState: updatePageState } = usePageState('vouchers', {
+        filterStatus: 'all',
+        sortBy: 'created_desc',
+    }, { persistScroll: true, scrollContainerSelector: '.main-content' });
+
     const [vouchers, setVouchers] = useState([]);
     const [customers, setCustomers] = useState([]);
     const [products, setProducts] = useState([]);
@@ -29,9 +54,11 @@ const Vouchers = () => {
     const filterDropdownRef = useRef(null);
     const voucherCardRef = useRef(null);
     
-    // Filter/Sort state
-    const [filterStatus, setFilterStatus] = useState('all');
-    const [sortBy, setSortBy] = useState('created_desc');
+    // Use persisted filter/sort state
+    const filterStatus = pageState.filterStatus;
+    const sortBy = pageState.sortBy;
+    const setFilterStatus = (value) => updatePageState({ filterStatus: value });
+    const setSortBy = (value) => updatePageState({ sortBy: value });
 
     const [formData, setFormData] = useState({
         code: '',
@@ -221,25 +248,41 @@ const Vouchers = () => {
     const exportVoucherAsImage = async () => {
         if (!voucherCardRef.current) return;
         try {
+            toast.info('Generating image...');
+            // Wait for any fonts to load
+            await document.fonts.ready;
+            
             const canvas = await html2canvas(voucherCardRef.current, {
-                scale: 2,
+                scale: 3,
                 backgroundColor: null,
-                useCORS: true
+                useCORS: true,
+                logging: false,
+                width: voucherCardRef.current.offsetWidth,
+                height: voucherCardRef.current.offsetHeight,
+                onclone: (clonedDoc) => {
+                    const el = clonedDoc.querySelector('.voucher-card-capture');
+                    if (el) {
+                        el.style.transform = 'none';
+                        el.style.position = 'static';
+                        el.style.display = 'block';
+                    }
+                }
             });
             const link = document.createElement('a');
             link.download = `voucher-${shareVoucher.code}.png`;
-            link.href = canvas.toDataURL('image/png');
+            link.href = canvas.toDataURL('image/png', 1.0);
             link.click();
-            toast.success('Voucher image downloaded!');
+            toast.success('Voucher image ready!');
         } catch (error) {
             console.error('Error exporting image:', error);
-            toast.error('Failed to export image');
+            toast.error('Failed to generate image');
         }
     };
 
     const exportVoucherAsPDF = async () => {
         if (!voucherCardRef.current) return;
         try {
+            toast.info('Preparing PDF...');
             const canvas = await html2canvas(voucherCardRef.current, {
                 scale: 2,
                 backgroundColor: null,
@@ -253,10 +296,10 @@ const Vouchers = () => {
             });
             pdf.addImage(imgData, 'PNG', 0, 0, canvas.width / 2, canvas.height / 2);
             pdf.save(`voucher-${shareVoucher.code}.pdf`);
-            toast.success('Voucher PDF downloaded!');
+            toast.success('Voucher PDF saved!');
         } catch (error) {
             console.error('Error exporting PDF:', error);
-            toast.error('Failed to export PDF');
+            toast.error('Failed to generate PDF');
         }
     };
 
@@ -275,14 +318,12 @@ const Vouchers = () => {
                 const file = new File([blob], `voucher-${shareVoucher.code}.png`, { type: 'image/png' });
                 await navigator.share({
                     title: `Discount Voucher: ${shareVoucher.code}`,
-                    text: `Use code ${shareVoucher.code} to get ${shareVoucher.discountType === 'percentage' ? `${shareVoucher.discountValue}% off` : `₦${shareVoucher.discountValue} off`} your purchase!`,
+                    text: `Use code ${shareVoucher.code} to get ${shareVoucher.discountType === 'percentage' ? `${shareVoucher.discountValue}% off` : `${currencySymbol}${shareVoucher.discountValue.toLocaleString()} off`} your purchase!`,
                     files: [file]
                 });
-                toast.success('Voucher shared!');
             });
         } catch (error) {
             if (error.name !== 'AbortError') {
-                console.error('Error sharing:', error);
                 copyToClipboard(shareVoucher.code);
             }
         }
@@ -308,11 +349,11 @@ const Vouchers = () => {
 
     const getStatusBadge = (status) => {
         const styles = {
-            active: { bg: 'var(--success-bg)', color: 'var(--success-text)', icon: <FiCheckCircle size={12} /> },
-            expired: { bg: 'var(--danger-bg)', color: 'var(--danger-text)', icon: <FiXCircle size={12} /> },
-            inactive: { bg: 'var(--bg-tertiary)', color: 'var(--text-tertiary)', icon: <FiXCircle size={12} /> },
-            scheduled: { bg: 'var(--info-bg)', color: 'var(--info-text)', icon: <FiClock size={12} /> },
-            exhausted: { bg: 'var(--warning-bg)', color: 'var(--warning-text)', icon: <FiCheck size={12} /> }
+            active: { bg: 'var(--success-bg)', color: 'var(--success-text)', icon: <CheckCircleIcon size={12} /> },
+            expired: { bg: 'var(--danger-bg)', color: 'var(--danger-text)', icon: <AlertCircleIcon size={12} /> },
+            inactive: { bg: 'var(--bg-tertiary)', color: 'var(--text-tertiary)', icon: <AlertCircleIcon size={12} /> },
+            scheduled: { bg: 'var(--info-bg)', color: 'var(--info-text)', icon: <ClockIcon size={12} /> },
+            exhausted: { bg: 'var(--warning-bg)', color: 'var(--warning-text)', icon: <CheckIcon size={12} /> }
         };
         const style = styles[status];
         return (
@@ -387,9 +428,9 @@ const Vouchers = () => {
                             className={`filter-btn ${filterStatus !== 'all' ? 'active' : ''}`}
                             onClick={() => setShowFilterDropdown(!showFilterDropdown)}
                         >
-                            <FiFilter size={16} /> 
+                            <FilterIcon size={16} /> 
                             <span className="hide-mobile">{filterStatus === 'all' ? 'Filter' : statusFilters.find(s => s.value === filterStatus)?.label}</span>
-                            <FiChevronDown size={14} className="hide-mobile" />
+                            <ChevronDownIcon size={14} className="hide-mobile" />
                         </button>
                         
                         {showFilterDropdown && (
@@ -419,7 +460,7 @@ const Vouchers = () => {
                         )}
                     </div>
                     <button className="add-btn-bordered btn-animate hover-lift add-btn-compact" onClick={() => setShowAddModal(true)} style={{ height: '42px' }}>
-                        <FiPlus size={16} /> <span className="btn-text-full">Create Voucher</span><span className="btn-text-short">Voucher</span>
+                        <PlusIcon size={16} /> <span className="btn-text-full">Create Voucher</span><span className="btn-text-short">Voucher</span>
                     </button>
                 </div>
             </div>
@@ -434,7 +475,7 @@ const Vouchers = () => {
                     <div className="stats-grid">
                         <div className="stat-widget border-purple animate-slide-up delay-100">
                             <div className="stat-header">
-                                <div className="stat-icon purple"><FiGift /></div>
+                                <div className="stat-icon purple"><VoucherIcon /></div>
                             </div>
                             <div className="stat-label">Total Vouchers</div>
                             <div className="stat-value">{stats.total}</div>
@@ -442,7 +483,7 @@ const Vouchers = () => {
                         
                         <div className="stat-widget border-green animate-slide-up delay-200">
                             <div className="stat-header">
-                                <div className="stat-icon green"><FiCheckCircle /></div>
+                                <div className="stat-icon green"><CheckCircleIcon /></div>
                             </div>
                             <div className="stat-label">Active Vouchers</div>
                             <div className="stat-value">{stats.activeCount}</div>
@@ -450,7 +491,7 @@ const Vouchers = () => {
 
                         <div className="stat-widget border-red animate-slide-up delay-300">
                             <div className="stat-header">
-                                <div className="stat-icon red"><FiXCircle /></div>
+                                <div className="stat-icon red"><AlertCircleIcon /></div>
                             </div>
                             <div className="stat-label">Expired</div>
                             <div className="stat-value">{stats.expiredCount}</div>
@@ -458,7 +499,7 @@ const Vouchers = () => {
 
                         <div className="stat-widget border-blue animate-slide-up delay-400">
                             <div className="stat-header">
-                                <div className="stat-icon blue"><FiRefreshCw /></div>
+                                <div className="stat-icon blue"><RefreshIcon /></div>
                             </div>
                             <div className="stat-label">Total Redemptions</div>
                             <div className="stat-value">{stats.totalUsed}</div>
@@ -500,7 +541,7 @@ const Vouchers = () => {
                                                             onClick={() => copyToClipboard(voucher.code)}
                                                             title="Copy code"
                                                         >
-                                                            <FiCopy size={14} />
+                                                            <CopyIcon size={14} />
                                                         </button>
                                                         {voucher.description && (
                                                             <p className="voucher-desc">{voucher.description}</p>
@@ -551,20 +592,20 @@ const Vouchers = () => {
                                                             onClick={() => handleShare(voucher)} 
                                                             title="Share Voucher"
                                                         >
-                                                            <FiShare2 size={16} />
+                                                            <ShareIcon size={16} />
                                                         </button>
                                                         <button 
                                                             className="icon-btn toggle-btn" 
                                                             onClick={() => handleToggleActive(voucher)} 
                                                             title={voucher.isActive ? 'Deactivate' : 'Activate'}
                                                         >
-                                                            {voucher.isActive ? <FiXCircle size={16} /> : <FiCheckCircle size={16} />}
+                                                            {voucher.isActive ? <AlertCircleIcon size={16} /> : <CheckCircleIcon size={16} />}
                                                         </button>
                                                         <button className="icon-btn edit-btn" onClick={() => handleEdit(voucher)} title="Edit">
-                                                            <FiEdit2 size={16} />
+                                                            <EditIcon size={16} />
                                                         </button>
                                                         <button className="icon-btn delete-btn" onClick={() => handleDelete(voucher.id)} title="Delete">
-                                                            <FiTrash2 size={16} />
+                                                            <DeleteIcon size={16} />
                                                         </button>
                                                     </div>
                                                 </td>
@@ -586,7 +627,7 @@ const Vouchers = () => {
                                             <div className="voucher-mobile-code">
                                                 <span className="voucher-code">{voucher.code}</span>
                                                 <button className="copy-btn" onClick={() => copyToClipboard(voucher.code)}>
-                                                    <FiCopy size={14} />
+                                                    <CopyIcon size={14} />
                                                 </button>
                                             </div>
                                             {getStatusBadge(getVoucherStatus(voucher))}
@@ -596,7 +637,7 @@ const Vouchers = () => {
                                         )}
                                         <div className="voucher-mobile-details">
                                             <div className="detail-item">
-                                                <FiPercent size={14} />
+                                                <PercentageIcon size={14} />
                                                 <span>
                                                     {voucher.discountType === 'percentage' 
                                                         ? `${voucher.discountValue}% off` 
@@ -604,7 +645,7 @@ const Vouchers = () => {
                                                 </span>
                                             </div>
                                             <div className="detail-item">
-                                                <FiCalendar size={14} />
+                                                <CalendarIcon size={14} />
                                                 <span>
                                                     {voucher.validUntil 
                                                         ? `Expires ${new Date(voucher.validUntil).toLocaleDateString()}` 
@@ -612,7 +653,7 @@ const Vouchers = () => {
                                                 </span>
                                             </div>
                                             <div className="detail-item">
-                                                <FiRefreshCw size={14} />
+                                                <RefreshIcon size={14} />
                                                 <span>Used {voucher.usedCount || 0} / {voucher.usageLimit || '∞'}</span>
                                             </div>
                                         </div>
@@ -625,16 +666,16 @@ const Vouchers = () => {
                                         )}
                                         <div className="voucher-mobile-actions">
                                             <button className="icon-btn share-btn" onClick={() => handleShare(voucher)} title="Share">
-                                                <FiShare2 size={16} />
+                                                <ShareIcon size={16} />
                                             </button>
                                             <button className="icon-btn toggle-btn" onClick={() => handleToggleActive(voucher)}>
-                                                {voucher.isActive ? <FiXCircle size={16} /> : <FiCheckCircle size={16} />}
+                                                {voucher.isActive ? <AlertCircleIcon size={16} /> : <CheckCircleIcon size={16} />}
                                             </button>
                                             <button className="icon-btn edit-btn" onClick={() => handleEdit(voucher)}>
-                                                <FiEdit2 size={16} />
+                                                <EditIcon size={16} />
                                             </button>
                                             <button className="icon-btn delete-btn" onClick={() => handleDelete(voucher.id)}>
-                                                <FiTrash2 size={16} />
+                                                <DeleteIcon size={16} />
                                             </button>
                                         </div>
                                     </div>
@@ -651,7 +692,7 @@ const Vouchers = () => {
                     <div className="modal-content voucher-modal animate-modal">
                         <div className="modal-header">
                             <h2>{editingVoucher ? 'Edit Voucher' : 'Create New Voucher'}</h2>
-                            <button className="close-btn" onClick={handleCloseModal}><FiX /></button>
+                            <button className="close-btn" onClick={handleCloseModal}><CloseIcon /></button>
                         </div>
                         <form onSubmit={handleSubmit} className="modal-form">
                             <div className="form-group">
@@ -667,7 +708,7 @@ const Vouchers = () => {
                                         style={{ textTransform: 'uppercase' }}
                                     />
                                     <button type="button" className="generate-btn" onClick={generateVoucherCode}>
-                                        <FiRefreshCw size={16} /> Generate
+                                        <RefreshIcon size={16} /> Generate
                                     </button>
                                 </div>
                             </div>
@@ -695,8 +736,8 @@ const Vouchers = () => {
                                     <label>Discount Value</label>
                                     <div className="input-with-icon">
                                         {formData.discountType === 'percentage' 
-                                            ? <FiPercent className="input-icon" />
-                                            : <FiDollarSign className="input-icon" />
+                                            ? <PercentageIcon className="input-icon" />
+                                            : <span className="input-icon-symbol">{currencySymbol}</span>
                                         }
                                         <input
                                             type="number"
@@ -715,7 +756,7 @@ const Vouchers = () => {
                                 <div className="form-group">
                                     <label>Minimum Purchase (Optional)</label>
                                     <div className="input-with-icon">
-                                        <FiDollarSign className="input-icon" />
+                                        <span className="input-icon-symbol">{currencySymbol}</span>
                                         <input
                                             type="number"
                                             name="minPurchase"
@@ -730,7 +771,7 @@ const Vouchers = () => {
                                     <div className="form-group">
                                         <label>Maximum Discount (Optional)</label>
                                         <div className="input-with-icon">
-                                            <FiDollarSign className="input-icon" />
+                                            <span className="input-icon-symbol">{currencySymbol}</span>
                                             <input
                                                 type="number"
                                                 name="maxDiscount"
@@ -800,7 +841,7 @@ const Vouchers = () => {
                                                 className={`brand-chip ${formData.brands.includes(brand) ? 'selected' : ''}`}
                                                 onClick={() => handleBrandToggle(brand)}
                                             >
-                                                {formData.brands.includes(brand) && <FiCheck size={14} />}
+                                                {formData.brands.includes(brand) && <CheckIcon size={14} />}
                                                 {brand}
                                             </button>
                                         ))}
@@ -823,7 +864,7 @@ const Vouchers = () => {
                             <div className="modal-footer">
                                 <button type="button" className="btn-secondary" onClick={handleCloseModal}>Cancel</button>
                                 <button type="submit" className="btn-primary">
-                                    {editingVoucher ? <><FiCheck /> Update Voucher</> : <><FiPlus /> Create Voucher</>}
+                                    {editingVoucher ? <><CheckIcon /> Update Voucher</> : <><PlusIcon /> Create Voucher</>}
                                 </button>
                             </div>
                         </form>
@@ -831,85 +872,81 @@ const Vouchers = () => {
                 </div>
             )}
 
-            {/* Share Voucher Modal */}
+            {/* Share Voucher Modal - More Modern and Compact */}
             {showShareModal && shareVoucher && (
-                <div className="modal-overlay">
-                    <div className="modal-content share-modal animate-modal">
-                        <div className="modal-header">
-                            <h2>Share Voucher</h2>
-                            <button className="close-btn" onClick={() => setShowShareModal(false)}><FiX /></button>
+                <div className="share-modal-overlay">
+                    <div className="share-modal-container compact animate-modal">
+                        <div className="share-modal-header">
+                            <div>
+                                <h2>Share Voucher</h2>
+                                <p>Send this discount to your customers</p>
+                            </div>
+                            <button className="close-btn" onClick={() => setShowShareModal(false)}>
+                                <CloseIcon size={20} />
+                            </button>
                         </div>
-                        
-                        <div className="share-modal-body">
-                            {/* Voucher Card Preview - Redesigned to modern ticket style */}
-                            <div className="voucher-preview-container">
-                                <div className="voucher-card-wrapper" ref={voucherCardRef}>
-                                    <div className="voucher-card-redesign">
-                                        <div className="card-top-section">
-                                            <div className="card-notch notch-left"></div>
-                                            <div className="card-notch notch-right"></div>
-                                        
-                                        <div className="card-brand">RYME</div>
-                                        
-                                        <div className="card-graphic">
-                                            <div className="graphic-circle">
-                                                <FiGift size={40} />
-                                            </div>
-                                        </div>
-                                        
-                                        <div className="card-value-display">
-                                            <div className="value-of-label">Value of</div>
-                                            <div className="main-value">
-                                                {shareVoucher.discountType === 'percentage' 
-                                                    ? `${shareVoucher.discountValue}%` 
-                                                    : `₦${shareVoucher.discountValue.toLocaleString()}`}
-                                                <span className="off-label"> OFF</span>
-                                            </div>
-                                        </div>
-                                        
-                                        <div className="card-description">
-                                            {shareVoucher.description || 'Special Discount Voucher'}
-                                        </div>
 
-                                        <div className="card-extra-info">
-                                            {shareVoucher.minPurchase > 0 && (
-                                                <div className="extra-item">Min. Purchase: ₦{shareVoucher.minPurchase.toLocaleString()}</div>
-                                            )}
-                                            {shareVoucher.brands && shareVoucher.brands.length > 0 && (
-                                                <div className="extra-item">Brands: {shareVoucher.brands.join(', ')}</div>
-                                            )}
+                        <div className="share-modal-body">
+                            {/* Voucher Preview Preview */}
+                            <div className="voucher-preview-area">
+                                <div className="voucher-card-capture" ref={voucherCardRef}>
+                                    <div className="modern-voucher-card">
+                                        <div className="voucher-main-content">
+                                            <div className="voucher-left">
+                                                <div className="voucher-brand">RYME</div>
+                                                <div className="voucher-value-box">
+                                                    <span className="value">
+                                                        {shareVoucher.discountType === 'percentage' 
+                                                            ? `${shareVoucher.discountValue}%` 
+                                                            : `${currencySymbol}${shareVoucher.discountValue.toLocaleString()}`}
+                                                    </span>
+                                                    <span className="off">OFF</span>
+                                                </div>
+                                                <div className="voucher-text">
+                                                    {shareVoucher.description || 'Exclusive Discount'}
+                                                </div>
+                                            </div>
+                                            
+                                            <div className="voucher-divider">
+                                                <div className="notch top"></div>
+                                                <div className="dash-line"></div>
+                                                <div className="notch bottom"></div>
+                                            </div>
+
+                                            <div className="voucher-right">
+                                                <div className="code-tag">PROMO CODE</div>
+                                                <div className="code-display">{shareVoucher.code}</div>
+                                                <div className="expiry-tag">
+                                                    Valid until {shareVoucher.validUntil ? new Date(shareVoucher.validUntil).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' }) : 'No Expiry'}
+                                                </div>
+                                            </div>
                                         </div>
-                                    </div>
-                                    
-                                    <div className="card-dashed-line"></div>
-                                    
-                                    <div className="card-bottom-section">
-                                        <div className="coupon-label">Coupon code</div>
-                                        <div className="coupon-code-container">
-                                            {shareVoucher.code}
+                                        <div className="voucher-footer-strip">
+                                            Present this code at checkout to redeem your discount
                                         </div>
-                                        <div className="validity-date">
-                                            Valid until {shareVoucher.validUntil ? new Date(shareVoucher.validUntil).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' }) : 'forever'}
-                                        </div>
-                                        <div className="footer-tagline">Present at checkout to redeem</div>
                                     </div>
                                 </div>
                             </div>
-                        </div>
 
-                            {/* Share Actions */}
-                            <div className="share-actions">
-                                <button className="share-action-btn png-btn" onClick={exportVoucherAsImage}>
-                                    <FiDownload size={18} />
-                                    <span>Download PNG</span>
+                            <div className="share-options-grid-compact">
+                                <button className="compact-action-btn png" onClick={exportVoucherAsImage}>
+                                    <div className="btn-icon"><DownloadIcon /></div>
+                                    <div className="btn-label">Save Image</div>
                                 </button>
-                                <button className="share-action-btn pdf-btn" onClick={exportVoucherAsPDF}>
-                                    <FiDownload size={18} />
-                                    <span>Download PDF</span>
+                                
+                                <button className="compact-action-btn pdf" onClick={exportVoucherAsPDF}>
+                                    <div className="btn-icon"><ReportsIcon /></div>
+                                    <div className="btn-label">Save PDF</div>
                                 </button>
-                                <button className="share-action-btn share-native-btn" onClick={shareVoucherNative}>
-                                    <FiShare2 size={18} />
-                                    <span>Share</span>
+                                
+                                <button className="compact-action-btn share" onClick={shareVoucherNative}>
+                                    <div className="btn-icon"><ShareIcon /></div>
+                                    <div className="btn-label">Share</div>
+                                </button>
+                                
+                                <button className="compact-action-btn copy" onClick={() => copyToClipboard(shareVoucher.code)}>
+                                    <div className="btn-icon"><CopyIcon /></div>
+                                    <div className="btn-label">Copy Code</div>
                                 </button>
                             </div>
                         </div>

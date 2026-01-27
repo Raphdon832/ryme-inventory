@@ -1,11 +1,32 @@
 import React, { useState, useEffect } from 'react';
-import { FiPlus, FiChevronLeft, FiChevronRight, FiX, FiClock, FiCalendar, FiEdit2, FiTrash2 } from 'react-icons/fi';
+import {
+  PlusIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  CloseIcon,
+  ClockIcon,
+  CalendarIcon,
+  EditIcon,
+  DeleteIcon
+} from '../components/CustomIcons';
 import { collection, addDoc, getDocs, updateDoc, deleteDoc, doc, query, Timestamp } from 'firebase/firestore';
 import { db } from '../api';
+import { usePageState } from '../hooks/usePageState';
 import './Calendar.css';
 
 const Calendar = () => {
-  const [currentDate, setCurrentDate] = useState(new Date());
+  // Persist calendar month/year across navigation
+  const { state: pageState, updateState: updatePageState } = usePageState('calendar', {
+    year: new Date().getFullYear(),
+    month: new Date().getMonth(),
+  }, { persistScroll: true, scrollContainerSelector: '.main-content' });
+
+  const [currentDate, setCurrentDate] = useState(() => {
+    const date = new Date();
+    date.setFullYear(pageState.year);
+    date.setMonth(pageState.month);
+    return date;
+  });
   const [events, setEvents] = useState([]);
   const [showModal, setShowModal] = useState(false);
   const [selectedDate, setSelectedDate] = useState(null);
@@ -27,6 +48,14 @@ const Calendar = () => {
   useEffect(() => {
     fetchEvents();
   }, []);
+
+  // Persist month/year changes
+  useEffect(() => {
+    updatePageState({
+      year: currentDate.getFullYear(),
+      month: currentDate.getMonth(),
+    });
+  }, [currentDate]);
 
   const fetchEvents = async () => {
     try {
@@ -179,7 +208,7 @@ const Calendar = () => {
           <p>Manage your schedule and events</p>
         </div>
         <button className="btn-primary" onClick={() => openNewEventModal()}>
-          <FiPlus /> Add Event
+          <PlusIcon size={18} /> Add Event
         </button>
       </div>
 
@@ -188,9 +217,9 @@ const Calendar = () => {
           <div className="calendar-card">
             <div className="calendar-header">
               <div className="calendar-nav">
-                <button className="nav-btn" onClick={prevMonth}><FiChevronLeft /></button>
+                <button className="nav-btn" onClick={prevMonth}><ChevronLeftIcon size={20} /></button>
                 <h2>{monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}</h2>
-                <button className="nav-btn" onClick={nextMonth}><FiChevronRight /></button>
+                <button className="nav-btn" onClick={nextMonth}><ChevronRightIcon size={20} /></button>
               </div>
               <button className="today-btn" onClick={goToToday}>Today</button>
             </div>
@@ -241,7 +270,7 @@ const Calendar = () => {
 
         <div className="calendar-sidebar">
           <div className="upcoming-card">
-            <h3><FiCalendar /> Upcoming Events</h3>
+            <h3><CalendarIcon size={18} /> Upcoming Events</h3>
             {upcomingEvents.length === 0 ? (
               <p className="no-events">No upcoming events</p>
             ) : (
@@ -252,14 +281,14 @@ const Calendar = () => {
                     <div className="event-details">
                       <div className="event-title">{event.title}</div>
                       <div className="event-date">
-                        <FiClock size={12} />
+                        <ClockIcon size={12} />
                         {new Date(event.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                         {event.time && ` at ${event.time}`}
                       </div>
                     </div>
                     <div className="event-actions">
-                      <button className="icon-btn-sm" onClick={() => openEditModal(event)}><FiEdit2 size={14} /></button>
-                      <button className="icon-btn-sm danger" onClick={() => deleteEvent(event.id)}><FiTrash2 size={14} /></button>
+                      <button className="icon-btn-sm" onClick={() => openEditModal(event)}><EditIcon size={14} /></button>
+                      <button className="icon-btn-sm danger" onClick={() => deleteEvent(event.id)}><DeleteIcon size={14} /></button>
                     </div>
                   </div>
                 ))}
@@ -275,7 +304,7 @@ const Calendar = () => {
           <div className="modal" onClick={e => e.stopPropagation()}>
             <div className="modal-header">
               <h2>{editingEvent ? 'Edit Event' : 'New Event'}</h2>
-              <button className="modal-close" onClick={() => setShowModal(false)}><FiX /></button>
+              <button className="modal-close" onClick={() => setShowModal(false)}><CloseIcon size={20} /></button>
             </div>
             <form onSubmit={handleSubmit}>
               <div className="form-group">

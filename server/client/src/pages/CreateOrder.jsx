@@ -1,11 +1,31 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { FiArrowLeft, FiPlus, FiCheck, FiTrash2, FiSearch, FiShoppingCart, FiUser, FiMapPin, FiAlertCircle, FiEdit2, FiMinus, FiPackage, FiClock, FiWifiOff, FiRefreshCw } from 'react-icons/fi';
+import {
+  ArrowLeftIcon,
+  PlusIcon,
+  CheckIcon,
+  DeleteIcon,
+  SearchIcon,
+  CartIcon,
+  ProfileIcon,
+  MapPinIcon,
+  AlertCircleIcon,
+  EditIcon,
+  MinusIcon,
+  PackageIcon,
+  ClockIcon,
+  WifiOffIcon,
+  RefreshIcon,
+  SaveIcon,
+  DownloadIcon,
+  CloudIcon
+} from '../components/CustomIcons';
 import api from '../api';
 import { useSettings } from '../contexts/SettingsContext';
 import offlineManager from '../utils/offlineManager';
 import soundManager from '../utils/soundManager';
 import { useToast } from '../components/Toast';
+import { usePageState } from '../hooks/usePageState';
 import './CreateOrder.css';
 
 const CreateOrder = () => {
@@ -15,6 +35,9 @@ const CreateOrder = () => {
   const { formatCurrency, currencySymbol } = useSettings();
   const isEditing = Boolean(id);
   const isOfflineOrder = id?.startsWith('offline_');
+
+  // Persist scroll position (but not form data, as that could cause issues)
+  usePageState('createOrder', {}, { persistScroll: true, scrollContainerSelector: '.main-content' });
   
   const [products, setProducts] = useState([]);
   const [customers, setCustomers] = useState([]);
@@ -26,6 +49,8 @@ const CreateOrder = () => {
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [offlineStatus, setOfflineStatus] = useState({ pendingCount: 0, offlineOrdersCount: 0 });
+  const [savingLocally, setSavingLocally] = useState(false);
+  const [localSaveSuccess, setLocalSaveSuccess] = useState(false);
   const [productSearch, setProductSearch] = useState('');
   const [customerSearch, setCustomerSearch] = useState('');
   const [showProductDropdown, setShowProductDropdown] = useState(false);
@@ -397,6 +422,90 @@ const CreateOrder = () => {
     }
   };
 
+  // Save locally first, then sync to cloud if online
+  const handleSaveLocally = async () => {
+    if (!orderData.customer_name || orderData.items.length === 0) {
+      toast.error('Please add customer name and at least one item');
+      return;
+    }
+    
+    setSavingLocally(true);
+    setError(null);
+    
+    try {
+      const vatAmount = calculateVAT();
+      const orderPayload = {
+        customer_id: orderData.customer_id || '',
+        customer_name: orderData.customer_name,
+        customer_address: orderData.customer_address,
+        items: orderData.items.map(item => ({ 
+          product_id: item.product_id,
+          product_name: item.product_name,
+          quantity: item.quantity,
+          discount_percentage: item.discount_percentage || 0,
+          sales_price: item.sales_price,
+          cost: item.cost
+        })),
+        discount: orderData.discount,
+        include_vat: orderData.include_vat,
+        vat_amount: vatAmount,
+        subtotal: calculateSubtotal(),
+        total: calculateGrandTotal(),
+        profit: calculateProfit(),
+        order_date: new Date().toISOString()
+      };
+
+      let savedOrder;
+      
+      if (isEditing && isOfflineOrder) {
+        // Update existing offline order
+        savedOrder = await offlineManager.updateOfflineOrder(id, orderPayload);
+      } else if (isEditing) {
+        // Save as offline update for existing server order
+        savedOrder = await offlineManager.saveOfflineOrder({
+          ...orderPayload,
+          isEdit: true,
+          originalId: id
+        });
+      } else {
+        // Create new offline order
+        savedOrder = await offlineManager.saveOfflineOrder(orderPayload);
+      }
+
+      soundManager.playSuccess();
+      setLocalSaveSuccess(true);
+      setHasUnsavedChanges(false);
+      toast.success('Order saved locally!');
+
+      // If online, attempt to sync to cloud
+      if (isOnline) {
+        try {
+          toast.info('Syncing to cloud...');
+          await offlineManager.syncPendingOperations();
+          toast.success('Synced to cloud!');
+        } catch (syncError) {
+          console.error('Cloud sync failed:', syncError);
+          toast.info('Saved locally. Will sync to cloud later.');
+        }
+      } else {
+        toast.info('Will sync to cloud when online.');
+      }
+
+      // Brief delay to show success state
+      setTimeout(() => {
+        setLocalSaveSuccess(false);
+        navigate('/orders');
+      }, 1500);
+      
+    } catch (err) {
+      console.error('Failed to save locally:', err);
+      soundManager.playError();
+      toast.error('Failed to save locally. Please try again.');
+    } finally {
+      setSavingLocally(false);
+    }
+  };
+
   const handleSaveOffline = async () => {
     setSubmitting(true);
     setError(null);
@@ -512,7 +621,7 @@ const CreateOrder = () => {
     return (
       <div className="create-order-page">
         <div className="create-order-loading">
-          <FiAlertCircle size={48} className="error-icon" />
+          <AlertCircleIcon size={48} className="error-icon" />
           <p className="error-message">{error}</p>
         </div>
       </div>
@@ -534,7 +643,7 @@ const CreateOrder = () => {
       {/* Offline Banner */}
       {!isOnline && (
         <div className="offline-banner">
-          <FiWifiOff size={16} />
+          <WifiOffIcon size={16} />
           <span>You're offline. Orders will be saved locally and synced when you're back online.</span>
         </div>
       )}
@@ -542,7 +651,7 @@ const CreateOrder = () => {
       {/* Success Toast */}
       {successMessage && (
         <div className="success-toast">
-          <FiCheck size={18} />
+          <CheckIcon size={18} />
           <span>{successMessage}</span>
           <button onClick={() => setSuccessMessage(null)}>&times;</button>
         </div>
@@ -551,7 +660,7 @@ const CreateOrder = () => {
       {/* Error Toast */}
       {error && (
         <div className="error-toast">
-          <FiAlertCircle size={18} />
+          <AlertCircleIcon size={18} />
           <span>{error}</span>
           {error.includes('save offline') && (
             <button className="save-offline-btn" onClick={handleSaveOffline}>
@@ -572,12 +681,12 @@ const CreateOrder = () => {
             )}
             {isOfflineOrder && (
               <span className="offline-order-badge">
-                <FiWifiOff size={12} /> Offline
+                <WifiOffIcon size={12} /> Offline
               </span>
             )}
           </h1>
           <Link to="/orders" className="back-link" onClick={(e) => { if (hasUnsavedChanges && !window.confirm('You have unsaved changes. Are you sure you want to leave?')) e.preventDefault(); }}>
-            <FiArrowLeft />
+            <ArrowLeftIcon />
             <span>Back to Orders</span>
           </Link>
         </div>
@@ -588,7 +697,7 @@ const CreateOrder = () => {
             </span>
             {hasUnsavedChanges && (
               <span className="unsaved-badge">
-                <FiEdit2 size={12} /> Unsaved changes
+                <EditIcon size={12} /> Unsaved changes
               </span>
             )}
           </div>
@@ -596,7 +705,7 @@ const CreateOrder = () => {
         <div className="header-actions">
           {!isOnline && (
             <span className="offline-indicator">
-              <FiWifiOff size={14} />
+              <WifiOffIcon size={14} />
             </span>
           )}
           <button 
@@ -606,14 +715,28 @@ const CreateOrder = () => {
             Cancel
           </button>
           <button 
+            className="btn-outline-primary save-local-btn"
+            onClick={handleSaveLocally}
+            disabled={!orderData.customer_name || orderData.items.length === 0 || savingLocally || submitting}
+            title="Save locally first, then sync to cloud"
+          >
+            {savingLocally ? (
+              <><span className="btn-spinner"></span> Saving...</>
+            ) : localSaveSuccess ? (
+              <><CheckIcon size={16} /> Saved!</>
+            ) : (
+              <><SaveIcon size={16} /> <span>Save Local</span></>
+            )}
+          </button>
+          <button 
             className="btn-primary"
             onClick={handleSubmit}
-            disabled={!orderData.customer_name || orderData.items.length === 0 || submitting}
+            disabled={!orderData.customer_name || orderData.items.length === 0 || submitting || savingLocally}
           >
             {submitting ? (
               <><span className="btn-spinner"></span> {isOnline ? (isEditing ? 'Updating...' : 'Creating...') : 'Saving...'}</>
             ) : (
-              <><FiCheck size={16} /> {isOnline ? (isEditing ? 'Update Order' : 'Create Order') : 'Save Offline'}</>
+              <><CloudIcon size={16} /> {isOnline ? (isEditing ? 'Update' : 'Create') : 'Save Offline'}</>
             )}
           </button>
         </div>
@@ -625,14 +748,14 @@ const CreateOrder = () => {
           {/* Customer Info Card */}
           <div className="form-card">
             <h3 className="card-title">
-              <FiUser /> Customer Information
+              <ProfileIcon /> Customer Information
             </h3>
             <div className="form-grid">
               <div className="form-group">
                 <label className="form-label">Customer Name <span className="required">*</span></label>
                 <div className="product-search-wrapper" ref={customerSearchRef}>
                   <div className="search-input-wrapper">
-                    <FiSearch className="search-icon" />
+                    <SearchIcon className="search-icon" />
                     <input 
                       className="form-input"
                       type="text" 
@@ -648,31 +771,43 @@ const CreateOrder = () => {
                     />
                   </div>
                   {showCustomerDropdown && (
-                    <div className="product-dropdown">
-                      {filteredCustomers.length === 0 ? (
-                        <div className="dropdown-empty">No customers found</div>
-                      ) : (
-                        filteredCustomers.slice(0, 6).map((customer) => (
-                          <div
-                            key={customer.id}
-                            className={`dropdown-item ${orderData.customer_id === customer.id ? 'selected' : ''}`}
-                            onClick={() => handleSelectCustomer(customer)}
-                          >
-                            <div className="dropdown-item-info">
-                              <span className="product-name">{customer.name}</span>
-                            </div>
-                            <div className="dropdown-item-meta">
-                              {customer.email && (
-                                <span className="product-price" style={{ fontWeight: 500 }}>{customer.email}</span>
-                              )}
-                              {customer.phone && (
-                                <span className="product-stock">{customer.phone}</span>
-                              )}
-                            </div>
+                    <>
+                      <div className="dropdown-backdrop" onClick={() => setShowCustomerDropdown(false)} />
+                      <div className="product-dropdown customer-dropdown">
+                        <div className="dropdown-header">
+                          <span className="dropdown-title">Select Customer</span>
+                          <span className="dropdown-count">{filteredCustomers.length} found</span>
+                        </div>
+                        {filteredCustomers.length === 0 ? (
+                          <div className="dropdown-empty">
+                            <ProfileIcon size={40} />
+                            <p>No customers found</p>
                           </div>
-                        ))
-                      )}
-                    </div>
+                        ) : (
+                          <div className="dropdown-list">
+                            {filteredCustomers.slice(0, 8).map((customer) => (
+                              <div
+                                key={customer.id}
+                                className={`dropdown-item ${orderData.customer_id === customer.id ? 'selected' : ''}`}
+                                onClick={() => handleSelectCustomer(customer)}
+                              >
+                                <div className="dropdown-item-info">
+                                  <span className="product-name">{customer.name}</span>
+                                </div>
+                                <div className="dropdown-item-meta">
+                                  {customer.email && (
+                                    <span className="customer-email">{customer.email}</span>
+                                  )}
+                                  {customer.phone && (
+                                    <span className="customer-phone">{customer.phone}</span>
+                                  )}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </>
                   )}
                 </div>
               </div>
@@ -692,7 +827,7 @@ const CreateOrder = () => {
           {/* Add Products Card */}
           <div className="form-card">
             <h3 className="card-title">
-              <FiShoppingCart /> Order Items
+              <CartIcon /> Order Items
             </h3>
             
             {/* Add Product Row */}
@@ -700,7 +835,7 @@ const CreateOrder = () => {
               <div className="product-search-wrapper" ref={productSearchRef}>
                 <label className="form-label">Select Product</label>
                 <div className="search-input-wrapper">
-                  <FiSearch className="search-icon" />
+                  <SearchIcon className="search-icon" />
                   <input 
                     className="form-input"
                     type="text"
@@ -715,30 +850,44 @@ const CreateOrder = () => {
                   />
                 </div>
                 {showProductDropdown && (
-                  <div className="product-dropdown">
-                    {filteredProducts.length === 0 ? (
-                      <div className="dropdown-empty">No products found</div>
-                    ) : (
-                      filteredProducts.slice(0, 8).map(p => (
-                        <div 
-                          key={p.id} 
-                          className={`dropdown-item ${currentItem.product_id === p.id ? 'selected' : ''}`}
-                          onClick={() => handleSelectProduct(p)}
-                        >
-                          <div className="dropdown-item-info">
-                            {p.sorting_code && (
-                              <span className="product-code">{p.sorting_code}</span>
-                            )}
-                            <span className="product-name">{p.name}</span>
-                          </div>
-                          <div className="dropdown-item-meta">
-                            <span className="product-price">{formatCurrency(p.sales_price)}</span>
-                            <span className="product-stock">Stock: {p.stock_quantity}</span>
-                          </div>
+                  <>
+                    <div className="dropdown-backdrop" onClick={() => setShowProductDropdown(false)} />
+                    <div className="product-dropdown">
+                      <div className="dropdown-header">
+                        <span className="dropdown-title">Select Product</span>
+                        <span className="dropdown-count">{filteredProducts.length} found</span>
+                      </div>
+                      {filteredProducts.length === 0 ? (
+                        <div className="dropdown-empty">
+                          <PackageIcon size={40} />
+                          <p>No products found</p>
                         </div>
-                      ))
-                    )}
-                  </div>
+                      ) : (
+                        <div className="dropdown-list">
+                          {filteredProducts.slice(0, 10).map(p => (
+                            <div 
+                              key={p.id} 
+                              className={`dropdown-item ${currentItem.product_id === p.id ? 'selected' : ''}`}
+                              onClick={() => handleSelectProduct(p)}
+                            >
+                              <div className="dropdown-item-info">
+                                {p.sorting_code && (
+                                  <span className="product-code">{p.sorting_code}</span>
+                                )}
+                                <span className="product-name">{p.name}</span>
+                              </div>
+                              <div className="dropdown-item-meta">
+                                <span className="product-price">{formatCurrency(p.sales_price)}</span>
+                                <span className={`product-stock ${p.stock_quantity === 0 ? 'out-of-stock' : p.stock_quantity <= 5 ? 'low-stock' : ''}`}>
+                                  {p.stock_quantity === 0 ? 'Out of stock' : `${p.stock_quantity} in stock`}
+                                </span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </>
                 )}
               </div>
               <div className="quantity-input">
@@ -766,7 +915,7 @@ const CreateOrder = () => {
               <div className="add-btn-wrapper">
                 <label className="form-label">&nbsp;</label>
                 <button className="btn-primary add-item-btn" onClick={handleAddItem} type="button">
-                  <FiPlus size={16} /> Add
+                  <PlusIcon size={16} /> Add
                 </button>
               </div>
             </div>
@@ -775,7 +924,7 @@ const CreateOrder = () => {
             {orderData.items.length > 0 && (
               <div className="items-table-wrapper">
                 <div className="items-count">
-                  <FiPackage size={14} />
+                  <PackageIcon size={14} />
                   <span>{orderData.items.length} product{orderData.items.length !== 1 ? 's' : ''} ({getTotalItems()} items total)</span>
                 </div>
                 <div className="table-container">
@@ -815,7 +964,7 @@ const CreateOrder = () => {
                                   onClick={() => handleUpdateItemQuantity(index, item.quantity - 1)}
                                   disabled={item.quantity <= 1}
                                 >
-                                  <FiMinus size={12} />
+                                  <MinusIcon size={12} />
                                 </button>
                                 <input
                                   type="number"
@@ -830,7 +979,7 @@ const CreateOrder = () => {
                                   onClick={() => handleUpdateItemQuantity(index, item.quantity + 1)}
                                   disabled={item.quantity >= availableStock}
                                 >
-                                  <FiPlus size={12} />
+                                  <PlusIcon size={12} />
                                 </button>
                               </div>
                               {availableStock < 10 && (
@@ -870,7 +1019,7 @@ const CreateOrder = () => {
                                 onClick={() => handleRemoveItem(index)}
                                 title="Remove item"
                               >
-                                <FiTrash2 size={14} />
+                                <DeleteIcon size={14} />
                               </button>
                             </td>
                           </tr>
@@ -884,7 +1033,7 @@ const CreateOrder = () => {
 
             {orderData.items.length === 0 && (
               <div className="empty-items">
-                <FiShoppingCart size={32} />
+                <CartIcon size={32} />
                 <p>No items added yet</p>
                 <span>Search and add products above</span>
               </div>
@@ -981,17 +1130,38 @@ const CreateOrder = () => {
 
           {/* Quick Actions */}
           <div className="quick-actions">
-            <button 
-              className="btn-primary full-width"
-              onClick={handleSubmit}
-              disabled={!orderData.customer_name || orderData.items.length === 0 || submitting}
-            >
-              {submitting ? (
-                <><span className="btn-spinner"></span> {isEditing ? 'Updating...' : 'Creating...'}</>
-              ) : (
-                <><FiCheck size={16} /> {isEditing ? 'Update Order' : 'Create Order'}</>
-              )}
-            </button>
+            <div className="quick-actions-row">
+              <button 
+                className="btn-primary"
+                onClick={handleSubmit}
+                disabled={!orderData.customer_name || orderData.items.length === 0 || submitting || savingLocally}
+              >
+                {submitting ? (
+                  <><span className="btn-spinner"></span> {isEditing ? 'Updating...' : 'Creating...'}</>
+                ) : (
+                  <><CloudIcon size={16} /> {isOnline ? (isEditing ? 'Update Order' : 'Create Order') : 'Save Offline'}</>
+                )}
+              </button>
+              <button 
+                className="btn-outline-primary save-local-btn"
+                onClick={handleSaveLocally}
+                disabled={!orderData.customer_name || orderData.items.length === 0 || savingLocally || submitting}
+                title="Save locally first, then sync to cloud"
+              >
+                {savingLocally ? (
+                  <><span className="btn-spinner"></span> Saving...</>
+                ) : localSaveSuccess ? (
+                  <><CheckIcon size={16} /> Saved!</>
+                ) : (
+                  <><SaveIcon size={16} /> Save Local</>
+                )}
+              </button>
+            </div>
+            {!isOnline && (
+              <p className="offline-note">
+                <WifiOffIcon size={12} /> You're offline. Orders will sync when connected.
+              </p>
+            )}
           </div>
         </div>
       </div>

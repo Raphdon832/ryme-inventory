@@ -1,11 +1,27 @@
 import React, { useEffect, useState } from 'react';
-import { FiPlus, FiEdit2, FiTrash2, FiGlobe, FiMail, FiPhone, FiBriefcase } from 'react-icons/fi';
+import {
+  PlusIcon,
+  EditIcon,
+  DeleteIcon,
+  GlobeIcon,
+  MailIcon,
+  PhoneIcon,
+  BriefcaseIcon
+} from '../components/CustomIcons';
 import api from '../api';
 import { useToast } from '../components/Toast';
 import soundManager from '../utils/soundManager';
+import { usePageState } from '../hooks/usePageState';
 
 const Vendors = () => {
   const toast = useToast();
+  
+  // Persisted scroll state
+  const { } = usePageState('vendors', {}, { 
+    persistScroll: true, 
+    scrollContainerSelector: '.main-content' 
+  });
+
   const [vendors, setVendors] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -104,13 +120,13 @@ const Vendors = () => {
           <p>Manage vendors, websites, and contact details</p>
         </div>
         <button className="btn-primary" onClick={openCreateModal}>
-          <FiPlus /> Add Vendor
+          <PlusIcon /> Add Vendor
         </button>
       </div>
 
       <div className="stats-grid">
         <div className="stat-widget border-blue">
-          <div className="stat-icon blue"><FiBriefcase /></div>
+          <div className="stat-icon blue"><BriefcaseIcon /></div>
           <div className="stat-label">Total Vendors</div>
           <div className="stat-value">{new Intl.NumberFormat('en-US').format(vendors.length)}</div>
         </div>
@@ -143,12 +159,12 @@ const Vendors = () => {
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                         {vendor.email && (
                           <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            <FiMail size={14} /> {vendor.email}
+                            <MailIcon size={14} /> {vendor.email}
                           </span>
                         )}
                         {vendor.phone && (
                           <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            <FiPhone size={14} /> {vendor.phone}
+                            <PhoneIcon size={14} /> {vendor.phone}
                           </span>
                         )}
                         {!vendor.email && !vendor.phone && (
@@ -159,7 +175,7 @@ const Vendors = () => {
                     <td>
                       {vendor.website ? (
                         <a href={vendor.website} target="_blank" rel="noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-                          <FiGlobe size={14} /> {vendor.website}
+                          <GlobeIcon size={14} /> {vendor.website}
                         </a>
                       ) : (
                         <span style={{ color: 'var(--text-tertiary)', fontSize: '12px' }}>—</span>
@@ -173,7 +189,7 @@ const Vendors = () => {
                           onClick={() => openEditModal(vendor)}
                           title="Edit vendor"
                         >
-                          <FiEdit2 size={16} />
+                          <EditIcon size={16} />
                         </button>
                         <button
                           className="secondary"
@@ -182,7 +198,7 @@ const Vendors = () => {
                           disabled={deletingId === vendor.id}
                           title="Delete vendor"
                         >
-                          <FiTrash2 size={16} />
+                          <DeleteIcon size={16} />
                         </button>
                       </div>
                     </td>

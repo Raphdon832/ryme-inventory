@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useCallback } from 'react';
-import { FiCheckCircle, FiXCircle, FiAlertCircle, FiInfo, FiX } from 'react-icons/fi';
+import { CheckCircleIcon, AlertCircleIcon, InfoIcon, CloseIcon } from './CustomIcons';
 import './Toast.css';
 
 const ToastContext = createContext(null);
@@ -63,10 +63,10 @@ const ToastItem = ({ toast, onClose }) => {
   const { type, message } = toast;
   
   const icons = {
-    success: <FiCheckCircle size={20} />,
-    error: <FiXCircle size={20} />,
-    warning: <FiAlertCircle size={20} />,
-    info: <FiInfo size={20} />
+    success: <CheckCircleIcon size={20} />,
+    error: <AlertCircleIcon size={20} />,
+    warning: <AlertCircleIcon size={20} />,
+    info: <InfoIcon size={20} />
   };
 
   return (
@@ -78,7 +78,7 @@ const ToastItem = ({ toast, onClose }) => {
         <p className="toast-message">{message}</p>
       </div>
       <button className="toast-close" onClick={onClose}>
-        <FiX size={16} />
+        <CloseIcon size={16} />
       </button>
     </div>
   );

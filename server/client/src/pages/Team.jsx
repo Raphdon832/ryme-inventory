@@ -1,13 +1,29 @@
 import React, { useState, useEffect } from 'react';
-import { FiPlus, FiEdit2, FiTrash2, FiMail, FiPhone, FiUser, FiX, FiUsers, FiUserCheck, FiUserX } from 'react-icons/fi';
+import {
+  PlusIcon,
+  EditIcon,
+  DeleteIcon,
+  MailIcon,
+  PhoneIcon,
+  ProfileIcon,
+  CloseIcon,
+  UsersIcon,
+  UserCheckIcon,
+  UserXIcon
+} from '../components/CustomIcons';
 import { collection, addDoc, getDocs, updateDoc, deleteDoc, doc, query, orderBy, Timestamp } from 'firebase/firestore';
 import { db } from '../api';
 import { useToast } from '../components/Toast';
 import soundManager from '../utils/soundManager';
+import { usePageState } from '../hooks/usePageState';
 import './Team.css';
 
 const Team = () => {
   const toast = useToast();
+  
+  // Persist scroll position
+  usePageState('team', {}, { persistScroll: true, scrollContainerSelector: '.main-content' });
+
   const [members, setMembers] = useState([]);
   const [showModal, setShowModal] = useState(false);
   const [editingMember, setEditingMember] = useState(null);
@@ -146,7 +162,7 @@ const Team = () => {
           <p>Manage your team members</p>
         </div>
         <button className="btn-primary" onClick={() => { setEditingMember(null); setNewMember({ name: '', email: '', phone: '', role: 'Staff', status: 'active' }); setShowModal(true); }}>
-          <FiPlus /> Add Member
+          <PlusIcon /> Add Member
         </button>
       </div>
 
@@ -154,21 +170,21 @@ const Team = () => {
       <div className="stats-grid">
         <div className="stat-widget border-blue animate-slide-up delay-100">
           <div className="stat-header">
-            <div className="stat-icon blue"><FiUsers /></div>
+            <div className="stat-icon blue"><UsersIcon /></div>
           </div>
           <div className="stat-label">Total Members</div>
           <div className="stat-value">{members.length}</div>
         </div>
         <div className="stat-widget border-green animate-slide-up delay-200">
           <div className="stat-header">
-            <div className="stat-icon green"><FiUserCheck /></div>
+            <div className="stat-icon green"><UserCheckIcon /></div>
           </div>
           <div className="stat-label">Active</div>
           <div className="stat-value">{activeCount}</div>
         </div>
         <div className="stat-widget border-orange animate-slide-up delay-300">
           <div className="stat-header">
-            <div className="stat-icon orange"><FiUserX /></div>
+            <div className="stat-icon orange"><UserXIcon /></div>
           </div>
           <div className="stat-label">Inactive</div>
           <div className="stat-value">{inactiveCount}</div>
@@ -179,7 +195,7 @@ const Team = () => {
       <div className="team-grid">
         {members.length === 0 ? (
           <div className="empty-state">
-            <FiUsers size={48} />
+            <UsersIcon size={48} />
             <h3>No team members yet</h3>
             <p>Add your first team member to get started</p>
           </div>
@@ -201,12 +217,12 @@ const Team = () => {
               
               <div className="member-details">
                 <div className="detail-item">
-                  <FiMail size={14} />
+                  <MailIcon size={14} />
                   <span>{member.email}</span>
                 </div>
                 {member.phone && (
                   <div className="detail-item">
-                    <FiPhone size={14} />
+                    <PhoneIcon size={14} />
                     <span>{member.phone}</span>
                   </div>
                 )}
@@ -216,8 +232,8 @@ const Team = () => {
                 <button className="action-btn" onClick={() => toggleStatus(member)}>
                   {member.status === 'active' ? 'Deactivate' : 'Activate'}
                 </button>
-                <button className="icon-btn" onClick={() => openEditModal(member)}><FiEdit2 size={16} /></button>
-                <button className="icon-btn danger" onClick={() => deleteMember(member.id)}><FiTrash2 size={16} /></button>
+                <button className="icon-btn" onClick={() => openEditModal(member)}><EditIcon size={16} /></button>
+                <button className="icon-btn danger" onClick={() => deleteMember(member.id)}><DeleteIcon size={16} /></button>
               </div>
             </div>
           ))
@@ -230,7 +246,7 @@ const Team = () => {
           <div className="modal" onClick={e => e.stopPropagation()}>
             <div className="modal-header">
               <h2>{editingMember ? 'Edit Member' : 'Add Team Member'}</h2>
-              <button className="modal-close" onClick={() => setShowModal(false)}><FiX /></button>
+              <button className="modal-close" onClick={() => setShowModal(false)}><CloseIcon /></button>
             </div>
             <form onSubmit={handleSubmit}>
               <div className="form-group">

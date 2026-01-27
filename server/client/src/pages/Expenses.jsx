@@ -1,11 +1,23 @@
 import React, { useState, useEffect } from 'react';
 import api from '../api';
 import { useSettings } from '../contexts/SettingsContext';
-import { FiPlus, FiTrash2, FiDollarSign, FiCalendar, FiFileText, FiLink, FiAlertCircle } from 'react-icons/fi';
+import {
+  PlusIcon,
+  DeleteIcon,
+  CalendarIcon,
+  ReportsIcon,
+  LinkIcon,
+  AlertCircleIcon
+} from '../components/CustomIcons';
+import { usePageState } from '../hooks/usePageState';
 import './Expenses.css';
 
 const Expenses = () => {
-    const { formatCurrency } = useSettings();
+    const { formatCurrency, currencySymbol } = useSettings();
+    
+    // Persist scroll position
+    usePageState('expenses', {}, { persistScroll: true, scrollContainerSelector: '.main-content' });
+
     const [expenses, setExpenses] = useState([]);
     const [loading, setLoading] = useState(true);
     const [showAddModal, setShowAddModal] = useState(false);
@@ -86,14 +98,14 @@ const Expenses = () => {
                     <p>Track business overheads and order-specific costs.</p>
                 </div>
                 <button className="add-btn-bordered btn-animate hover-lift" onClick={() => setShowAddModal(true)}>
-                    <FiPlus size={16} className="icon-spin" /> Add Expense
+                    <PlusIcon size={16} className="icon-spin" /> Add Expense
                 </button>
             </div>
 
             <div className="stats-grid">
                 <div className="stat-widget border-red animate-slide-up delay-100">
                     <div className="stat-header">
-                        <div className="stat-icon red"><FiDollarSign /></div>
+                        <div className="stat-icon red"><span className="currency-icon-text">{currencySymbol}</span></div>
                     </div>
                     <div className="stat-label">Total Expenses</div>
                     <div className="stat-value">{formatCurrency(totalExpenses)}</div>
@@ -101,7 +113,7 @@ const Expenses = () => {
                 
                 <div className="stat-widget border-blue animate-slide-up delay-200">
                     <div className="stat-header">
-                        <div className="stat-icon blue"><FiFileText /></div>
+                        <div className="stat-icon blue"><ReportsIcon /></div>
                     </div>
                     <div className="stat-label">Total Records</div>
                     <div className="stat-value">{expenses.length}</div>
@@ -144,7 +156,7 @@ const Expenses = () => {
                                             <tr key={expense.id} className="animate-slide-up">
                                                 <td>
                                                     <div className="date-cell">
-                                                        <FiCalendar size={12} />
+                                                        <CalendarIcon size={12} />
                                                         {new Date(expense.date).toLocaleDateString()}
                                                     </div>
                                                 </td>
@@ -155,7 +167,7 @@ const Expenses = () => {
                                                 <td>
                                                     {expense.order_id ? (
                                                         <span className="order-link">
-                                                            <FiLink size={12} /> {orders.find(o => o.id === expense.order_id)?.customer_name || expense.customer_name || `Order #${expense.order_id.slice(0, 5)}`}
+                                                            <LinkIcon size={12} /> {orders.find(o => o.id === expense.order_id)?.customer_name || expense.customer_name || `Order #${expense.order_id.slice(0, 5)}`}
                                                         </span>
                                                     ) : (
                                                         <span className="text-muted">— General —</span>
@@ -164,7 +176,7 @@ const Expenses = () => {
                                                 <td className="amount-cell text-red">{formatCurrency(expense.amount)}</td>
                                                 <td style={{ textAlign: 'right' }}>
                                                     <button className="action-btn delete btn-animate" onClick={() => handleDelete(expense.id)}>
-                                                        <FiTrash2 size={16} />
+                                                        <DeleteIcon size={16} />
                                                     </button>
                                                 </td>
                                             </tr>
@@ -195,11 +207,11 @@ const Expenses = () => {
                                             <div className="expense-mobile-actions">
                                                 {expense.order_id && (
                                                     <span className="order-link small">
-                                                        <FiLink size={10} /> {orders.find(o => o.id === expense.order_id)?.customer_name || expense.customer_name || 'Linked'}
+                                                        <LinkIcon size={10} /> {orders.find(o => o.id === expense.order_id)?.customer_name || expense.customer_name || 'Linked'}
                                                     </span>
                                                 )}
                                                 <button className="action-btn delete btn-animate" onClick={() => handleDelete(expense.id)}>
-                                                    <FiTrash2 size={14} />
+                                                    <DeleteIcon size={14} />
                                                 </button>
                                             </div>
                                         </div>
@@ -240,7 +252,7 @@ const Expenses = () => {
                                 <div className="form-group">
                                     <label>Amount <span className="required">*</span></label>
                                     <div className="input-with-symbol">
-                                        <span className="input-symbol">₦</span>
+                                        <span className="input-symbol">{currencySymbol}</span>
                                         <input 
                                             type="number" 
                                             name="amount" 
@@ -288,7 +300,7 @@ const Expenses = () => {
                                     ))}
                                 </select>
                                 <p className="helper-text">
-                                    <FiAlertCircle size={12} /> Linking deducts this from the order's net profit.
+                                    <AlertCircleIcon size={12} /> Linking deducts this from the order's net profit.
                                 </p>
                             </div>
 

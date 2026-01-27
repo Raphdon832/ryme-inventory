@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { FiX, FiPieChart, FiArrowUpRight, FiPercent, FiRefreshCcw } from 'react-icons/fi';
+import { CloseIcon, PieChartIcon, ArrowUpRightIcon, PercentageIcon, RefreshIcon } from './CustomIcons';
+import { useSettings } from '../contexts/SettingsContext';
 import './PricingSimulator.css';
 
 const PricingSimulator = ({ isOpen, onClose }) => {
+  const { currencySymbol } = useSettings();
   const [cost, setCost] = useState('1000');
   const [markupType, setMarkupType] = useState('percent'); // percent or fixed
   const [markupValue, setMarkupValue] = useState('30');
@@ -57,8 +59,8 @@ const PricingSimulator = ({ isOpen, onClose }) => {
     <div className="pricing-modal" onClick={onClose}>
       <div className="pricing-container" onClick={e => e.stopPropagation()}>
         <div className="pricing-header">
-          <h3><FiPieChart /> Pricing & Markup Simulator</h3>
-          <button className="pricing-close" onClick={onClose}><FiX size={20} /></button>
+          <h3><PieChartIcon size={18} /> Pricing & Markup Simulator</h3>
+          <button className="pricing-close" onClick={onClose}><CloseIcon size={20} /></button>
         </div>
 
         <div className="pricing-content">
@@ -76,7 +78,7 @@ const PricingSimulator = ({ isOpen, onClose }) => {
                   onClick={() => setMarkupType(markupType === 'percent' ? 'fixed' : 'percent')}
                   title="Toggle Markup Type"
                 >
-                  <FiRefreshCcw size={14} />
+                  <RefreshIcon size={14} />
                 </button>
               </div>
             </div>
@@ -90,21 +92,21 @@ const PricingSimulator = ({ isOpen, onClose }) => {
           <div className="results-grid">
             <div className="result-card primary">
               <span className="res-label">Base Selling Price</span>
-              <span className="res-value">₦{formatNumber(stats.sellingPrice)}</span>
+              <span className="res-value">{currencySymbol}{formatNumber(stats.sellingPrice)}</span>
             </div>
             
             <div className="result-card secondary highlighting">
               <span className="res-label">Final Price (After Discount)</span>
-              <span className="res-value highlight">₦{formatNumber(stats.finalPrice)}</span>
+              <span className="res-value highlight">{currencySymbol}{formatNumber(stats.finalPrice)}</span>
             </div>
 
             <div className="stats-row">
               <div className="stat-pill">
-                <FiArrowUpRight size={14} color="#10b981" />
-                <span>Profit: <b>₦{formatNumber(stats.netProfit)}</b></span>
+                <ArrowUpRightIcon size={14} color="#10b981" />
+                <span>Profit: <b>{currencySymbol}{formatNumber(stats.netProfit)}</b></span>
               </div>
               <div className="stat-pill">
-                <FiPercent size={14} color="#3b82f6" />
+                <PercentageIcon size={14} color="#3b82f6" />
                 <span>Margin: <b>{stats.margin}%</b></span>
               </div>
             </div>

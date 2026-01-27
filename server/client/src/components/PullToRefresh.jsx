@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { FiRefreshCw } from 'react-icons/fi';
+import { RefreshIcon } from './CustomIcons';
 import usePullToRefresh from '../hooks/usePullToRefresh';
 import './PullToRefresh.css';
 
@@ -62,7 +62,7 @@ const PullToRefresh = ({ children, onRefresh, disabled = false }) => {
             transform: `rotate(${progress * 360}deg)`,
           }}
         >
-          <FiRefreshCw size={22} />
+          <RefreshIcon size={22} />
         </div>
         <span className="pull-text">
           {isRefreshing 

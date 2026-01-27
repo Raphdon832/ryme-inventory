@@ -1,12 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { 
-  FiBox, 
-  FiShoppingCart, 
-  FiTruck, 
-  FiBarChart2, 
-  FiUser,
-  FiTarget
-} from 'react-icons/fi';
+  BoxIcon, 
+  CartIcon, 
+  ShippingIcon, 
+  AnalyticsIcon, 
+  ProfileIcon,
+  TargetIcon
+} from './CustomIcons';
 import './Splash.css';
 
 const Splash = ({ duration = 2500, onDone }) => {
@@ -55,19 +55,19 @@ const Splash = ({ duration = 2500, onDone }) => {
           </div>
           
           {/* Top Right */}
-          <div className="orbit-icon icon-2"><FiBarChart2 /></div>
+          <div className="orbit-icon icon-2"><AnalyticsIcon size={24} /></div>
           
           {/* Bottom Right */}
-          <div className="orbit-icon icon-3"><FiShoppingCart /></div>
+          <div className="orbit-icon icon-3"><CartIcon size={24} /></div>
           
           {/* Bottom */}
-          <div className="orbit-icon icon-4"><FiUser /></div>
+          <div className="orbit-icon icon-4"><ProfileIcon size={24} /></div>
           
           {/* Bottom Left */}
-          <div className="orbit-icon icon-5"><FiBox /></div>
+          <div className="orbit-icon icon-5"><BoxIcon size={24} /></div>
           
           {/* Top Left */}
-          <div className="orbit-icon icon-6"><FiTarget /></div>
+          <div className="orbit-icon icon-6"><TargetIcon size={24} /></div>
         </div>
       </div>
       

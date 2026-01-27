@@ -1,33 +1,35 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { NavLink } from 'react-router-dom';
 import {
-  FiHome,
-  FiBox,
-  FiShoppingCart,
-  FiSettings,
-  FiLogOut,
-  FiCheckSquare,
-  FiCalendar,
-  FiBarChart2,
-  FiUsers,
-  FiUser,
-  FiTruck,
-  FiHelpCircle,
-  FiClock,
-  FiHash,
-  FiRefreshCw,
-  FiCpu,
-  FiDollarSign,
-  FiPieChart,
-  FiEdit3,
-  FiTrendingUp,
-  FiGift
-} from 'react-icons/fi';
+  DashboardIcon,
+  BoxIcon,
+  CartIcon,
+  ProfileIcon,
+  ShippingIcon,
+  TasksIcon,
+  CalendarIcon,
+  ClockIcon,
+  AnalyticsIcon,
+  IncomeIcon,
+  TaxesIcon,
+  VoucherIcon,
+  UsersIcon,
+  SettingsIcon,
+  HelpIcon,
+  CalculatorIcon,
+  UnitConverterIcon,
+  BarcodeIcon,
+  PricingIcon,
+  NotepadIcon,
+  LogoutIcon
+} from './CustomIcons';
 import { collection, onSnapshot, query, where } from 'firebase/firestore';
 import { db } from '../api';
+import { useSettings } from '../contexts/SettingsContext';
 import './Sidebar.css';
 
 const Sidebar = ({ isOpen, onClose, onOpenCalculator, onOpenConverter, onOpenBarcode, onOpenCurrency, onOpenPricing, onOpenScratchpad }) => {
+  const { currencySymbol } = useSettings();
   const [pendingTasksCount, setPendingTasksCount] = useState(0);
   const [swipeOffset, setSwipeOffset] = useState(0);
   const [isSwipingNav, setIsSwipingNav] = useState(false);
@@ -158,7 +160,7 @@ const Sidebar = ({ isOpen, onClose, onOpenCalculator, onOpenConverter, onOpenBar
           onClick={() => onClose && onClose()}
           end
         >
-          <span className="nav-icon"><FiHome /></span>
+          <span className="nav-icon"><DashboardIcon size={20} /></span>
           <span>Dashboard</span>
         </NavLink>
 
@@ -167,7 +169,7 @@ const Sidebar = ({ isOpen, onClose, onOpenCalculator, onOpenConverter, onOpenBar
           className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
           onClick={() => onClose && onClose()}
         >
-          <span className="nav-icon"><FiBox /></span>
+          <span className="nav-icon"><BoxIcon size={20} /></span>
           <span>Inventory</span>
         </NavLink>
 
@@ -176,7 +178,7 @@ const Sidebar = ({ isOpen, onClose, onOpenCalculator, onOpenConverter, onOpenBar
           className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
           onClick={() => onClose && onClose()}
         >
-          <span className="nav-icon"><FiShoppingCart /></span>
+          <span className="nav-icon"><CartIcon size={20} /></span>
           <span>Orders</span>
         </NavLink>
 
@@ -185,7 +187,7 @@ const Sidebar = ({ isOpen, onClose, onOpenCalculator, onOpenConverter, onOpenBar
           className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
           onClick={() => onClose && onClose()}
         >
-          <span className="nav-icon"><FiUser /></span>
+          <span className="nav-icon"><ProfileIcon size={20} /></span>
           <span>Customers</span>
         </NavLink>
 
@@ -194,7 +196,7 @@ const Sidebar = ({ isOpen, onClose, onOpenCalculator, onOpenConverter, onOpenBar
           className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
           onClick={() => onClose && onClose()}
         >
-          <span className="nav-icon"><FiTruck /></span>
+          <span className="nav-icon"><ShippingIcon size={20} /></span>
           <span>Vendors</span>
         </NavLink>
 
@@ -203,7 +205,7 @@ const Sidebar = ({ isOpen, onClose, onOpenCalculator, onOpenConverter, onOpenBar
           className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
           onClick={() => onClose && onClose()}
         >
-          <span className="nav-icon"><FiCheckSquare /></span>
+          <span className="nav-icon"><TasksIcon size={20} /></span>
           <span>Tasks</span>
           {pendingTasksCount > 0 && (
             <span className="nav-badge">{pendingTasksCount > 99 ? '99+' : pendingTasksCount}</span>
@@ -215,7 +217,7 @@ const Sidebar = ({ isOpen, onClose, onOpenCalculator, onOpenConverter, onOpenBar
           className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
           onClick={() => onClose && onClose()}
         >
-          <span className="nav-icon"><FiCalendar /></span>
+          <span className="nav-icon"><CalendarIcon size={20} /></span>
           <span>Calendar</span>
         </NavLink>
 
@@ -224,7 +226,7 @@ const Sidebar = ({ isOpen, onClose, onOpenCalculator, onOpenConverter, onOpenBar
           className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
           onClick={() => onClose && onClose()}
         >
-          <span className="nav-icon"><FiClock /></span>
+          <span className="nav-icon"><ClockIcon size={20} /></span>
           <span>Activity Log</span>
         </NavLink>
 
@@ -233,7 +235,7 @@ const Sidebar = ({ isOpen, onClose, onOpenCalculator, onOpenConverter, onOpenBar
           className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
           onClick={() => onClose && onClose()}
         >
-          <span className="nav-icon"><FiBarChart2 /></span>
+          <span className="nav-icon"><AnalyticsIcon size={20} /></span>
           <span>Analytics</span>
         </NavLink>
 
@@ -242,7 +244,7 @@ const Sidebar = ({ isOpen, onClose, onOpenCalculator, onOpenConverter, onOpenBar
           className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
           onClick={() => onClose && onClose()}
         >
-          <span className="nav-icon"><FiDollarSign /></span>
+          <span className="nav-icon"><span className="currency-symbol-icon">{currencySymbol}</span></span>
           <span>Expenses</span>
         </NavLink>
 
@@ -251,7 +253,7 @@ const Sidebar = ({ isOpen, onClose, onOpenCalculator, onOpenConverter, onOpenBar
           className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
           onClick={() => onClose && onClose()}
         >
-          <span className="nav-icon"><FiTrendingUp /></span>
+          <span className="nav-icon"><IncomeIcon size={20} /></span>
           <span>Income</span>
         </NavLink>
 
@@ -260,7 +262,7 @@ const Sidebar = ({ isOpen, onClose, onOpenCalculator, onOpenConverter, onOpenBar
           className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
           onClick={() => onClose && onClose()}
         >
-          <span className="nav-icon"><FiPieChart /></span>
+          <span className="nav-icon"><TaxesIcon size={20} /></span>
           <span>Taxes</span>
         </NavLink>
 
@@ -269,7 +271,7 @@ const Sidebar = ({ isOpen, onClose, onOpenCalculator, onOpenConverter, onOpenBar
           className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
           onClick={() => onClose && onClose()}
         >
-          <span className="nav-icon"><FiGift /></span>
+          <span className="nav-icon"><VoucherIcon size={20} /></span>
           <span>Vouchers</span>
         </NavLink>
 
@@ -278,7 +280,7 @@ const Sidebar = ({ isOpen, onClose, onOpenCalculator, onOpenConverter, onOpenBar
           className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
           onClick={() => onClose && onClose()}
         >
-          <span className="nav-icon"><FiUsers /></span>
+          <span className="nav-icon"><UsersIcon size={20} /></span>
           <span>Team</span>
         </NavLink>
 
@@ -289,7 +291,7 @@ const Sidebar = ({ isOpen, onClose, onOpenCalculator, onOpenConverter, onOpenBar
           className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
           onClick={() => onClose && onClose()}
         >
-          <span className="nav-icon"><FiSettings /></span>
+          <span className="nav-icon"><SettingsIcon size={20} /></span>
           <span>Settings</span>
         </NavLink>
 
@@ -298,12 +300,12 @@ const Sidebar = ({ isOpen, onClose, onOpenCalculator, onOpenConverter, onOpenBar
           className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
           onClick={() => onClose && onClose()}
         >
-          <span className="nav-icon"><FiHelpCircle /></span>
+          <span className="nav-icon"><HelpIcon size={20} /></span>
           <span>Help</span>
         </NavLink>
 
         <div className="nav-item">
-          <span className="nav-icon"><FiLogOut /></span>
+          <span className="nav-icon"><LogoutIcon size={20} /></span>
           <span>Logout</span>
         </div>
 
@@ -317,7 +319,7 @@ const Sidebar = ({ isOpen, onClose, onOpenCalculator, onOpenConverter, onOpenBar
           }}
           style={{ cursor: 'pointer' }}
         >
-          <span className="nav-icon"><FiHash /></span>
+          <span className="nav-icon"><CalculatorIcon size={20} /></span>
           <span>Calculator</span>
         </div>
 
@@ -329,7 +331,7 @@ const Sidebar = ({ isOpen, onClose, onOpenCalculator, onOpenConverter, onOpenBar
           }}
           style={{ cursor: 'pointer' }}
         >
-          <span className="nav-icon"><FiRefreshCw /></span>
+          <span className="nav-icon"><UnitConverterIcon size={20} /></span>
           <span>Unit Converter</span>
         </div>
 
@@ -341,7 +343,7 @@ const Sidebar = ({ isOpen, onClose, onOpenCalculator, onOpenConverter, onOpenBar
           }}
           style={{ cursor: 'pointer' }}
         >
-          <span className="nav-icon"><FiCpu /></span>
+          <span className="nav-icon"><BarcodeIcon size={20} /></span>
           <span>Asset Tag Tool</span>
         </div>
 
@@ -353,7 +355,7 @@ const Sidebar = ({ isOpen, onClose, onOpenCalculator, onOpenConverter, onOpenBar
           }}
           style={{ cursor: 'pointer' }}
         >
-          <span className="nav-icon"><FiDollarSign /></span>
+          <span className="nav-icon"><span className="currency-symbol-icon">{currencySymbol}</span></span>
           <span>Currency Converter</span>
         </div>
 
@@ -365,7 +367,7 @@ const Sidebar = ({ isOpen, onClose, onOpenCalculator, onOpenConverter, onOpenBar
           }}
           style={{ cursor: 'pointer' }}
         >
-          <span className="nav-icon"><FiPieChart /></span>
+          <span className="nav-icon"><PricingIcon size={20} /></span>
           <span>Pricing Simulator</span>
         </div>
 
@@ -377,7 +379,7 @@ const Sidebar = ({ isOpen, onClose, onOpenCalculator, onOpenConverter, onOpenBar
           }}
           style={{ cursor: 'pointer' }}
         >
-          <span className="nav-icon"><FiEdit3 /></span>
+          <span className="nav-icon"><NotepadIcon size={20} /></span>
           <span>Scratchpad</span>
         </div>
       </nav>

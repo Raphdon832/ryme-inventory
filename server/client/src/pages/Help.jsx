@@ -1,10 +1,36 @@
-import React, { useState } from 'react';
-import { FiHelpCircle, FiBook, FiMessageCircle, FiMail, FiChevronDown, FiChevronUp, FiExternalLink, FiBox, FiShoppingCart, FiUsers, FiBarChart2, FiCalendar, FiCheckSquare } from 'react-icons/fi';
+import React, { useState, useEffect } from 'react';
+import {
+  HelpIcon,
+  BookIcon,
+  MessageCircleIcon,
+  MailIcon,
+  ChevronDownIcon,
+  ChevronUpIcon,
+  ExternalLinkIcon,
+  BoxIcon,
+  CartIcon,
+  UsersIcon,
+  AnalyticsIcon,
+  CalendarIcon,
+  CheckSquareIcon
+} from '../components/CustomIcons';
+import { usePageState } from '../hooks/usePageState';
 import './Help.css';
 
 const Help = () => {
-  const [expandedFaq, setExpandedFaq] = useState(null);
-  const [activeCategory, setActiveCategory] = useState('general');
+  // Persist active category and expanded FAQ
+  const { state: pageState, updateState: updatePageState } = usePageState('help', {
+    activeCategory: 'general',
+    expandedFaq: null,
+  }, { persistScroll: true, scrollContainerSelector: '.main-content' });
+
+  const [expandedFaq, setExpandedFaq] = useState(pageState.expandedFaq);
+  const [activeCategory, setActiveCategory] = useState(pageState.activeCategory);
+
+  // Persist state changes
+  useEffect(() => {
+    updatePageState({ activeCategory, expandedFaq });
+  }, [activeCategory, expandedFaq]);
 
   const faqs = {
     general: [
@@ -104,7 +130,7 @@ const Help = () => {
 
       {/* Quick Links */}
       <div className="help-section">
-        <h2><FiBook /> Quick Start Guide</h2>
+        <h2><BookIcon /> Quick Start Guide</h2>
         <div className="quick-links-grid">
           {quickLinks.map((link, index) => (
             <div key={index} className="quick-link-card">
@@ -122,7 +148,7 @@ const Help = () => {
 
       {/* FAQ Section */}
       <div className="help-section">
-        <h2><FiHelpCircle /> Frequently Asked Questions</h2>
+        <h2><HelpIcon /> Frequently Asked Questions</h2>
         
         <div className="faq-categories">
           {categories.map(cat => (
@@ -148,7 +174,7 @@ const Help = () => {
                 onClick={() => setExpandedFaq(expandedFaq === index ? null : index)}
               >
                 <span>{faq.question}</span>
-                {expandedFaq === index ? <FiChevronUp /> : <FiChevronDown />}
+                {expandedFaq === index ? <ChevronUpIcon /> : <ChevronDownIcon />}
               </button>
               {expandedFaq === index && (
                 <div className="faq-answer">
@@ -162,28 +188,28 @@ const Help = () => {
 
       {/* Contact Section */}
       <div className="help-section contact-section">
-        <h2><FiMessageCircle /> Need More Help?</h2>
+        <h2><MessageCircleIcon /> Need More Help?</h2>
         <div className="contact-cards">
           <div className="contact-card">
             <div className="contact-icon">
-              <FiMail size={24} />
+              <MailIcon size={24} />
             </div>
             <h4>Email Support</h4>
             <p>Get help from our support team</p>
             <a href="mailto:support@rymeinteriors.com" className="contact-link">
               support@rymeinteriors.com
-              <FiExternalLink size={14} />
+              <ExternalLinkIcon size={14} />
             </a>
           </div>
           <div className="contact-card">
             <div className="contact-icon">
-              <FiMessageCircle size={24} />
+              <MessageCircleIcon size={24} />
             </div>
             <h4>WhatsApp</h4>
             <p>Chat with us directly</p>
             <a href="https://wa.me/2348000000000" target="_blank" rel="noopener noreferrer" className="contact-link">
               Send Message
-              <FiExternalLink size={14} />
+              <ExternalLinkIcon size={14} />
             </a>
           </div>
         </div>

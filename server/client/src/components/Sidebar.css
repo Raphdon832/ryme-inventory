@@ -110,6 +110,14 @@
   -webkit-tap-highlight-color: transparent;
 }
 
+.currency-symbol-icon {
+  font-weight: 700;
+  font-size: 1rem;
+  width: 20px;
+  text-align: center;
+  display: inline-block;
+}
+
 .nav-item:hover {
   background-color: var(--sidebar-hover);
   color: var(--text-primary);

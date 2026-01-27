@@ -1,7 +1,22 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import api from '../api';
-import { FiClock, FiTrash2, FiRefreshCw, FiAlertCircle, FiShoppingCart, FiBox, FiEdit, FiPlus, FiCheck, FiX, FiChevronRight, FiChevronDown, FiMinus } from 'react-icons/fi';
+import {
+  ClockIcon,
+  DeleteIcon,
+  RefreshIcon,
+  AlertCircleIcon,
+  CartIcon,
+  BoxIcon,
+  EditIcon,
+  PlusIcon,
+  CheckIcon,
+  CloseIcon,
+  ChevronRightIcon,
+  ChevronDownIcon,
+  MinusIcon
+} from '../components/CustomIcons';
 import useScrollLock from '../hooks/useScrollLock';
+import { usePageState } from '../hooks/usePageState';
 import { useSettings } from '../contexts/SettingsContext';
 import './ActivityLog.css';
 
@@ -9,17 +24,33 @@ const INITIAL_VISIBLE_COUNT = 10;
 
 const ActivityLog = () => {
   const { formatCurrency } = useSettings();
-  const [activeTab, setActiveTab] = useState('activity');
+  
+  // Persisted page state
+  const { state: pageState, updateState: updatePageState } = usePageState('activity-log', {
+    activeTab: 'activity',
+    expandedDates: {},
+    visibleCount: INITIAL_VISIBLE_COUNT,
+  }, { persistScroll: true, scrollContainerSelector: '.main-content' });
+
   const [activityLog, setActivityLog] = useState([]);
   const [recycleBin, setRecycleBin] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(null);
   const [showRestoreConfirm, setShowRestoreConfirm] = useState(null);
   const [selectedActivity, setSelectedActivity] = useState(null);
-  const [expandedDates, setExpandedDates] = useState({});
-  const [visibleCount, setVisibleCount] = useState(INITIAL_VISIBLE_COUNT);
   const [restoring, setRestoring] = useState(false);
   const [deleting, setDeleting] = useState(false);
+
+  // Use persisted state
+  const activeTab = pageState.activeTab;
+  const expandedDates = pageState.expandedDates;
+  const visibleCount = pageState.visibleCount;
+  
+  const setActiveTab = (value) => updatePageState({ activeTab: value });
+  const setExpandedDates = (value) => updatePageState({ 
+    expandedDates: typeof value === 'function' ? value(expandedDates) : value 
+  });
+  const setVisibleCount = (value) => updatePageState({ visibleCount: value });
 
   // Lock scroll when any confirmation modal is open
   useScrollLock(showDeleteConfirm !== null || showRestoreConfirm !== null || selectedActivity !== null);
@@ -41,10 +72,12 @@ const ActivityLog = () => {
       setActivityLog(activities);
       setRecycleBin(recycled);
       
-      // Auto-expand today and yesterday by default
-      const today = new Date().toDateString();
-      const yesterday = new Date(Date.now() - 86400000).toDateString();
-      setExpandedDates({ [today]: true, [yesterday]: true });
+      // Auto-expand today and yesterday by default if not already set
+      if (Object.keys(expandedDates).length === 0) {
+        const today = new Date().toDateString();
+        const yesterday = new Date(Date.now() - 86400000).toDateString();
+        setExpandedDates({ [today]: true, [yesterday]: true });
+      }
     } catch (error) {
       console.error('Error fetching data:', error);
     }
@@ -137,30 +170,30 @@ const ActivityLog = () => {
   const getActionIcon = (action) => {
     switch (action) {
       case 'delete':
-        return <FiTrash2 className="action-icon delete" />;
+        return <DeleteIcon className="action-icon delete" />;
       case 'restore':
-        return <FiRefreshCw className="action-icon restore" />;
+        return <RefreshIcon className="action-icon restore" />;
       case 'create':
-        return <FiPlus className="action-icon create" />;
+        return <PlusIcon className="action-icon create" />;
       case 'update':
-        return <FiEdit className="action-icon update" />;
+        return <EditIcon className="action-icon update" />;
       case 'permanent_delete':
-        return <FiX className="action-icon permanent-delete" />;
+        return <CloseIcon className="action-icon permanent-delete" />;
       case 'auto_cleanup':
-        return <FiClock className="action-icon cleanup" />;
+        return <ClockIcon className="action-icon cleanup" />;
       default:
-        return <FiClock className="action-icon" />;
+        return <ClockIcon className="action-icon" />;
     }
   };
 
   const getEntityIcon = (entityType) => {
     switch (entityType) {
       case 'order':
-        return <FiShoppingCart />;
+        return <CartIcon />;
       case 'product':
-        return <FiBox />;
+        return <BoxIcon />;
       default:
-        return <FiClock />;
+        return <ClockIcon />;
     }
   };
 
@@ -208,7 +241,7 @@ const ActivityLog = () => {
           <p>Track all activities and manage deleted items</p>
         </div>
         <button className="btn-secondary" onClick={fetchData}>
-          <FiRefreshCw size={16} /> Refresh
+          <RefreshIcon size={16} /> Refresh
         </button>
       </div>
 
@@ -218,7 +251,7 @@ const ActivityLog = () => {
           className={`tab-btn ${activeTab === 'activity' ? 'active' : ''}`}
           onClick={() => setActiveTab('activity')}
         >
-          <FiClock size={16} />
+          <ClockIcon size={16} />
           Activity Log
           <span className="tab-count">{activityLog.length}</span>
         </button>
@@ -226,7 +259,7 @@ const ActivityLog = () => {
           className={`tab-btn ${activeTab === 'recycle' ? 'active' : ''}`}
           onClick={() => setActiveTab('recycle')}
         >
-          <FiTrash2 size={16} />
+          <DeleteIcon size={16} />
           Recycle Bin
           <span className="tab-count">{recycleBin.length}</span>
         </button>
@@ -244,7 +277,7 @@ const ActivityLog = () => {
             <div className="activity-groups">
               {activityLog.length === 0 ? (
                 <div className="empty-state">
-                  <FiClock size={48} style={{ opacity: 0.3 }} />
+                  <ClockIcon size={48} style={{ opacity: 0.3 }} />
                   <h3>No activity yet</h3>
                   <p>Activities will appear here as you use the app</p>
                 </div>
@@ -257,7 +290,7 @@ const ActivityLog = () => {
                         onClick={() => toggleDateExpanded(group.date)}
                       >
                         <div className="date-group-title">
-                          {expandedDates[group.date] ? <FiChevronDown size={18} /> : <FiChevronRight size={18} />}
+                          {expandedDates[group.date] ? <ChevronDownIcon size={18} /> : <ChevronRightIcon size={18} />}
                           <span>{formatDateHeader(group.date)}</span>
                           <span className="date-group-count">{group.activities.length}{group.hasMore ? '+' : ''}</span>
                         </div>
@@ -287,7 +320,7 @@ const ActivityLog = () => {
                                 </div>
                               </div>
                               <div className="activity-arrow">
-                                <FiChevronRight size={18} />
+                                <ChevronRightIcon size={18} />
                               </div>
                             </div>
                           ))}
@@ -298,7 +331,7 @@ const ActivityLog = () => {
                   
                   {hasMoreActivities && (
                     <button className="see-more-btn" onClick={handleSeeMore}>
-                      <FiChevronDown size={16} />
+                      <ChevronDownIcon size={16} />
                       See More ({totalActivities - visibleCount} remaining)
                     </button>
                   )}
@@ -312,7 +345,7 @@ const ActivityLog = () => {
             <div className="recycle-bin-list">
               {recycleBin.length === 0 ? (
                 <div className="empty-state">
-                  <FiTrash2 size={48} style={{ opacity: 0.3 }} />
+                  <DeleteIcon size={48} style={{ opacity: 0.3 }} />
                   <h3>Recycle bin is empty</h3>
                   <p>Deleted items will appear here for 50 days</p>
                 </div>
@@ -335,7 +368,7 @@ const ActivityLog = () => {
                           <span className="recycle-type">{item.type}</span>
                           <span className="recycle-deleted">Deleted {formatTimeAgo(item.deleted_at)}</span>
                           <span className={`recycle-expires ${daysLeft <= 7 ? 'warning' : ''}`}>
-                            <FiAlertCircle size={12} />
+                            <AlertCircleIcon size={12} />
                             {daysLeft} days left
                           </span>
                         </div>
@@ -346,14 +379,14 @@ const ActivityLog = () => {
                           onClick={() => setShowRestoreConfirm(item.id)}
                           title="Restore"
                         >
-                          <FiRefreshCw size={18} />
+                          <RefreshIcon size={18} />
                         </button>
                         <button 
                           className="btn-icon delete"
                           onClick={() => setShowDeleteConfirm(item.id)}
                           title="Delete Permanently"
                         >
-                          <FiTrash2 size={18} />
+                          <DeleteIcon size={18} />
                         </button>
                       </div>
                     </div>
@@ -370,7 +403,7 @@ const ActivityLog = () => {
         <div className="modal-overlay" onClick={() => setShowRestoreConfirm(null)}>
           <div className="modal-content confirm-modal" onClick={e => e.stopPropagation()}>
             <div className="modal-header">
-              <h3><FiRefreshCw style={{ marginRight: '8px' }} /> Restore Item</h3>
+              <h3><RefreshIcon style={{ marginRight: '8px' }} /> Restore Item</h3>
             </div>
             <div className="modal-body">
               <p>Are you sure you want to restore this item?</p>
@@ -381,7 +414,7 @@ const ActivityLog = () => {
                 {restoring ? (
                   <><span className="btn-spinner"></span> Restoring...</>
                 ) : (
-                  <><FiCheck size={16} /> Restore</>
+                  <><CheckIcon size={16} /> Restore</>
                 )}
               </button>
             </div>
@@ -395,7 +428,7 @@ const ActivityLog = () => {
           <div className="modal-content confirm-modal" onClick={e => e.stopPropagation()}>
             <div className="modal-header">
               <h3 style={{ color: 'var(--danger-text)' }}>
-                <FiAlertCircle style={{ marginRight: '8px' }} /> Permanent Delete
+                <AlertCircleIcon style={{ marginRight: '8px' }} /> Permanent Delete
               </h3>
             </div>
             <div className="modal-body">
@@ -408,7 +441,7 @@ const ActivityLog = () => {
                 {deleting ? (
                   <><span className="btn-spinner"></span> Deleting...</>
                 ) : (
-                  <><FiTrash2 size={16} /> Delete Permanently</>
+                  <><DeleteIcon size={16} /> Delete Permanently</>
                 )}
               </button>
             </div>
@@ -433,7 +466,7 @@ const ActivityLog = () => {
                 </div>
               </div>
               <button className="modal-close-btn" onClick={() => setSelectedActivity(null)}>
-                <FiX size={20} />
+                <CloseIcon size={20} />
               </button>
             </div>
             <div className="modal-body activity-detail-body">
@@ -512,7 +545,7 @@ const ActivityLog = () => {
                                   {data.changes.added && data.changes.added.length > 0 && (
                                     <div className="change-group added">
                                       <span className="change-group-title">
-                                        <FiPlus size={14} /> Added Items
+                                        <PlusIcon size={14} /> Added Items
                                       </span>
                                       {data.changes.added.map((item, idx) => (
                                         <div key={idx} className="change-item">
@@ -526,7 +559,7 @@ const ActivityLog = () => {
                                   {data.changes.removed && data.changes.removed.length > 0 && (
                                     <div className="change-group removed">
                                       <span className="change-group-title">
-                                        <FiMinus size={14} /> Removed Items
+                                        <MinusIcon size={14} /> Removed Items
                                       </span>
                                       {data.changes.removed.map((item, idx) => (
                                         <div key={idx} className="change-item">
@@ -540,7 +573,7 @@ const ActivityLog = () => {
                                   {data.changes.modified && data.changes.modified.length > 0 && (
                                     <div className="change-group modified">
                                       <span className="change-group-title">
-                                        <FiEdit size={14} /> Modified Items
+                                        <EditIcon size={14} /> Modified Items
                                       </span>
                                       {data.changes.modified.map((item, idx) => (
                                         <div key={idx} className="change-item">

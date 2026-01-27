@@ -1,12 +1,28 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { FiArrowLeft, FiUser, FiCalendar, FiPackage, FiTag, FiTrendingUp, FiPrinter, FiShare2, FiDownload, FiCheckCircle, FiAlertCircle, FiCheck, FiCopy, FiEdit2 } from 'react-icons/fi';
+import {
+  ArrowLeftIcon,
+  ProfileIcon,
+  CalendarIcon,
+  PackageIcon,
+  TagsIcon,
+  TrendingUpIcon,
+  PrintIcon,
+  ShareIcon,
+  DownloadIcon,
+  CheckCircleIcon,
+  AlertCircleIcon,
+  CheckIcon,
+  CopyIcon,
+  EditIcon
+} from '../components/CustomIcons';
 import api from '../api';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { useSettings } from '../contexts/SettingsContext';
 import { useToast } from '../components/Toast';
 import soundManager from '../utils/soundManager';
+import { usePageState } from '../hooks/usePageState';
 import './OrderDetails.css';
 
 const OrderDetails = () => {
@@ -14,6 +30,10 @@ const OrderDetails = () => {
   const navigate = useNavigate();
   const { formatCurrency } = useSettings();
   const toast = useToast();
+
+  // Persist scroll position
+  usePageState('orderDetails', {}, { persistScroll: true, scrollContainerSelector: '.main-content' });
+
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showShareMenu, setShowShareMenu] = useState(false);
@@ -659,7 +679,7 @@ Sent from Ryme Inventory`;
       {/* Header Section */}
       <div className="order-details-header">
         <Link to="/orders" className="back-link">
-          <FiArrowLeft />
+          <ArrowLeftIcon size={20} />
           <span>Back to Orders</span>
         </Link>
         
@@ -672,7 +692,7 @@ Sent from Ryme Inventory`;
                 style={{ marginRight: '8px' }}
                 title="Edit Order"
               >
-                <FiEdit2 size={18} />
+                <EditIcon size={18} />
                 <span>Edit</span>
               </button>
               <button 
@@ -681,23 +701,23 @@ Sent from Ryme Inventory`;
                 style={{ marginRight: '8px', backgroundColor: '#F59E0B' }}
                 title="Mark order as paid and deduct stock"
               >
-                <FiCheckCircle size={18} />
+                <CheckCircleIcon size={18} />
                 <span>Mark as Paid</span>
               </button>
             </>
           )}
           <button className="btn-primary" title="Download Invoice" onClick={handlePrintInvoice} style={{ marginRight: '8px' }}>
-            <FiDownload size={18} />
+            <DownloadIcon size={18} />
             <span>Download Invoice</span>
           </button>
           <div className="share-button-container">
             <button className="btn-icon" title="Share" style={{ width: '42px', height: '42px' }} onClick={handleShare}>
-              <FiShare2 />
+              <ShareIcon size={20} />
             </button>
             {showShareMenu && (
               <div className="share-menu">
                 <button className="share-menu-item" onClick={handleCopyToClipboard}>
-                  {copied ? <FiCheck size={16} /> : <FiCopy size={16} />}
+                  {copied ? <CheckIcon size={16} /> : <CopyIcon size={16} />}
                   <span>{copied ? 'Copied!' : 'Copy to Clipboard'}</span>
                 </button>
                 <button className="share-menu-item" onClick={handleWhatsAppShare}>
@@ -737,12 +757,12 @@ Sent from Ryme Inventory`;
                   borderRadius: '20px',
                   border: `1px solid ${order.payment_status === 'Paid' ? 'rgba(16, 185, 129, 0.2)' : 'rgba(245, 158, 11, 0.2)'}`
                 }}>
-                {order.payment_status === 'Paid' ? <FiCheckCircle /> : <FiAlertCircle />}
+                {order.payment_status === 'Paid' ? <CheckCircleIcon size={16} /> : <AlertCircleIcon size={16} />}
                 <span>Status: {order.payment_status || 'Paid'}</span>
               </span>
             </div>
             <div className="meta-item">
-              <FiCalendar className="meta-icon" />
+              <CalendarIcon size={16} className="meta-icon" />
               <span>{new Date(order.order_date).toLocaleDateString('en-US', { 
                 weekday: 'long', 
                 year: 'numeric', 
@@ -751,7 +771,7 @@ Sent from Ryme Inventory`;
               })}</span>
             </div>
             <div className="meta-item">
-              <FiUser className="meta-icon" />
+              <ProfileIcon size={16} className="meta-icon" />
               <span>{order.customer_name}</span>
             </div>
           </div>
@@ -761,7 +781,7 @@ Sent from Ryme Inventory`;
         <div className="order-summary-stats">
           <div className="summary-stat">
             <div className="stat-icon items">
-              <FiPackage />
+              <PackageIcon size={20} />
             </div>
             <div className="stat-content">
               <span className="stat-value">{order.items?.length || 0}</span>
@@ -770,7 +790,7 @@ Sent from Ryme Inventory`;
           </div>
           <div className="summary-stat">
             <div className="stat-icon revenue">
-              <FiTag />
+              <TagsIcon size={20} />
             </div>
             <div className="stat-content">
               <span className="stat-value">{formatCurrency(order.total_sales_price || 0)}</span>
@@ -779,7 +799,7 @@ Sent from Ryme Inventory`;
           </div>
           <div className="summary-stat">
             <div className="stat-icon profit">
-              <FiTrendingUp />
+              <TrendingUpIcon size={20} />
             </div>
             <div className="stat-content">
               <span className="stat-value">{formatCurrency(order.total_profit || 0)}</span>

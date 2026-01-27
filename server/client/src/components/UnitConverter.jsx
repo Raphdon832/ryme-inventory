@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { FiX, FiRefreshCw, FiLayers } from 'react-icons/fi';
+import { CloseIcon, RefreshIcon, LayersIcon } from './CustomIcons';
 import './UnitConverter.css';
 
 const UnitConverter = ({ isOpen, onClose }) => {
@@ -88,8 +88,8 @@ const UnitConverter = ({ isOpen, onClose }) => {
     <div className="unit-modal" onClick={onClose}>
       <div className="unit-container" onClick={e => e.stopPropagation()}>
         <div className="unit-header">
-          <h3><FiRefreshCw /> Unit Converter</h3>
-          <button className="unit-close" onClick={onClose}><FiX size={20} /></button>
+          <h3><RefreshIcon size={18} /> Unit Converter</h3>
+          <button className="unit-close" onClick={onClose}><CloseIcon size={20} /></button>
         </div>
 
         <div className="unit-tabs">
@@ -125,7 +125,7 @@ const UnitConverter = ({ isOpen, onClose }) => {
 
           <div className="unit-divider">
             <button className="swap-btn" onClick={swapUnits}>
-              <FiLayers />
+              <LayersIcon size={16} />
             </button>
           </div>
 

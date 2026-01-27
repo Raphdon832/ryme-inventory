@@ -1,15 +1,32 @@
 import React, { useState, useEffect } from 'react';
-import { FiPlus, FiCheck, FiTrash2, FiEdit2, FiCalendar, FiFlag, FiX, FiClock, FiCheckSquare, FiSquare } from 'react-icons/fi';
+import {
+  PlusIcon,
+  CheckIcon,
+  DeleteIcon,
+  EditIcon,
+  CalendarIcon,
+  FlagIcon,
+  CloseIcon,
+  ClockIcon,
+  CheckSquareIcon,
+  SquareIcon
+} from '../components/CustomIcons';
 import { collection, addDoc, getDocs, updateDoc, deleteDoc, doc, query, orderBy, Timestamp } from 'firebase/firestore';
 import { db } from '../api';
 import useScrollLock from '../hooks/useScrollLock';
+import { usePageState } from '../hooks/usePageState';
 import './Tasks.css';
 
 const Tasks = () => {
+  // Persist filter state across navigation
+  const { state: pageState, updateState: updatePageState } = usePageState('tasks', {
+    filter: 'all',
+  }, { persistScroll: true, scrollContainerSelector: '.main-content' });
+
   const [tasks, setTasks] = useState([]);
   const [showModal, setShowModal] = useState(false);
   const [editingTask, setEditingTask] = useState(null);
-  const [filter, setFilter] = useState('all');
+  const [filter, setFilter] = useState(pageState.filter);
   const [submitting, setSubmitting] = useState(false);
   const [deletingId, setDeletingId] = useState(null);
   const [newTask, setNewTask] = useState({
@@ -26,6 +43,11 @@ const Tasks = () => {
   useEffect(() => {
     fetchTasks();
   }, []);
+
+  // Persist filter changes
+  useEffect(() => {
+    updatePageState({ filter });
+  }, [filter]);
 
   const fetchTasks = async () => {
     try {
@@ -148,29 +170,29 @@ const Tasks = () => {
           <p>Manage your tasks and to-dos</p>
         </div>
         <button className="btn-primary" onClick={() => { setEditingTask(null); setNewTask({ title: '', description: '', priority: 'medium', dueDate: '', status: 'pending' }); setShowModal(true); }}>
-          <FiPlus /> Add Task
+          <PlusIcon /> Add Task
         </button>
       </div>
 
       {/* Stats */}
       <div className="tasks-stats">
         <div className="stat-widget border-blue">
-          <div className="stat-icon blue"><FiCheckSquare /></div>
+          <div className="stat-icon blue"><CheckSquareIcon /></div>
           <div className="stat-label">Total Tasks</div>
           <div className="stat-value">{tasks.length}</div>
         </div>
         <div className="stat-widget border-orange">
-          <div className="stat-icon orange"><FiClock /></div>
+          <div className="stat-icon orange"><ClockIcon /></div>
           <div className="stat-label">Pending</div>
           <div className="stat-value">{pendingCount}</div>
         </div>
         <div className="stat-widget border-green">
-          <div className="stat-icon green"><FiCheck /></div>
+          <div className="stat-icon green"><CheckIcon /></div>
           <div className="stat-label">Completed</div>
           <div className="stat-value">{completedCount}</div>
         </div>
         <div className="stat-widget border-red">
-          <div className="stat-icon red"><FiFlag /></div>
+          <div className="stat-icon red"><FlagIcon /></div>
           <div className="stat-label">High Priority</div>
           <div className="stat-value">{highPriorityCount}</div>
         </div>
@@ -188,7 +210,7 @@ const Tasks = () => {
       <div className="tasks-list">
         {filteredTasks.length === 0 ? (
           <div className="empty-state">
-            <FiCheckSquare size={48} />
+            <CheckSquareIcon size={48} />
             <h3>No tasks found</h3>
             <p>Create a new task to get started</p>
           </div>
@@ -196,27 +218,27 @@ const Tasks = () => {
           filteredTasks.map(task => (
             <div key={task.id} className={`task-card ${task.status === 'completed' ? 'completed' : ''}`}>
               <div className="task-checkbox" onClick={() => toggleTaskStatus(task)}>
-                {task.status === 'completed' ? <FiCheckSquare size={20} /> : <FiSquare size={20} />}
+                {task.status === 'completed' ? <CheckSquareIcon size={20} /> : <SquareIcon size={20} />}
               </div>
               <div className="task-content">
                 <div className="task-header">
                   <h4 className={task.status === 'completed' ? 'strikethrough' : ''}>{task.title}</h4>
                   <div className="task-priority" style={{ backgroundColor: `${getPriorityColor(task.priority)}20`, color: getPriorityColor(task.priority) }}>
-                    <FiFlag size={12} /> {task.priority}
+                    <FlagIcon size={12} /> {task.priority}
                   </div>
                 </div>
                 {task.description && <p className="task-description">{task.description}</p>}
                 {task.dueDate && (
                   <div className={`task-due ${isOverdue(task.dueDate) ? 'overdue' : ''}`}>
-                    <FiCalendar size={12} />
+                    <CalendarIcon size={12} />
                     {new Date(task.dueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                     {isOverdue(task.dueDate) && ' (Overdue)'}
                   </div>
                 )}
               </div>
               <div className="task-actions">
-                <button className="icon-btn" onClick={() => openEditModal(task)}><FiEdit2 size={16} /></button>
-                <button className="icon-btn danger" onClick={() => deleteTask(task.id)}><FiTrash2 size={16} /></button>
+                <button className="icon-btn" onClick={() => openEditModal(task)}><EditIcon size={16} /></button>
+                <button className="icon-btn danger" onClick={() => deleteTask(task.id)}><DeleteIcon size={16} /></button>
               </div>
             </div>
           ))
@@ -229,7 +251,7 @@ const Tasks = () => {
           <div className="modal" onClick={e => e.stopPropagation()}>
             <div className="modal-header">
               <h2>{editingTask ? 'Edit Task' : 'New Task'}</h2>
-              <button className="modal-close" onClick={() => setShowModal(false)}><FiX /></button>
+              <button className="modal-close" onClick={() => setShowModal(false)}><CloseIcon /></button>
             </div>
             <form onSubmit={handleSubmit}>
               <div className="form-group">

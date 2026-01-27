@@ -2,15 +2,34 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import api from '../api';
 import { useSettings } from '../contexts/SettingsContext';
 import { SkeletonTable, SkeletonStatsGrid } from '../components/Skeleton';
-import { FiPlus, FiTrash2, FiDollarSign, FiCalendar, FiFileText, FiTrendingUp, FiEdit2, FiFilter, FiChevronDown, FiX, FiCheck } from 'react-icons/fi';
+import {
+  PlusIcon,
+  DeleteIcon,
+  CalendarIcon,
+  ReportsIcon,
+  TrendingUpIcon,
+  EditIcon,
+  FilterIcon,
+  ChevronDownIcon,
+  CloseIcon,
+  CheckIcon
+} from '../components/CustomIcons';
 import { useToast } from '../components/Toast';
 import soundManager from '../utils/soundManager';
 import useScrollLock from '../hooks/useScrollLock';
+import { usePageState } from '../hooks/usePageState';
 import './Income.css';
 
 const Income = () => {
-    const { formatCurrency } = useSettings();
+    const { formatCurrency, currencySymbol } = useSettings();
     const toast = useToast();
+    
+    // Persisted page state
+    const { state: pageState, updateState: updatePageState } = usePageState('income', {
+        filterCategory: 'all',
+        sortBy: 'date_desc',
+    }, { persistScroll: true, scrollContainerSelector: '.main-content' });
+
     const [incomeRecords, setIncomeRecords] = useState([]);
     const [loading, setLoading] = useState(true);
     const [showAddModal, setShowAddModal] = useState(false);
@@ -18,9 +37,11 @@ const Income = () => {
     const [showFilterDropdown, setShowFilterDropdown] = useState(false);
     const filterDropdownRef = useRef(null);
     
-    // Filter/Sort state
-    const [filterCategory, setFilterCategory] = useState('all');
-    const [sortBy, setSortBy] = useState('date_desc');
+    // Use persisted filter/sort state
+    const filterCategory = pageState.filterCategory;
+    const sortBy = pageState.sortBy;
+    const setFilterCategory = (value) => updatePageState({ filterCategory: value });
+    const setSortBy = (value) => updatePageState({ sortBy: value });
 
     const [formData, setFormData] = useState({
         description: '',
@@ -213,9 +234,9 @@ const Income = () => {
                             className={`filter-btn ${filterCategory !== 'all' ? 'active' : ''}`}
                             onClick={() => setShowFilterDropdown(!showFilterDropdown)}
                         >
-                            <FiFilter size={16} /> 
+                            <FilterIcon size={16} /> 
                             <span className="hide-mobile">{filterCategory === 'all' ? 'Filter' : filterCategory}</span>
-                            <FiChevronDown size={14} className="hide-mobile" />
+                            <ChevronDownIcon size={14} className="hide-mobile" />
                         </button>
                         
                         {showFilterDropdown && (
@@ -244,7 +265,7 @@ const Income = () => {
                         )}
                     </div>
                     <button className="add-btn-bordered btn-animate hover-lift add-btn-compact" onClick={() => setShowAddModal(true)} style={{ height: '42px' }}>
-                        <FiPlus size={16} /> <span className="btn-text-full">Add Income</span><span className="btn-text-short">Income</span>
+                        <PlusIcon size={16} /> <span className="btn-text-full">Add Income</span><span className="btn-text-short">Income</span>
                     </button>
                 </div>
             </div>
@@ -261,7 +282,7 @@ const Income = () => {
                     <div className="stats-grid">
                         <div className="stat-widget border-green animate-slide-up delay-100">
                             <div className="stat-header">
-                                <div className="stat-icon green"><FiDollarSign /></div>
+                                <div className="stat-icon green"><span className="currency-icon-text">{currencySymbol}</span></div>
                             </div>
                             <div className="stat-label">Total Revenue (Income)</div>
                             <div className="stat-value">{formatCurrency(stats.total)}</div>
@@ -269,7 +290,7 @@ const Income = () => {
                         
                         <div className="stat-widget border-cyan animate-slide-up delay-200">
                             <div className="stat-header">
-                                <div className="stat-icon cyan"><FiTrendingUp /></div>
+                                <div className="stat-icon cyan"><TrendingUpIcon /></div>
                             </div>
                             <div className="stat-label">Total Profit</div>
                             <div className="stat-value">{formatCurrency(stats.totalProfit)}</div>
@@ -277,7 +298,7 @@ const Income = () => {
 
                         <div className="stat-widget border-blue animate-slide-up delay-300">
                             <div className="stat-header">
-                                <div className="stat-icon blue"><FiCalendar /></div>
+                                <div className="stat-icon blue"><CalendarIcon /></div>
                             </div>
                             <div className="stat-label">This Month Revenue</div>
                             <div className="stat-value">{formatCurrency(stats.monthly)}</div>
@@ -286,7 +307,7 @@ const Income = () => {
 
                         <div className="stat-widget border-purple animate-slide-up delay-400">
                             <div className="stat-header">
-                                <div className="stat-icon purple"><FiFileText /></div>
+                                <div className="stat-icon purple"><ReportsIcon /></div>
                             </div>
                             <div className="stat-label">Records ({stats.topCategory})</div>
                             <div className="stat-value">{stats.count}</div>
@@ -321,7 +342,7 @@ const Income = () => {
                                             <tr key={record.id} className="animate-slide-up">
                                                 <td>
                                                     <div className="date-cell">
-                                                        <FiCalendar size={12} />
+                                                        <CalendarIcon size={12} />
                                                         {new Date(record.date).toLocaleDateString()}
                                                     </div>
                                                 </td>
@@ -343,10 +364,10 @@ const Income = () => {
                                                 <td style={{ textAlign: 'right' }}>
                                                     <div className="action-buttons">
                                                         <button className="icon-btn edit-btn" onClick={() => handleEdit(record)} title="Edit">
-                                                            <FiEdit2 size={16} />
+                                                            <EditIcon size={16} />
                                                         </button>
                                                         <button className="icon-btn delete-btn" onClick={() => handleDelete(record.id)} title="Delete">
-                                                            <FiTrash2 size={16} />
+                                                            <DeleteIcon size={16} />
                                                         </button>
                                                     </div>
                                                 </td>
@@ -381,10 +402,10 @@ const Income = () => {
                                             <span className="category-badge income-badge">{record.category}</span>
                                             <div className="expense-mobile-actions">
                                                 <button className="icon-btn edit-btn" onClick={() => handleEdit(record)}>
-                                                    <FiEdit2 size={16} />
+                                                    <EditIcon size={16} />
                                                 </button>
                                                 <button className="icon-btn delete-btn" onClick={() => handleDelete(record.id)}>
-                                                    <FiTrash2 size={16} />
+                                                    <DeleteIcon size={16} />
                                                 </button>
                                             </div>
                                         </div>
@@ -402,7 +423,7 @@ const Income = () => {
                     <div className="modal-content animate-modal">
                         <div className="modal-header">
                             <h2>{editingRecord ? 'Edit Income Record' : 'Add Income Entry'}</h2>
-                            <button className="close-btn" onClick={handleCloseModal}><FiX /></button>
+                            <button className="close-btn" onClick={handleCloseModal}><CloseIcon /></button>
                         </div>
                         <form onSubmit={handleSubmit} className="modal-form">
                             <div className="form-group">
@@ -421,7 +442,7 @@ const Income = () => {
                                 <div className="form-group">
                                     <label>Revenue (Income Amount)</label>
                                     <div className="input-with-icon">
-                                        <FiDollarSign className="input-icon" />
+                                        <span className="input-icon-symbol">{currencySymbol}</span>
                                         <input
                                             type="number"
                                             name="amount"
@@ -436,7 +457,7 @@ const Income = () => {
                                 <div className="form-group">
                                     <label>Actual Profit</label>
                                     <div className="input-with-icon">
-                                        <FiTrendingUp className="input-icon" />
+                                        <TrendingUpIcon className="input-icon" />
                                         <input
                                             type="number"
                                             name="profit"
@@ -497,7 +518,7 @@ const Income = () => {
                             <div className="modal-footer">
                                 <button type="button" className="btn-secondary" onClick={handleCloseModal}>Cancel</button>
                                 <button type="submit" className="btn-primary">
-                                    {editingRecord ? <><FiCheck /> Update</> : <><FiPlus /> Add Income</>}
+                                    {editingRecord ? <><CheckIcon /> Update</> : <><PlusIcon /> Add Income</>}
                                 </button>
                             </div>
                         </form>
