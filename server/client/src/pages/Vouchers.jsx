@@ -388,8 +388,8 @@ const Vouchers = () => {
                             onClick={() => setShowFilterDropdown(!showFilterDropdown)}
                         >
                             <FiFilter size={16} /> 
-                            <span>{filterStatus === 'all' ? 'Filter' : statusFilters.find(s => s.value === filterStatus)?.label}</span>
-                            <FiChevronDown size={14} />
+                            <span className="hide-mobile">{filterStatus === 'all' ? 'Filter' : statusFilters.find(s => s.value === filterStatus)?.label}</span>
+                            <FiChevronDown size={14} className="hide-mobile" />
                         </button>
                         
                         {showFilterDropdown && (
@@ -418,8 +418,8 @@ const Vouchers = () => {
                             </div>
                         )}
                     </div>
-                    <button className="add-btn-bordered btn-animate hover-lift" onClick={() => setShowAddModal(true)}>
-                        <FiPlus size={16} /> Create Voucher
+                    <button className="add-btn-bordered btn-animate hover-lift add-btn-compact" onClick={() => setShowAddModal(true)} style={{ height: '42px' }}>
+                        <FiPlus size={16} /> <span className="btn-text-full">Create Voucher</span><span className="btn-text-short">Voucher</span>
                     </button>
                 </div>
             </div>

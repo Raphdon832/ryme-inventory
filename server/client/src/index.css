@@ -1474,6 +1474,15 @@ input:focus, select:focus {
   gap: 12px;
 }
 
+/* Button text variants for responsive */
+.btn-text-full {
+  display: inline;
+}
+
+.btn-text-short {
+  display: none;
+}
+
 .dashboard-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -2024,6 +2033,18 @@ input:focus, select:focus {
   h3 { font-size: 14px; }
   .stat-value { font-size: 18px; }
   .stat-label { font-size: 11px; }
+
+  /* Inventory filter dropdown - fixed position on mobile */
+  .inventory-filter-dropdown {
+    position: fixed !important;
+    top: auto !important;
+    right: 16px !important;
+    left: auto !important;
+    width: calc(100vw - 32px) !important;
+    max-width: 280px !important;
+    transform: none !important;
+    transform-origin: top right !important;
+  }
   
   th, td {
     padding: 8px 6px;
@@ -2119,6 +2140,33 @@ input:focus, select:focus {
 
   .stat-label {
     font-size: 10px;
+  }
+
+  /* Inventory filter dropdown - fixed position on mobile */
+  .inventory-filter-dropdown {
+    position: fixed !important;
+    top: auto !important;
+    right: 16px !important;
+    left: auto !important;
+    width: calc(100vw - 32px) !important;
+    max-width: 280px !important;
+    transform: none !important;
+    transform-origin: top right !important;
+  }
+
+  /* Compact add button on mobile */
+  .add-btn-compact {
+    padding: 0 12px !important;
+    font-size: 13px;
+    white-space: nowrap;
+  }
+
+  .btn-text-full {
+    display: none !important;
+  }
+
+  .btn-text-short {
+    display: inline !important;
   }
   
   .top-header {

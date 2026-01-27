@@ -419,13 +419,13 @@ const Inventory = () => {
           <h1>Inventory</h1>
           <p>Manage your products, costs, and pricing</p>
         </div>
-        <div style={{ display: 'flex', gap: '10px' }}>
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'nowrap' }}>
           <div style={{ position: 'relative', display: 'flex', gap: '8px' }}>
             <button 
               className="secondary" 
               onClick={() => exportInventory(sortedProducts, 'csv')}
               title="Export as CSV"
-              style={{ padding: '0 16px', display: 'flex', alignItems: 'center', gap: '8px', height: '42px', borderRadius: '10px' }}
+              style={{ padding: '0 10px', display: 'flex', alignItems: 'center', gap: '6px', height: '42px', borderRadius: '10px' }}
             >
               <FiFileText size={16} /> <span className="hide-mobile">CSV</span>
             </button>
@@ -433,13 +433,124 @@ const Inventory = () => {
               className="secondary" 
               onClick={() => exportInventory(sortedProducts, 'pdf')}
               title="Export as PDF"
-              style={{ padding: '0 16px', display: 'flex', alignItems: 'center', gap: '8px', height: '42px', borderRadius: '10px' }}
+              style={{ padding: '0 10px', display: 'flex', alignItems: 'center', gap: '6px', height: '42px', borderRadius: '10px' }}
             >
               <FiDownload size={16} /> <span className="hide-mobile">PDF</span>
             </button>
           </div>
-          <button className="add-btn-bordered" onClick={() => navigate('/inventory/add')} style={{ height: '42px' }}>
-            <FiPlus size={18} /> Add Product
+
+          {/* Filter button moved here */}
+          <div style={{ position: 'relative' }} ref={filterDropdownRef}>
+            <button 
+              onClick={() => setShowFilterDropdown(!showFilterDropdown)}
+              title="Filter & Sort"
+              style={{ 
+                width: '42px', 
+                height: '42px', 
+                borderRadius: '10px', 
+                padding: 0, 
+                background: showFilterDropdown || sortBy !== 'name_asc' || filterCategory !== 'all' ? 'rgba(79, 106, 245, 0.1)' : 'var(--bg-surface)', 
+                border: '1px solid var(--border-color)', 
+                color: showFilterDropdown || sortBy !== 'name_asc' || filterCategory !== 'all' ? 'var(--primary-color)' : 'var(--text-secondary)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer'
+              }}
+            >
+              <FiFilter size={18} />
+            </button>
+            
+            {showFilterDropdown && (
+              <div 
+                className="inventory-filter-dropdown"
+                style={{
+                  position: 'absolute',
+                  top: '48px',
+                  right: 0,
+                  background: 'var(--bg-surface)',
+                  border: '1px solid var(--border-color)',
+                  borderRadius: '12px',
+                  boxShadow: '0 10px 30px rgba(0,0,0,0.15)',
+                  zIndex: 1000,
+                  minWidth: '220px',
+                  maxWidth: 'calc(100vw - 32px)',
+                  padding: '8px 0',
+                  maxHeight: '400px',
+                  overflowY: 'auto'
+                }}
+              >
+                <div style={{ padding: '8px 16px', fontSize: '12px', fontWeight: 600, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                  Sort By
+                </div>
+                {sortOptions.map((option) => (
+                  <button
+                    key={option.value}
+                    onClick={() => {
+                      setSortBy(option.value);
+                      setShowFilterDropdown(false);
+                      setCurrentPage(1);
+                    }}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      width: '100%',
+                      padding: '10px 16px',
+                      background: sortBy === option.value ? 'rgba(79, 106, 245, 0.1)' : 'transparent',
+                      border: 'none',
+                      cursor: 'pointer',
+                      color: sortBy === option.value ? 'var(--primary-color)' : 'var(--text-primary)',
+                      fontSize: '14px',
+                      textAlign: 'left',
+                      fontWeight: sortBy === option.value ? 600 : 400
+                    }}
+                  >
+                    <span>{option.label}</span>
+                    {sortBy === option.value && <FiCheck size={16} />}
+                  </button>
+                ))}
+
+                {categories.length > 1 && (
+                  <>
+                    <div style={{ padding: '16px 16px 8px', fontSize: '12px', fontWeight: 600, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.5px', borderTop: '1px solid var(--border-color)', marginTop: '8px' }}>
+                      Filter Category
+                    </div>
+                    {categories.map((cat) => (
+                      <button
+                        key={cat}
+                        onClick={() => {
+                          setFilterCategory(cat);
+                          setShowFilterDropdown(false);
+                          setCurrentPage(1);
+                        }}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          width: '100%',
+                          padding: '10px 16px',
+                          background: filterCategory === cat ? 'rgba(79, 106, 245, 0.1)' : 'transparent',
+                          border: 'none',
+                          cursor: 'pointer',
+                          color: filterCategory === cat ? 'var(--primary-color)' : 'var(--text-primary)',
+                          fontSize: '14px',
+                          textAlign: 'left',
+                          fontWeight: filterCategory === cat ? 600 : 400
+                        }}
+                      >
+                        <span style={{ textTransform: 'capitalize' }}>{cat === 'all' ? 'All Categories' : cat}</span>
+                        {filterCategory === cat && <FiCheck size={16} />}
+                      </button>
+                    ))}
+                  </>
+                )}
+              </div>
+            )}
+          </div>
+
+          <button className="add-btn-bordered btn-animate hover-lift add-btn-compact" onClick={() => navigate('/inventory/add')} style={{ height: '42px' }}>
+            <FiPlus size={18} /> <span className="btn-text-full">Add Product</span><span className="btn-text-short">Product</span>
           </button>
         </div>
       </div>
@@ -498,112 +609,11 @@ const Inventory = () => {
           </div>
           <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
             {/* Filter/Sort Button */}
-            <div style={{ position: 'relative' }} ref={filterDropdownRef}>
-              <button 
-                onClick={() => setShowFilterDropdown(!showFilterDropdown)}
-                title="Sort products"
-                style={{ 
-                  width: '40px', 
-                  height: '40px', 
-                  borderRadius: '50%', 
-                  padding: 0, 
-                  background: showFilterDropdown || sortBy !== 'name_asc' ? 'rgba(79, 106, 245, 0.1)' : 'var(--bg-surface)', 
-                  border: '1px solid var(--border-color)', 
-                  color: showFilterDropdown || sortBy !== 'name_asc' ? 'var(--primary-color)' : 'var(--text-secondary)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  cursor: 'pointer'
-                }}
-              >
-                <FiFilter size={18} />
-              </button>
-              
-              {/* Filter Dropdown */}
-              {showFilterDropdown && (
-                <div style={{
-                  position: 'absolute',
-                  top: '48px',
-                  right: 0,
-                  background: 'var(--bg-surface)',
-                  border: '1px solid var(--border-color)',
-                  borderRadius: '12px',
-                  boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
-                  zIndex: 100,
-                  minWidth: '220px',
-                  maxWidth: 'calc(100vw - 32px)',
-                  padding: '8px 0',
-                  maxHeight: '400px',
-                  overflowY: 'auto'
-                }}>
-                  <div style={{ padding: '8px 16px', fontSize: '12px', fontWeight: 600, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                    Sort By
-                  </div>
-                  {sortOptions.map((option) => (
-                    <button
-                      key={option.value}
-                      onClick={() => {
-                        setSortBy(option.value);
-                        setShowFilterDropdown(false);
-                        setCurrentPage(1); // Reset to first page on sort change
-                      }}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        width: '100%',
-                        padding: '10px 16px',
-                        background: sortBy === option.value ? 'rgba(79, 106, 245, 0.1)' : 'transparent',
-                        border: 'none',
-                        cursor: 'pointer',
-                        color: sortBy === option.value ? 'var(--primary-color)' : 'var(--text-primary)',
-                        fontSize: '14px',
-                        textAlign: 'left',
-                        fontWeight: sortBy === option.value ? 600 : 400
-                      }}
-                    >
-                      <span>{option.label}</span>
-                      {sortBy === option.value && <FiCheck size={16} />}
-                    </button>
-                  ))}
-
-                  {categories.length > 1 && (
-                    <>
-                      <div style={{ padding: '16px 16px 8px', fontSize: '12px', fontWeight: 600, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.5px', borderTop: '1px solid var(--border-color)', marginTop: '8px' }}>
-                        Filter Category
-                      </div>
-                      {categories.map((cat) => (
-                        <button
-                          key={cat}
-                          onClick={() => {
-                            setFilterCategory(cat);
-                            setShowFilterDropdown(false);
-                            setCurrentPage(1);
-                          }}
-                          style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'space-between',
-                            width: '100%',
-                            padding: '10px 16px',
-                            background: filterCategory === cat ? 'rgba(79, 106, 245, 0.1)' : 'transparent',
-                            border: 'none',
-                            cursor: 'pointer',
-                            color: filterCategory === cat ? 'var(--primary-color)' : 'var(--text-primary)',
-                            fontSize: '14px',
-                            textAlign: 'left',
-                            fontWeight: filterCategory === cat ? 600 : 400
-                          }}
-                        >
-                          <span style={{ textTransform: 'capitalize' }}>{cat === 'all' ? 'All Categories' : cat}</span>
-                          {filterCategory === cat && <FiCheck size={16} />}
-                        </button>
-                      ))}
-                    </>
-                  )}
-                </div>
-              )}
-            </div>
+            {filterCategory !== 'all' && (
+              <span style={{ color: 'var(--text-tertiary)', fontSize: '13px', fontStyle: 'italic', marginRight: '8px' }}>
+                Category: <span style={{ textTransform: 'capitalize' }}>{filterCategory}</span>
+              </span>
+            )}
 
             {selectionMode ? (
               <>

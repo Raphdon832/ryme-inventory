@@ -214,8 +214,8 @@ const Income = () => {
                             onClick={() => setShowFilterDropdown(!showFilterDropdown)}
                         >
                             <FiFilter size={16} /> 
-                            <span>{filterCategory === 'all' ? 'Filter' : filterCategory}</span>
-                            <FiChevronDown size={14} />
+                            <span className="hide-mobile">{filterCategory === 'all' ? 'Filter' : filterCategory}</span>
+                            <FiChevronDown size={14} className="hide-mobile" />
                         </button>
                         
                         {showFilterDropdown && (
@@ -243,8 +243,8 @@ const Income = () => {
                             </div>
                         )}
                     </div>
-                    <button className="add-btn-bordered btn-animate hover-lift" onClick={() => setShowAddModal(true)}>
-                        <FiPlus size={16} /> Add Income
+                    <button className="add-btn-bordered btn-animate hover-lift add-btn-compact" onClick={() => setShowAddModal(true)} style={{ height: '42px' }}>
+                        <FiPlus size={16} /> <span className="btn-text-full">Add Income</span><span className="btn-text-short">Income</span>
                     </button>
                 </div>
             </div>
