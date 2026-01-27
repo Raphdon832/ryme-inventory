@@ -841,64 +841,61 @@ const Vouchers = () => {
                         </div>
                         
                         <div className="share-modal-body">
-                            {/* Voucher Card Preview */}
-                            <div className="voucher-card-wrapper" ref={voucherCardRef}>
-                                <div className="voucher-card-shareable">
-                                    <div className="voucher-card-left">
-                                        <div className="voucher-brand-logo">RYME</div>
-                                        <div className="voucher-discount-display">
-                                            <span className="discount-number">
-                                                {shareVoucher.discountType === 'percentage' 
-                                                    ? shareVoucher.discountValue 
-                                                    : `₦${shareVoucher.discountValue.toLocaleString()}`}
-                                            </span>
-                                            <span className="discount-unit">
-                                                {shareVoucher.discountType === 'percentage' ? '%' : ''}
-                                            </span>
-                                        </div>
-                                        <div className="voucher-discount-label">OFF</div>
-                                    </div>
-                                    <div className="voucher-card-divider">
-                                        <div className="divider-circle top"></div>
-                                        <div className="divider-line"></div>
-                                        <div className="divider-circle bottom"></div>
-                                    </div>
-                                    <div className="voucher-card-right">
-                                        <div className="voucher-card-header">
-                                            <FiGift className="voucher-gift-icon" />
-                                            <span>DISCOUNT VOUCHER</span>
-                                        </div>
-                                        <div className="voucher-code-display">{shareVoucher.code}</div>
-                                        {shareVoucher.description && (
-                                            <p className="voucher-card-desc">{shareVoucher.description}</p>
-                                        )}
-                                        <div className="voucher-card-details">
-                                            {shareVoucher.minPurchase > 0 && (
-                                                <div className="detail-row">
-                                                    <span>Min. Purchase:</span>
-                                                    <span>₦{shareVoucher.minPurchase.toLocaleString()}</span>
-                                                </div>
-                                            )}
-                                            {shareVoucher.brands && shareVoucher.brands.length > 0 && (
-                                                <div className="detail-row">
-                                                    <span>Valid for:</span>
-                                                    <span>{shareVoucher.brands.slice(0, 2).join(', ')}{shareVoucher.brands.length > 2 ? ` +${shareVoucher.brands.length - 2} more` : ''}</span>
-                                                </div>
-                                            )}
-                                            <div className="detail-row validity">
-                                                <FiCalendar size={12} />
-                                                <span>
-                                                    Valid: {new Date(shareVoucher.validFrom).toLocaleDateString()} 
-                                                    {shareVoucher.validUntil ? ` - ${new Date(shareVoucher.validUntil).toLocaleDateString()}` : ' onwards'}
-                                                </span>
+                            {/* Voucher Card Preview - Redesigned to modern ticket style */}
+                            <div className="voucher-preview-container">
+                                <div className="voucher-card-wrapper" ref={voucherCardRef}>
+                                    <div className="voucher-card-redesign">
+                                        <div className="card-top-section">
+                                            <div className="card-notch notch-left"></div>
+                                            <div className="card-notch notch-right"></div>
+                                        
+                                        <div className="card-brand">RYME</div>
+                                        
+                                        <div className="card-graphic">
+                                            <div className="graphic-circle">
+                                                <FiGift size={40} />
                                             </div>
                                         </div>
-                                        <div className="voucher-card-footer">
-                                            <span>Present this voucher at checkout</span>
+                                        
+                                        <div className="card-value-display">
+                                            <div className="value-of-label">Value of</div>
+                                            <div className="main-value">
+                                                {shareVoucher.discountType === 'percentage' 
+                                                    ? `${shareVoucher.discountValue}%` 
+                                                    : `₦${shareVoucher.discountValue.toLocaleString()}`}
+                                                <span className="off-label"> OFF</span>
+                                            </div>
                                         </div>
+                                        
+                                        <div className="card-description">
+                                            {shareVoucher.description || 'Special Discount Voucher'}
+                                        </div>
+
+                                        <div className="card-extra-info">
+                                            {shareVoucher.minPurchase > 0 && (
+                                                <div className="extra-item">Min. Purchase: ₦{shareVoucher.minPurchase.toLocaleString()}</div>
+                                            )}
+                                            {shareVoucher.brands && shareVoucher.brands.length > 0 && (
+                                                <div className="extra-item">Brands: {shareVoucher.brands.join(', ')}</div>
+                                            )}
+                                        </div>
+                                    </div>
+                                    
+                                    <div className="card-dashed-line"></div>
+                                    
+                                    <div className="card-bottom-section">
+                                        <div className="coupon-label">Coupon code</div>
+                                        <div className="coupon-code-container">
+                                            {shareVoucher.code}
+                                        </div>
+                                        <div className="validity-date">
+                                            Valid until {shareVoucher.validUntil ? new Date(shareVoucher.validUntil).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' }) : 'forever'}
+                                        </div>
+                                        <div className="footer-tagline">Present at checkout to redeem</div>
                                     </div>
                                 </div>
                             </div>
+                        </div>
 
                             {/* Share Actions */}
                             <div className="share-actions">

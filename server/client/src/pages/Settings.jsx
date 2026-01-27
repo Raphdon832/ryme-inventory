@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { FiBell, FiDatabase, FiSave, FiMoon, FiRefreshCw, FiVolume2, FiPlay, FiNavigation, FiPlus, FiX, FiCheck } from 'react-icons/fi';
+import { FiBell, FiDatabase, FiSave, FiMoon, FiRefreshCw, FiVolume2, FiPlay, FiNavigation, FiPlus, FiX, FiCheck, FiDownloadCloud, FiAlertTriangle } from 'react-icons/fi';
 import { useSettings } from '../contexts/SettingsContext';
 import { AVAILABLE_NAV_OPTIONS, ICON_MAP } from '../components/QuickNavBar';
 import api from '../api';
@@ -20,6 +20,8 @@ const Settings = () => {
   const [migrating, setMigrating] = useState(false);
   const [migrationProgress, setMigrationProgress] = useState(null);
   const [migrationResult, setMigrationResult] = useState(null);
+  const [updating, setUpdating] = useState(false);
+  const [showUpdateDialog, setShowUpdateDialog] = useState(false);
   
   // Sound settings state
   const [soundEnabled, setSoundEnabled] = useState(soundManager.enabled);
@@ -167,6 +169,61 @@ const Settings = () => {
       });
     } finally {
       setMigrating(false);
+    }
+  };
+
+  const handleForceUpdate = () => {
+    if (updating) return;
+    setShowUpdateDialog(true);
+  };
+
+  const executeForceUpdate = async () => {
+    setShowUpdateDialog(false);
+    setUpdating(true);
+    
+    try {
+      // Clear localStorage (except critical items if needed)
+      localStorage.clear();
+      
+      // Clear sessionStorage
+      sessionStorage.clear();
+      
+      // Clear all IndexedDB databases
+      if (window.indexedDB && window.indexedDB.databases) {
+        const databases = await window.indexedDB.databases();
+        for (const db of databases) {
+          if (db.name) {
+            window.indexedDB.deleteDatabase(db.name);
+          }
+        }
+      }
+      
+      // Unregister all service workers and clear their caches
+      if ('serviceWorker' in navigator) {
+        const registrations = await navigator.serviceWorker.getRegistrations();
+        for (const registration of registrations) {
+          await registration.unregister();
+        }
+      }
+      
+      // Clear all caches (Cache API)
+      if ('caches' in window) {
+        const cacheNames = await caches.keys();
+        for (const cacheName of cacheNames) {
+          await caches.delete(cacheName);
+        }
+      }
+      
+      // Short delay to allow cleanup to complete
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // Force reload from server (bypass cache)
+      window.location.reload(true);
+      
+    } catch (err) {
+      console.error('Error during force update:', err);
+      setUpdating(false);
+      // Error will be visible through the button state reset
     }
   };
 
@@ -955,6 +1012,60 @@ const Settings = () => {
             )}
           </div>
         </div>
+
+        {/* App Update */}
+        <div className="card">
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
+            <div style={{
+              width: '40px',
+              height: '40px',
+              borderRadius: '10px',
+              background: 'linear-gradient(135deg, #11998e 0%, #38ef7d 100%)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: 'white'
+            }}>
+              <FiDownloadCloud size={20} />
+            </div>
+            <div>
+              <h3 style={{ margin: 0 }}>App Update</h3>
+              <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-secondary)' }}>Force download latest app version</p>
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 0', flexWrap: 'wrap', gap: '12px' }}>
+              <div style={{ flex: 1, minWidth: '200px' }}>
+                <p style={{ margin: 0, fontWeight: 500 }}>Clear Cache & Update</p>
+                <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-tertiary)' }}>
+                  Clears all local cache, offline data, and service workers. The app will reload and download fresh assets. Your cloud data remains safe.
+                </p>
+              </div>
+              <button
+                onClick={handleForceUpdate}
+                disabled={updating}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  padding: '8px 16px',
+                  fontSize: '13px',
+                  fontWeight: 500,
+                  background: updating ? '#666' : 'linear-gradient(135deg, #11998e 0%, #38ef7d 100%)',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  cursor: updating ? 'not-allowed' : 'pointer',
+                  whiteSpace: 'nowrap'
+                }}
+              >
+                <FiDownloadCloud size={14} style={{ animation: updating ? 'spin 1s linear infinite' : 'none' }} />
+                {updating ? 'Updating...' : 'Update Now'}
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
 
       <div style={{ 
@@ -983,6 +1094,40 @@ const Settings = () => {
           <FiSave size={14} /> {saving ? 'Saving...' : saved ? 'Saved!' : 'Save Changes'}
         </button>
       </div>
+
+      {/* Custom Update Confirmation Dialog */}
+      {showUpdateDialog && (
+        <div className="custom-dialog-overlay">
+          <div className="custom-dialog">
+            <div className="custom-dialog-icon warning">
+              <FiDownloadCloud size={32} />
+            </div>
+            <h3 className="custom-dialog-title">Update App?</h3>
+            <p className="custom-dialog-message">
+              This will clear all local cache and offline data, then reload the app to download fresh assets.
+            </p>
+            <div className="custom-dialog-info">
+              <FiCheck size={14} />
+              <span>Your cloud data will NOT be affected</span>
+            </div>
+            <div className="custom-dialog-actions">
+              <button 
+                className="custom-dialog-btn cancel"
+                onClick={() => setShowUpdateDialog(false)}
+              >
+                Cancel
+              </button>
+              <button 
+                className="custom-dialog-btn confirm"
+                onClick={executeForceUpdate}
+              >
+                <FiDownloadCloud size={16} />
+                Update Now
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
