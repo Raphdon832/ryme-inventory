@@ -508,9 +508,9 @@ p, span, a, button, input, select, th, td {
 
 .top-header {
   height: var(--header-height);
-  background-color: color-mix(in srgb, var(--bg-body), transparent 30%);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  background: color-mix(in srgb, var(--bg-surface), transparent 40%);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
   display: flex;
   align-items: center;
   justify-content: space-between;
