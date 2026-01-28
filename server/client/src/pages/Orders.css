@@ -44,6 +44,53 @@
   background: var(--warning-bg);
 }
 
+/* Bulk Download Mode Styles */
+.row-selected.download-selected {
+  background: rgba(37, 99, 235, 0.08) !important;
+}
+
+.table-checkbox.download.checked {
+  background: var(--primary-color);
+  border-color: var(--primary-color);
+}
+
+.table-checkbox.disabled {
+  background: var(--bg-tertiary);
+  border-color: var(--border-color);
+  color: var(--text-tertiary);
+  cursor: not-allowed;
+}
+
+.not-selectable {
+  opacity: 0.6;
+  cursor: not-allowed !important;
+}
+
+.order-card-mobile.download-selected {
+  border-color: var(--primary-color) !important;
+  background: rgba(37, 99, 235, 0.05);
+}
+
+.order-card-mobile .checkbox.download.checked {
+  background: var(--primary-color);
+  border-color: var(--primary-color);
+}
+
+.order-card-mobile .checkbox.disabled {
+  background: var(--bg-tertiary);
+  border-color: var(--border-color);
+  color: var(--text-tertiary);
+}
+
+.btn-spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid transparent;
+  border-top-color: currentColor;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
 .badge-offline {
   display: inline-flex;
   align-items: center;
