@@ -322,8 +322,19 @@ const Orders = () => {
         const totalsLabelX = totalsRightMargin - 50;
         let currentY = doc.lastAutoTable.finalY + 15;
 
+        // Ensure we don't start totals too close to the bottom
+        if (currentY > pageHeight - 60) {
+            doc.addPage();
+            currentY = 25;
+        }
+
         // Helper function for drawing total rows
         const drawTotalRow = (label, valueRaw, isBold = false, isDiscount = false) => {
+          // Check for page overflow
+          if (currentY > pageHeight - 40) {
+              doc.addPage();
+              currentY = 25;
+          }
           doc.setFontSize(9);
           doc.setFont('helvetica', isBold ? 'bold' : 'normal');
           doc.setTextColor(...(isBold ? primaryColor : secondaryColor));
@@ -348,6 +359,12 @@ const Orders = () => {
 
         if (order.include_vat && order.vat_amount > 0) {
           drawTotalRow('VAT (7.5%)', order.vat_amount);
+        }
+
+        // Ensure space for the final total and line
+        if (currentY > pageHeight - 30) {
+            doc.addPage();
+            currentY = 25;
         }
 
         currentY += 2;

@@ -260,7 +260,14 @@ export const exportTaxReport = (financials, type = 'pdf') => {
     });
 
     // Footer
-    const footerY = doc.lastAutoTable.finalY + 20;
+    let footerY = doc.lastAutoTable.finalY + 20;
+    
+    // Check for page overflow
+    if (footerY > doc.internal.pageSize.getHeight() - 20) {
+        doc.addPage();
+        footerY = 25;
+    }
+    
     doc.setFontSize(8);
     doc.setTextColor(150);
     doc.text('Disclaimer: This report is an automated assessment based on transactions in RYME Inventory.', 14, footerY);

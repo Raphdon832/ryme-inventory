@@ -307,8 +307,19 @@ Sent from Ryme Inventory`;
     const totalsRightMargin = pageWidth - 20;
     const totalsLabelX = totalsRightMargin - 50;
     let currentY = doc.lastAutoTable.finalY + 15;
+
+    // Ensure we don't start totals too close to the bottom
+    if (currentY > pageHeight - 60) {
+        doc.addPage();
+        currentY = 25;
+    }
     
     const drawTotalRow = (label, valueRaw, isBold = false, isHeavy = false, isDiscount = false) => {
+        // Check for page overflow
+        if (currentY > pageHeight - 40) {
+            doc.addPage();
+            currentY = 25;
+        }
         doc.setFontSize(isHeavy ? 11 : 9);
         doc.setFont('helvetica', isBold ? 'bold' : 'normal');
         doc.setTextColor(...(isBold ? primaryColor : secondaryColor));
@@ -334,6 +345,12 @@ Sent from Ryme Inventory`;
         drawTotalRow('VAT (7.5%)', order.vat_amount);
     }
     
+    // Ensure space for the final total and line
+    if (currentY > pageHeight - 30) {
+        doc.addPage();
+        currentY = 25;
+    }
+
     currentY += 2;
     doc.setDrawColor(240, 240, 240);
     doc.line(totalsRightMargin - 70, currentY - 6, totalsRightMargin, currentY - 6);
@@ -342,12 +359,29 @@ Sent from Ryme Inventory`;
     drawTotalRow('Amount due', grandTotal, true, true);
 
     const footerY = pageHeight - 35;
+    
+    // Check if totals or table ended too close to the footer
+    if (currentY > footerY - 5) {
+        doc.addPage();
+    }
+
     doc.setFontSize(8);
     doc.setFont('helvetica', 'italic');
     doc.setTextColor(...primaryColor);
     doc.text('*Notes:', 20, footerY);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(...secondaryColor);
+    doc.text('Thank you for your business! For any inquiries, please contact Ryme Interiors.', 20, footerY + 5);
+    doc.text('Payment is due within 7 days. Goods received in good condition are not returnable.', 20, footerY + 10);
+    
+    // Page Number
+    const totalPages = doc.internal.getNumberOfPages();
+    for (let i = 1; i <= totalPages; i++) {
+        doc.setPage(i);
+        doc.setFontSize(8);
+        doc.setTextColor(...textGray);
+        doc.text(`Page ${i} of ${totalPages}`, pageWidth / 2, pageHeight - 10, { align: 'center' });
+    }
     
     return { doc, invoiceNum };
   };
