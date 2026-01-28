@@ -116,7 +116,7 @@ Sent from Ryme Inventory`;
     }
   };
 
-  const generatePDFBlob = async () => {
+  const generateInvoicePDF = async () => {
     if (!order) return null;
     
     // Load Logo
@@ -140,13 +140,18 @@ Sent from Ryme Inventory`;
     const pageWidth = doc.internal.pageSize.getWidth();
     const pageHeight = doc.internal.pageSize.getHeight();
     
-    const primaryColor = [20, 20, 20];
-    const secondaryColor = [100, 100, 100];
-    const lightGray = [248, 249, 250];
-    const textGray = [156, 163, 175];
+    // Theme Colors
+    const primaryColor = [20, 20, 20]; // Almost Black
+    const secondaryColor = [100, 100, 100]; // Dark Gray
+    const lightGray = [248, 249, 250]; // Very Light Gray for Headers
+    const textGray = [156, 163, 175]; // Light Text Gray for labels
     
-    const config = { companyName: "Ryme Interiors" };
+    // Config
+    const config = {
+      companyName: "Ryme Interiors", 
+    };
 
+    // --- Header ---
     if (logoImg) {
         const logoWidth = 40; 
         const logoHeight = (logoImg.height * logoWidth) / logoImg.width;
@@ -213,8 +218,6 @@ Sent from Ryme Inventory`;
 
     const tableStartY = row2Y + 30;
     const hasItemDiscounts = order.items.some(item => (item.discount_percentage || 0) > 0);
-    
-    // Updated: Added SUBTOTAL column to show original price before discount
     const tableColumn = hasItemDiscounts 
         ? ["S/N", "ITEM", "QTY", "RATE", "SUBTOTAL", "DISC.", "FINAL"]
         : ["S/N", "ITEM", "QTY", "RATE", "AMOUNT"];
@@ -228,8 +231,8 @@ Sent from Ryme Inventory`;
       const effectiveTotal = (item.sales_price_at_time * (1 - discount / 100)) * item.quantity;
       const itemData = [index + 1, item.product_name, item.quantity, safeCurrency(item.sales_price_at_time)];
       if (hasItemDiscounts) {
-        itemData.push(safeCurrency(originalTotal)); // Subtotal before discount
-        itemData.push(discount > 0 ? `-${discount}%` : "-");
+        itemData.push(safeCurrency(originalTotal));
+        itemData.push(""); // Placeholder for Disc column
       }
       itemData.push(safeCurrency(effectiveTotal));
       tableRows.push(itemData);
@@ -241,53 +244,124 @@ Sent from Ryme Inventory`;
       body: tableRows,
       theme: 'plain',
       margin: { left: 15, right: 15 },
-      styles: { fontSize: 9, cellPadding: 2, textColor: primaryColor, font: 'helvetica', valign: 'middle' },
-      headStyles: { fillColor: lightGray, textColor: textGray, fontSize: 8, fontStyle: 'bold' },
+      styles: { fontSize: 9, cellPadding: 2, textColor: primaryColor, font: 'helvetica', valign: 'middle', overflow: 'linebreak' },
+      headStyles: { fillColor: lightGray, textColor: textGray, fontSize: 8, fontStyle: 'bold', halign: 'left', cellPadding: { top: 4, bottom: 4, left: 2, right: 2 } },
+      bodyStyles: { lineWidth: 0, minCellHeight: 10 },
+      columnStyles: hasItemDiscounts ? {
+        0: { cellWidth: 8, halign: 'center', textColor: secondaryColor },
+        1: { cellWidth: 'auto', fontStyle: 'bold' },
+        2: { cellWidth: 10, halign: 'center', textColor: secondaryColor },
+        3: { cellWidth: 22, halign: 'right', textColor: secondaryColor },
+        4: { cellWidth: 28, halign: 'right', textColor: secondaryColor },
+        5: { cellWidth: 14, halign: 'center' },
+        6: { cellWidth: 28, halign: 'right', fontStyle: 'bold' },
+      } : {
+        0: { cellWidth: 10, halign: 'center', textColor: secondaryColor },
+        1: { cellWidth: 'auto', fontStyle: 'bold' },
+        2: { cellWidth: 15, halign: 'center', textColor: secondaryColor },
+        3: { cellWidth: 35, halign: 'right', textColor: secondaryColor },
+        4: { cellWidth: 40, halign: 'right', fontStyle: 'bold' },
+      },
+      didParseCell: (data) => {
+        if (data.section === 'head') {
+            if (data.column.index === 0 || data.column.index === 2) data.cell.styles.halign = 'center';
+            if (hasItemDiscounts) {
+                 if (data.column.index === 3 || data.column.index === 4 || data.column.index === 6) data.cell.styles.halign = 'right';
+                 if (data.column.index === 5) data.cell.styles.halign = 'center';
+            } else {
+                 if (data.column.index === 3 || data.column.index === 4) data.cell.styles.halign = 'right';
+            }
+        }
+      },
+      didDrawCell: (data) => {
+        if (hasItemDiscounts && data.section === 'body' && data.column.index === 5) {
+            const item = order.items[data.row.index];
+            if (item && item.discount_percentage > 0) {
+                 const badgeText = `-${item.discount_percentage}%`;
+                 const fontSize = 5; 
+                 doc.setFontSize(fontSize);
+                 doc.setFont('helvetica', 'bold');
+                 const textWidth = doc.getTextWidth(badgeText);
+                 const padding = 0.3; 
+                 const badgeSize = Math.max(textWidth + (padding * 2), fontSize + 1);
+                 const radius = badgeSize / 1.0; 
+                 const badgeX = data.cell.x + (data.cell.width / 2) - (badgeSize / 2);
+                 const badgeY = data.cell.y + (data.cell.height / 2) - (badgeSize / 2);
+                 doc.setFillColor(16, 185, 129);
+                 doc.roundedRect(badgeX, badgeY, badgeSize, badgeSize, radius, radius, 'F');
+                 doc.setTextColor(255, 255, 255);
+                 const textX = badgeX + (badgeSize / 2);
+                 const textY = badgeY + (badgeSize / 2);
+                 doc.text(badgeText, textX, textY, { align: 'center', baseline: 'middle' });
+            } else {
+                doc.setFontSize(8);
+                doc.setTextColor(...secondaryColor);
+                const dashText = "-";
+                const dashWidth = doc.getTextWidth(dashText);
+                doc.text(dashText, data.cell.x + (data.cell.width / 2) - (dashWidth / 2), data.cell.y + (data.cell.height / 2) + 1);
+            }
+        }
+      }
     });
     
     const totalsRightMargin = pageWidth - 20;
     const totalsLabelX = totalsRightMargin - 50;
     let currentY = doc.lastAutoTable.finalY + 15;
     
+    const drawTotalRow = (label, valueRaw, isBold = false, isHeavy = false, isDiscount = false) => {
+        doc.setFontSize(isHeavy ? 11 : 9);
+        doc.setFont('helvetica', isBold ? 'bold' : 'normal');
+        doc.setTextColor(...(isBold ? primaryColor : secondaryColor));
+        doc.text(label, totalsLabelX, currentY, { align: 'right' });
+        let displayValue = typeof valueRaw === 'number' ? safeCurrency(valueRaw) : valueRaw.replace(/[^\x00-\x7F]/g, "N");
+        doc.setTextColor(...(isDiscount ? [239, 68, 68] : primaryColor));
+        doc.text(displayValue, totalsRightMargin, currentY, { align: 'right' });
+        currentY += 8;
+    };
+
     const subtotal = order.subtotal || order.total_sales_price;
-    doc.setFontSize(9);
-    doc.setTextColor(...secondaryColor);
-    doc.text('Sub total', totalsLabelX, currentY, { align: 'right' });
-    doc.setTextColor(...primaryColor);
-    doc.text(safeCurrency(subtotal), totalsRightMargin, currentY, { align: 'right' });
-    currentY += 8;
+    drawTotalRow('Sub total', subtotal);
     
-    // VAT row if applicable
-    if (order.include_vat && order.vat_amount > 0) {
-      doc.setFont('helvetica', 'normal');
-      doc.setTextColor(...secondaryColor);
-      doc.text('VAT (7.5%)', totalsLabelX, currentY, { align: 'right' });
-      doc.setTextColor(...primaryColor);
-      doc.text(safeCurrency(order.vat_amount), totalsRightMargin, currentY, { align: 'right' });
-      currentY += 8;
+    if (order.discount && order.discount.value > 0) {
+        const total = order.total_sales_price;
+        const discountAmount = subtotal - total;
+        if (discountAmount > 0) {
+             drawTotalRow(`Discount`, `-${safeCurrency(discountAmount)}`, false, false, true);
+        }
     }
     
-    doc.setFont('helvetica', 'bold');
-    doc.text('Total', totalsLabelX, currentY, { align: 'right' });
+    if (order.include_vat && order.vat_amount > 0) {
+        drawTotalRow('VAT (7.5%)', order.vat_amount);
+    }
+    
+    currentY += 2;
+    doc.setDrawColor(240, 240, 240);
+    doc.line(totalsRightMargin - 70, currentY - 6, totalsRightMargin, currentY - 6);
     const grandTotal = (order.total_sales_price || 0) + (order.vat_amount || 0);
-    doc.text(safeCurrency(grandTotal), totalsRightMargin, currentY, { align: 'right' });
+    drawTotalRow('Total', grandTotal, true, false);
+    drawTotalRow('Amount due', grandTotal, true, true);
 
-    return doc.output('blob');
+    const footerY = pageHeight - 35;
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'italic');
+    doc.setTextColor(...primaryColor);
+    doc.text('*Notes:', 20, footerY);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(...secondaryColor);
+    
+    return { doc, invoiceNum };
   };
 
   const handleShare = async () => {
     if (!order) return;
     
-    // Try to share PDF file if Web Share API supports files
     if (navigator.share && navigator.canShare) {
       try {
-        const pdfBlob = await generatePDFBlob();
-        if (pdfBlob) {
-          const isPaid = order.payment_status === 'Paid';
-          const invoicePrefix = isPaid ? 'Sales_Invoice' : 'Invoice';
-          const datePart = new Date(order.order_date).toISOString().slice(0, 7).replace('-', '');
-          const idHash = order.id.slice(0, 2).toUpperCase() + order.id.slice(-2).toUpperCase();
-          const fileName = `${invoicePrefix}_${datePart}-00-${idHash}.pdf`;
+        const result = await generateInvoicePDF();
+        if (result) {
+          const { doc, invoiceNum } = result;
+          const pdfBlob = doc.output('blob');
+          const fileName = `invoice_${invoiceNum.replace(/\s/g, '_')}.pdf`;
           
           const file = new File([pdfBlob], fileName, { type: 'application/pdf' });
           
@@ -329,324 +403,11 @@ Sent from Ryme Inventory`;
   };
 
   const handlePrintInvoice = async () => {
-    if (!order) return;
-    
-    // Load Logo
-    const loadImage = (url) => {
-        return new Promise((resolve, reject) => {
-            const img = new Image();
-            img.src = url;
-            img.onload = () => resolve(img);
-            img.onerror = reject;
-        });
-    };
-
-    let logoImg = null;
-    try {
-        logoImg = await loadImage('/RymeLogoPDF.png');
-    } catch (error) {
-        console.error("Failed to load logo", error);
+    const result = await generateInvoicePDF();
+    if (result) {
+      const { doc, invoiceNum } = result;
+      doc.save(`invoice_${invoiceNum.replace(/\s/g, '_')}.pdf`);
     }
-
-    const doc = new jsPDF();
-    const pageWidth = doc.internal.pageSize.getWidth();
-    const pageHeight = doc.internal.pageSize.getHeight();
-    
-    // Theme Colors
-    const primaryColor = [20, 20, 20]; // Almost Black
-    const secondaryColor = [100, 100, 100]; // Dark Gray
-    const lightGray = [248, 249, 250]; // Very Light Gray for Headers
-    const textGray = [156, 163, 175]; // Light Text Gray for labels
-    
-    // Config
-    const config = {
-      companyName: "Ryme Interiors", 
-    };
-
-    // --- Header ---
-    // Logo
-    if (logoImg) {
-        const logoWidth = 40; 
-        const logoHeight = (logoImg.height * logoWidth) / logoImg.width;
-        doc.addImage(logoImg, 'PNG', 20, 12, logoWidth, logoHeight);
-    } else {
-        doc.setFontSize(18);
-        doc.setFont('helvetica', 'bold');
-        doc.setTextColor(...primaryColor);
-        doc.text(config.companyName, 20, 26);
-    }
-
-    // Invoice Number - "Sales Invoice" for paid orders, "Invoice" for pending
-    const isPaid = order.payment_status === 'Paid';
-    const invoicePrefix = isPaid ? 'Sales Invoice' : 'Invoice';
-    let invoiceNum = `${invoicePrefix} 000`;
-    if (order.id) {
-        // Generate a clean invoice number format like INV YYYYMM-00-HASH
-        const datePart = new Date(order.order_date).toISOString().slice(0, 7).replace('-', ''); // YYYYMM
-        const idHash = order.id.slice(0, 2).toUpperCase() + order.id.slice(-2).toUpperCase();
-        invoiceNum = `${invoicePrefix} ${datePart}-00-${idHash}`;
-    }
-    
-    doc.setFontSize(11);
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(...primaryColor);
-    doc.text(invoiceNum, pageWidth - 20, 26, { align: 'right' });
-
-    // Line Divider
-    doc.setDrawColor(240, 240, 240);
-    doc.setLineWidth(0.5);
-    doc.line(20, 35, pageWidth - 20, 35);
-
-    // --- Info Section ---
-    const startY = 50;
-    const col2X = pageWidth / 2 + 10;
-    
-    doc.setFontSize(9);
-    
-    // Row 1: Date & Currency
-    // Label - Date
-    doc.setTextColor(...textGray);
-    doc.text('Date', 20, startY);
-    // Value
-    doc.setTextColor(...primaryColor);
-    doc.setFont('helvetica', 'bold');
-    const orderDate = new Date(order.order_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
-    doc.text(orderDate, 20, startY + 6);
-
-    // Label - Currency (Moved from Row 2)
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(...textGray);
-    doc.text('Currency', col2X, startY);
-    // Value
-    doc.setTextColor(...primaryColor);
-    doc.setFont('helvetica', 'bold');
-    doc.text('NGN - Nigerian Naira', col2X, startY + 6);
-
-    // Row 2: Billed To (Currency Removed)
-    const row2Y = startY + 20;
-    
-    // Label - Billed To
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(...textGray);
-    doc.text('Billed To', 20, row2Y);
-    // Value
-    doc.setTextColor(...primaryColor);
-    doc.setFont('helvetica', 'bold');
-    doc.text(order.customer_name || 'Guest', 20, row2Y + 6);
-    
-    // Billed To Address (Regular font, smaller)
-    if (order.customer_address) {
-        doc.setFont('helvetica', 'normal');
-        doc.setFontSize(8);
-        doc.setTextColor(...secondaryColor);
-        // Wrap text if needed
-        const splitAddress = doc.splitTextToSize(order.customer_address, 70);
-        doc.text(splitAddress, 20, row2Y + 11);
-        doc.setFontSize(9); // Reset size
-    }
-    
-    // Currency was here - now removed
-
-    // --- Table ---
-    const tableStartY = row2Y + 30;
-    
-    // Check if any item has a discount to dynamically add column
-    const hasItemDiscounts = order.items.some(item => (item.discount_percentage || 0) > 0);
-    
-    // Updated: Added S/N column, SUBTOTAL column (before discount), Discount column if needed
-    const tableColumn = hasItemDiscounts 
-        ? ["S/N", "ITEM", "QTY", "RATE", "SUBTOTAL", "DISC.", "FINAL"]
-        : ["S/N", "ITEM", "QTY", "RATE", "AMOUNT"];
-        
-    const tableRows = [];
-
-    // Helper to sanitize currency for PDF (removes unsupported symbols like ₦)
-    const safeCurrency = (val) => {
-        const formatted = formatCurrency(val);
-        return formatted.replace(/[^\x00-\x7F]/g, "N"); // Replace non-ascii with N
-    };
-
-    order.items.forEach((item, index) => {
-      const discount = item.discount_percentage || 0;
-      const originalTotal = item.sales_price_at_time * item.quantity;
-      const effectiveTotal = (item.sales_price_at_time * (1 - discount / 100)) * item.quantity;
-      
-      const itemData = [
-        index + 1, // S/N
-        item.product_name,
-        item.quantity,
-        safeCurrency(item.sales_price_at_time),
-      ];
-
-      if (hasItemDiscounts) {
-          itemData.push(safeCurrency(originalTotal)); // Subtotal before discount
-          itemData.push(""); // Placeholder for Disc column (drawn manually as badge)
-      }
-
-      itemData.push(safeCurrency(effectiveTotal));
-      tableRows.push(itemData);
-    });
-
-    autoTable(doc, {
-      startY: tableStartY,
-      head: [tableColumn],
-      body: tableRows,
-      theme: 'plain',
-      margin: { left: 15, right: 15 }, // Reduced margins for wider table
-      styles: {
-        fontSize: 9,
-        cellPadding: 2, // Reduced padding significantly (was 8) to prevent wrapping
-        textColor: primaryColor,
-        font: 'helvetica',
-        valign: 'middle',
-        overflow: 'linebreak'
-      },
-      headStyles: {
-        fillColor: lightGray,
-        textColor: textGray,
-        fontSize: 8,
-        fontStyle: 'bold',
-        halign: 'left',
-        cellPadding: { top: 4, bottom: 4, left: 2, right: 2 } // specific padding for header
-      },
-      bodyStyles: {
-        lineWidth: 0,
-        minCellHeight: 10, // Ensure rows aren't too squashed vertically
-      },
-      columnStyles: hasItemDiscounts ? {
-        0: { cellWidth: 8, halign: 'center', textColor: secondaryColor }, // S/N
-        1: { cellWidth: 'auto', fontStyle: 'bold' }, // Item
-        2: { cellWidth: 10, halign: 'center', textColor: secondaryColor }, // Qty
-        3: { cellWidth: 22, halign: 'right', textColor: secondaryColor }, // Rate
-        4: { cellWidth: 28, halign: 'right', textColor: secondaryColor }, // Subtotal (before discount)
-        5: { cellWidth: 14, halign: 'center' }, // Disc
-        6: { cellWidth: 28, halign: 'right', fontStyle: 'bold' }, // Final (after discount)
-      } : {
-        0: { cellWidth: 10, halign: 'center', textColor: secondaryColor }, // S/N
-        1: { cellWidth: 'auto', fontStyle: 'bold' }, // Item
-        2: { cellWidth: 15, halign: 'center', textColor: secondaryColor }, // Qty
-        3: { cellWidth: 35, halign: 'right', textColor: secondaryColor }, // Rate
-        4: { cellWidth: 40, halign: 'right', fontStyle: 'bold' }, // Amount
-      },
-      didParseCell: (data) => {
-        // Custom alignment for header
-        if (data.section === 'head') {
-            if (data.column.index === 0 || data.column.index === 2) data.cell.styles.halign = 'center';
-            if (hasItemDiscounts) {
-                 if (data.column.index === 3 || data.column.index === 4 || data.column.index === 6) data.cell.styles.halign = 'right';
-                 if (data.column.index === 5) data.cell.styles.halign = 'center';
-            } else {
-                 if (data.column.index === 3 || data.column.index === 4) data.cell.styles.halign = 'right';
-            }
-        }
-      },
-      didDrawCell: (data) => {
-        // Draw badge in Discount column if applicable (now index 5 with SUBTOTAL column)
-        if (hasItemDiscounts && data.section === 'body' && data.column.index === 5) {
-            const item = order.items[data.row.index];
-            if (item && item.discount_percentage > 0) {
-                 const badgeText = `-${item.discount_percentage}%`;
-                 const fontSize = 5; 
-                 doc.setFontSize(fontSize);
-                 doc.setFont('helvetica', 'bold');
-                 
-                 const textWidth = doc.getTextWidth(badgeText);
-                 const padding = 0.3; 
-                 // Make badge perfectly circular by using the larger dimension
-                 const minSize = Math.max(textWidth + (padding * 2), fontSize + 1);
-                 const badgeSize = minSize; // Use same width and height for circle
-                 const radius = badgeSize / 1.0; 
-                 
-                 // Center in cell
-                 const badgeX = data.cell.x + (data.cell.width / 2) - (badgeSize / 2);
-                 const badgeY = data.cell.y + (data.cell.height / 2) - (badgeSize / 2);
-                 
-                 doc.setFillColor(16, 185, 129); // Green background
-                 doc.roundedRect(badgeX, badgeY, badgeSize, badgeSize, radius, radius, 'F');
-                 
-                 doc.setTextColor(255, 255, 255); // White text
-                 const textX = badgeX + (badgeSize / 2);
-                 const textY = badgeY + (badgeSize / 2);
-                 doc.text(badgeText, textX, textY, { align: 'center', baseline: 'middle' });
-            } else {
-                // Optional: Draw a subtle dash for items without discount
-                doc.setFontSize(8);
-                doc.setTextColor(...secondaryColor);
-                const dashText = "-";
-                const dashWidth = doc.getTextWidth(dashText);
-                doc.text(dashText, data.cell.x + (data.cell.width / 2) - (dashWidth / 2), data.cell.y + (data.cell.height / 2) + 1);
-            }
-        }
-      }
-    });
-    
-    // --- Totals Section ---
-    const totalsRightMargin = pageWidth - 20;
-    const totalsLabelX = totalsRightMargin - 50;
-    let currentY = doc.lastAutoTable.finalY + 15;
-    
-    // Helper to draw total rows
-    const drawTotalRow = (label, valueRaw, isBold = false, isHeavy = false, isDiscount = false) => {
-        doc.setFontSize(isHeavy ? 11 : 9);
-        doc.setFont('helvetica', isBold ? 'bold' : 'normal');
-        
-        // Label
-        doc.setTextColor(...(isBold ? primaryColor : secondaryColor));
-        doc.text(label, totalsLabelX, currentY, { align: 'right' });
-        
-        // Value (cleaned)
-        // If valueRaw is a number, format it. If string, use as is (sanitized)
-        let displayValue = typeof valueRaw === 'number' ? safeCurrency(valueRaw) : valueRaw.replace(/[^\x00-\x7F]/g, "N");
-
-        doc.setTextColor(...(isDiscount ? [239, 68, 68] : primaryColor)); // Red for discount
-        doc.text(displayValue, totalsRightMargin, currentY, { align: 'right' });
-        
-        currentY += 8; // Spacing per row
-    };
-
-    // Subtotal
-    const subtotal = order.subtotal || order.total_sales_price;
-    drawTotalRow('Sub total', subtotal);
-    
-    // Discount
-    if (order.discount && order.discount.value > 0) {
-        const total = order.total_sales_price;
-        const discountAmount = subtotal - total;
-        if (discountAmount > 0) {
-             drawTotalRow(`Discount`, `-${safeCurrency(discountAmount)}`, false, false, true);
-        }
-    }
-    
-    // VAT row if applicable
-    if (order.include_vat && order.vat_amount > 0) {
-        drawTotalRow('VAT (7.5%)', order.vat_amount);
-    }
-    
-    // Visual Line before Total
-    currentY += 2;
-    doc.setDrawColor(240, 240, 240);
-    doc.line(totalsRightMargin - 70, currentY - 6, totalsRightMargin, currentY - 6);
-    
-    // Total (includes VAT if applicable)
-    const grandTotal = (order.total_sales_price || 0) + (order.vat_amount || 0);
-    drawTotalRow('Total', grandTotal, true, false);
-    
-    // Amount Due (Grand Total)
-    drawTotalRow('Amount due', grandTotal, true, true);
-
-    
-    // --- Footer Notes ---
-    const footerY = pageHeight - 35;
-    
-    doc.setFontSize(8);
-    doc.setFont('helvetica', 'italic');
-    doc.setTextColor(...primaryColor);
-    doc.text('*Notes:', 20, footerY);
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(...secondaryColor);
-    // Removed specific return policy note and attachment box
-    
-    doc.save(`invoice_${invoiceNum.replace(/\s/g, '_')}.pdf`);
   };
 
   if (loading) {
