@@ -278,6 +278,11 @@ tr.row-selected td {
   color: var(--success-text);
 }
 
+.order-card-status.partial {
+  background: rgba(59, 130, 246, 0.1);
+  color: #3B82F6;
+}
+
 .order-card-status.pending {
   background: var(--warning-bg);
   color: var(--warning-text);

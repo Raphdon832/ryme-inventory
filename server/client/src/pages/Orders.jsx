@@ -965,11 +965,18 @@ const Orders = () => {
                     (() => {
                         const status = order.payment_status || 'Paid';
                         const isPaid = status === 'Paid';
+                        const isPartial = status === 'Partial';
+                        const statusColors = {
+                          Paid: { bg: 'rgba(16, 185, 129, 0.1)', text: '#10B981' },
+                          Partial: { bg: 'rgba(59, 130, 246, 0.1)', text: '#3B82F6' },
+                          Pending: { bg: 'rgba(245, 158, 11, 0.1)', text: '#F59E0B' }
+                        };
+                        const colors = statusColors[status] || statusColors.Pending;
                         return (
-                            <span className={`badge ${isPaid ? 'badge-success' : 'badge-warning'}`} 
+                            <span className={`badge ${isPaid ? 'badge-success' : isPartial ? 'badge-info' : 'badge-warning'}`} 
                                   style={{ 
-                                    backgroundColor: isPaid ? 'rgba(16, 185, 129, 0.1)' : 'rgba(245, 158, 11, 0.1)',
-                                    color: isPaid ? '#10B981' : '#F59E0B',
+                                    backgroundColor: colors.bg,
+                                    color: colors.text,
                                     padding: '4px 8px',
                                     borderRadius: '4px',
                                     fontWeight: 600,
@@ -1039,6 +1046,7 @@ const Orders = () => {
                 .map(order => {
                   const status = order._offline ? 'Pending Sync' : (order.payment_status || 'Paid');
                   const isPaid = status === 'Paid';
+                  const isPartial = status === 'Partial';
                   const isOffline = order._offline;
                   const isSelected = selectedOrders.includes(order.id);
                   const isSelectedForDownload = selectedForDownload.includes(order.id);
@@ -1194,7 +1202,7 @@ const Orders = () => {
                     <Link to={`/orders/${order.id}`} key={order.id} className="order-card-mobile">
                       <div className="order-card-header">
                         <span className="order-card-customer">{order.customer_name}</span>
-                        <span className={`order-card-status ${isPaid ? 'paid' : 'pending'}`}>
+                        <span className={`order-card-status ${isPaid ? 'paid' : isPartial ? 'partial' : 'pending'}`}>
                           {status}
                         </span>
                       </div>

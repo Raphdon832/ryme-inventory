@@ -863,3 +863,86 @@ export const CloudIcon = ({ size = 24, className = '', color = 'currentColor' })
     <path d="M18 10H16.74C16.3659 8.55183 15.5928 7.23801 14.5086 6.2028C13.4245 5.16759 12.0727 4.45547 10.6069 4.14854C9.14114 3.84161 7.6201 3.95217 6.21665 4.46763C4.8132 4.9831 3.58363 5.88211 2.66118 7.06351C1.73873 8.24492 1.16048 9.66162 0.993042 11.1525C0.825601 12.6435 1.07566 14.1511 1.71533 15.5109C2.355 16.8708 3.35942 18.0299 4.61909 18.8617C5.87876 19.6936 7.34389 20.1651 8.85 20.23H18C19.3261 20.23 20.5979 19.7029 21.5355 18.7653C22.4732 17.8276 23 16.5558 23 15.2297C23 13.9036 22.4732 12.6317 21.5355 11.6941C20.5979 10.7564 19.3261 10.2297 18 10.2297V10Z" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
   </svg>
 );
+
+// Payment/Wallet Icon
+export const PaymentIcon = ({ size = 24, className = '', color = 'currentColor' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className={className}>
+    <rect x="2" y="5" width="20" height="14" rx="2" stroke={color} strokeWidth="2"/>
+    <path d="M2 10H22" stroke={color} strokeWidth="2"/>
+    <path d="M6 15H10" stroke={color} strokeWidth="2" strokeLinecap="round"/>
+  </svg>
+);
+
+// Credit Card Icon
+export const CreditCardIcon = ({ size = 24, className = '', color = 'currentColor' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className={className}>
+    <rect x="1" y="4" width="22" height="16" rx="2" stroke={color} strokeWidth="2"/>
+    <path d="M1 10H23" stroke={color} strokeWidth="2"/>
+    <path d="M5 15H9" stroke={color} strokeWidth="2" strokeLinecap="round"/>
+    <path d="M13 15H15" stroke={color} strokeWidth="2" strokeLinecap="round"/>
+  </svg>
+);
+
+// Cash/Money Icon
+export const CashIcon = ({ size = 24, className = '', color = 'currentColor' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className={className}>
+    <rect x="2" y="6" width="20" height="12" rx="2" stroke={color} strokeWidth="2"/>
+    <circle cx="12" cy="12" r="3" stroke={color} strokeWidth="2"/>
+    <path d="M6 12H6.01" stroke={color} strokeWidth="2" strokeLinecap="round"/>
+    <path d="M18 12H18.01" stroke={color} strokeWidth="2" strokeLinecap="round"/>
+  </svg>
+);
+
+// Bank Transfer Icon
+export const BankIcon = ({ size = 24, className = '', color = 'currentColor' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className={className}>
+    <path d="M3 21H21" stroke={color} strokeWidth="2" strokeLinecap="round"/>
+    <path d="M3 10H21" stroke={color} strokeWidth="2" strokeLinecap="round"/>
+    <path d="M5 6L12 3L19 6" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+    <path d="M4 10V21" stroke={color} strokeWidth="2"/>
+    <path d="M20 10V21" stroke={color} strokeWidth="2"/>
+    <path d="M8 14V17" stroke={color} strokeWidth="2" strokeLinecap="round"/>
+    <path d="M12 14V17" stroke={color} strokeWidth="2" strokeLinecap="round"/>
+    <path d="M16 14V17" stroke={color} strokeWidth="2" strokeLinecap="round"/>
+  </svg>
+);
+
+// History Icon
+export const HistoryIcon = ({ size = 24, className = '', color = 'currentColor' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className={className}>
+    <path d="M3 3V9H9" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+    <path d="M3.05 13C3.27 15.37 4.38 17.57 6.14 19.16C7.9 20.75 10.17 21.61 12.55 21.59C14.93 21.56 17.18 20.64 18.9 19.01C20.63 17.37 21.69 15.14 21.86 12.77C22.03 10.4 21.29 8.05 19.78 6.2C18.27 4.35 16.11 3.14 13.74 2.83C11.37 2.52 8.97 3.14 7.05 4.55L3 8" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+    <path d="M12 7V12L16 14" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+  </svg>
+);
+
+// Unlink Icon (for unlinking orders)
+export const UnlinkIcon = ({ size = 24, className = '', color = 'currentColor' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className={className}>
+    <path d="M18.84 12.25L21.54 9.54C22.4508 8.59695 22.9548 7.33394 22.9434 6.02296C22.932 4.71198 22.4061 3.45791 21.479 2.53087C20.552 1.60383 19.2979 1.07799 17.987 1.0666C16.676 1.0552 15.413 1.55918 14.47 2.47L12.75 4.18" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+    <path d="M5.16 11.75L2.46 14.46C1.54917 15.403 1.04519 16.666 1.05659 17.977C1.06798 19.288 1.59382 20.5421 2.52086 21.4691C3.4479 22.3962 4.70197 22.922 6.01295 22.9334C7.32393 22.9448 8.58694 22.4408 9.53 21.53L11.24 19.82" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+    <path d="M1 1L23 23" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+  </svg>
+);
+
+// Package Check Icon (for fulfilled items)
+export const PackageCheckIcon = ({ size = 24, className = '', color = 'currentColor' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className={className}>
+    <path d="M16.5 9.4L7.5 4.21" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+    <path d="M21 16V8C20.9996 7.6481 20.9071 7.30284 20.7315 7.00019C20.556 6.69754 20.3037 6.44842 20 6.27702L13 2.27702C12.696 2.10538 12.3511 2.01514 12 2.01514C11.6489 2.01514 11.304 2.10538 11 2.27702L4 6.27702C3.69626 6.44842 3.44398 6.69754 3.26846 7.00019C3.09294 7.30284 3.00036 7.6481 3 8V16C3.00036 16.3519 3.09294 16.6972 3.26846 16.9998C3.44398 17.3025 3.69626 17.5516 4 17.723L11 21.723C11.304 21.8946 11.6489 21.9849 12 21.9849C12.3511 21.9849 12.696 21.8946 13 21.723L20 17.723C20.3037 17.5516 20.556 17.3025 20.7315 16.9998C20.9071 16.6972 20.9996 16.3519 21 16Z" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+    <path d="M3.27002 6.96002L12 12.01L20.73 6.96002" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+    <path d="M12 22.08V12" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+    <path d="M7.5 15L10.5 17L16.5 11" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+  </svg>
+);
+
+// Group Icon (for linked orders group)
+export const GroupIcon = ({ size = 24, className = '', color = 'currentColor' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className={className}>
+    <rect x="3" y="3" width="7" height="7" rx="1" stroke={color} strokeWidth="2"/>
+    <rect x="14" y="3" width="7" height="7" rx="1" stroke={color} strokeWidth="2"/>
+    <rect x="3" y="14" width="7" height="7" rx="1" stroke={color} strokeWidth="2"/>
+    <rect x="14" y="14" width="7" height="7" rx="1" stroke={color} strokeWidth="2"/>
+  </svg>
+);
+

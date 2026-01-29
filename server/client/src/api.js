@@ -155,6 +155,41 @@ const api = {
       return { data: { data: snapshot.docs.map(normalizeDoc) } };
     }
 
+    if (path.startsWith('/orders/') && path.includes('/linked')) {
+      // Get linked orders for a specific order
+      const id = path.split('/')[2];
+      const orderSnap = await getDoc(doc(ordersRef, id));
+      
+      if (!orderSnap.exists()) {
+        return { data: { data: [] } };
+      }
+      
+      const orderData = orderSnap.data();
+      
+      if (!orderData.linked_group_id) {
+        return { data: { data: [] } };
+      }
+      
+      // Get all orders in the same group
+      const groupQuery = query(ordersRef, where('linked_group_id', '==', orderData.linked_group_id));
+      const groupSnapshot = await getDocs(groupQuery);
+      
+      // Exclude the current order from the list
+      const linkedOrders = groupSnapshot.docs
+        .map(normalizeDoc)
+        .filter(order => order.id !== id);
+      
+      return { data: { data: linkedOrders } };
+    }
+
+    if (path.startsWith('/orders/customer/')) {
+      // Get orders by customer ID for linking
+      const customerId = path.split('/')[3];
+      const customerQuery = query(ordersRef, where('customer_id', '==', customerId), orderBy('order_date', 'desc'));
+      const snapshot = await getDocs(customerQuery);
+      return { data: { data: snapshot.docs.map(normalizeDoc) } };
+    }
+
     if (path.startsWith('/orders/')) {
       const id = path.split('/')[2];
       const snapshot = await getDoc(doc(ordersRef, id));
@@ -565,6 +600,347 @@ const api = {
          });
 
          const snapshot = await getDoc(doc(ordersRef, id));
+         return { data: { data: normalizeDoc(snapshot) } };
+       }
+
+       // Record a payment for an order
+       if (payload.action === 'record_payment') {
+         const { amount, payment_method, notes, date } = payload;
+         
+         if (!amount || amount <= 0) {
+           throw new Error('Payment amount must be greater than 0');
+         }
+
+         const orderRef = doc(ordersRef, id);
+         const orderSnap = await getDoc(orderRef);
+         
+         if (!orderSnap.exists()) {
+           throw new Error("Order not found");
+         }
+
+         const orderData = orderSnap.data();
+         const existingPayments = orderData.payments || [];
+         const grandTotal = (orderData.total_sales_price || 0) + (orderData.vat_amount || 0);
+         const totalPaid = existingPayments.reduce((sum, p) => sum + (p.amount || 0), 0);
+         const newTotalPaid = totalPaid + amount;
+
+         // Create new payment record
+         const newPayment = {
+           id: `pay_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+           amount: Number(amount),
+           payment_method: payment_method || 'Cash',
+           notes: notes || '',
+           date: date || new Date().toISOString(),
+           recorded_at: new Date().toISOString()
+         };
+
+         const updatedPayments = [...existingPayments, newPayment];
+
+         // Determine new payment status
+         let newPaymentStatus = orderData.payment_status;
+         if (newTotalPaid >= grandTotal) {
+           newPaymentStatus = 'Paid';
+         } else if (newTotalPaid > 0) {
+           newPaymentStatus = 'Partial';
+         }
+
+         // Update order with new payment
+         const updateData = {
+           payments: updatedPayments,
+           total_paid: newTotalPaid,
+           payment_status: newPaymentStatus,
+           updated_at: new Date().toISOString()
+         };
+
+         // If fully paid and was not paid before, also set paid_at and deduct stock
+         if (newPaymentStatus === 'Paid' && orderData.payment_status !== 'Paid') {
+           updateData.paid_at = new Date().toISOString();
+           
+           // Deduct stock in a transaction
+           await runTransaction(db, async (transaction) => {
+             // First, read all product data
+             const productUpdates = [];
+             for (const item of orderData.items) {
+               const productRef = doc(productsRef, String(item.product_id));
+               const productSnap = await transaction.get(productRef);
+               
+               if (!productSnap.exists()) {
+                 throw new Error(`Product ${item.product_name} not found`);
+               }
+               
+               const productData = productSnap.data();
+               const currentStock = Number(productData.stock_quantity || 0);
+               
+               if (currentStock < item.quantity) {
+                 throw new Error(`Insufficient stock for ${item.product_name}. Available: ${currentStock}`);
+               }
+               
+               productUpdates.push({
+                 ref: productRef,
+                 newStock: currentStock - item.quantity
+               });
+             }
+
+             // Submit all stock updates
+             for (const update of productUpdates) {
+               transaction.update(update.ref, {
+                 stock_quantity: update.newStock
+               });
+             }
+
+             // Update order
+             transaction.update(orderRef, updateData);
+           });
+         } else {
+           // Just update the order without stock changes
+           await updateDoc(orderRef, updateData);
+         }
+
+         // Log activity
+         await api.logActivity('payment', 'order', `Payment of ${amount} recorded for order #${id.slice(0, 8)}`, { 
+           id, 
+           payment: newPayment,
+           total_paid: newTotalPaid,
+           payment_status: newPaymentStatus
+         });
+
+         const snapshot = await getDoc(orderRef);
+         return { data: { data: normalizeDoc(snapshot) } };
+       }
+
+       // Delete a payment from an order
+       if (payload.action === 'delete_payment') {
+         const { paymentId } = payload;
+         
+         if (!paymentId) {
+           throw new Error('Payment ID is required');
+         }
+
+         const orderRef = doc(ordersRef, id);
+         const orderSnap = await getDoc(orderRef);
+         
+         if (!orderSnap.exists()) {
+           throw new Error("Order not found");
+         }
+
+         const orderData = orderSnap.data();
+         
+         // Cannot delete payments from fully paid orders that have had stock deducted
+         if (orderData.payment_status === 'Paid' && orderData.paid_at) {
+           throw new Error('Cannot delete payments from fully paid orders. Stock has already been deducted.');
+         }
+
+         const existingPayments = orderData.payments || [];
+         const paymentToDelete = existingPayments.find(p => p.id === paymentId);
+         
+         if (!paymentToDelete) {
+           throw new Error('Payment not found');
+         }
+
+         const updatedPayments = existingPayments.filter(p => p.id !== paymentId);
+         const newTotalPaid = updatedPayments.reduce((sum, p) => sum + (p.amount || 0), 0);
+
+         // Determine new payment status
+         let newPaymentStatus = 'Pending';
+         if (newTotalPaid > 0) {
+           newPaymentStatus = 'Partial';
+         }
+
+         await updateDoc(orderRef, {
+           payments: updatedPayments,
+           total_paid: newTotalPaid,
+           payment_status: newPaymentStatus,
+           updated_at: new Date().toISOString()
+         });
+
+         // Log activity
+         await api.logActivity('payment_deleted', 'order', `Payment of ${paymentToDelete.amount} deleted from order #${id.slice(0, 8)}`, { 
+           id, 
+           deleted_payment: paymentToDelete,
+           total_paid: newTotalPaid,
+           payment_status: newPaymentStatus
+         });
+
+         const snapshot = await getDoc(orderRef);
+         return { data: { data: normalizeDoc(snapshot) } };
+       }
+
+       // Link orders together
+       if (payload.action === 'link_orders') {
+         const { orderIds } = payload;
+         
+         if (!orderIds || !Array.isArray(orderIds) || orderIds.length === 0) {
+           throw new Error('Order IDs are required');
+         }
+
+         const orderRef = doc(ordersRef, id);
+         const orderSnap = await getDoc(orderRef);
+         
+         if (!orderSnap.exists()) {
+           throw new Error("Order not found");
+         }
+
+         const orderData = orderSnap.data();
+         
+         // Use existing linked_group_id or create a new one
+         const linkedGroupId = orderData.linked_group_id || `group_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+         
+         // Update all orders with the same linked_group_id
+         const allOrderIds = [id, ...orderIds];
+         const batch = writeBatch(db);
+         
+         for (const orderId of allOrderIds) {
+           const ref = doc(ordersRef, orderId);
+           batch.update(ref, {
+             linked_group_id: linkedGroupId,
+             updated_at: new Date().toISOString()
+           });
+         }
+         
+         await batch.commit();
+
+         // Log activity
+         await api.logActivity('orders_linked', 'order', `Linked ${allOrderIds.length} orders together`, { 
+           linked_group_id: linkedGroupId,
+           order_ids: allOrderIds
+         });
+
+         const snapshot = await getDoc(orderRef);
+         return { data: { data: normalizeDoc(snapshot) } };
+       }
+
+       // Unlink an order from its group
+       if (payload.action === 'unlink_order') {
+         const orderRef = doc(ordersRef, id);
+         const orderSnap = await getDoc(orderRef);
+         
+         if (!orderSnap.exists()) {
+           throw new Error("Order not found");
+         }
+
+         const orderData = orderSnap.data();
+         
+         if (!orderData.linked_group_id) {
+           throw new Error("Order is not linked to any group");
+         }
+
+         const linkedGroupId = orderData.linked_group_id;
+
+         // Get all orders in the group
+         const groupQuery = query(ordersRef, where('linked_group_id', '==', linkedGroupId));
+         const groupSnapshot = await getDocs(groupQuery);
+         
+         // If only 2 orders in group, unlink both (dissolve the group)
+         if (groupSnapshot.docs.length <= 2) {
+           const batch = writeBatch(db);
+           for (const docSnap of groupSnapshot.docs) {
+             batch.update(docSnap.ref, {
+               linked_group_id: null,
+               updated_at: new Date().toISOString()
+             });
+           }
+           await batch.commit();
+         } else {
+           // Just remove this order from the group
+           await updateDoc(orderRef, {
+             linked_group_id: null,
+             updated_at: new Date().toISOString()
+           });
+         }
+
+         // Log activity
+         await api.logActivity('order_unlinked', 'order', `Order #${id.slice(0, 8)} unlinked from group`, { 
+           id,
+           former_group_id: linkedGroupId
+         });
+
+         const snapshot = await getDoc(orderRef);
+         return { data: { data: normalizeDoc(snapshot) } };
+       }
+
+       // Toggle item fulfillment status
+       if (payload.action === 'toggle_item_fulfilled') {
+         const { itemIndex, fulfilled } = payload;
+         
+         if (itemIndex === undefined || itemIndex === null) {
+           throw new Error('Item index is required');
+         }
+
+         const orderRef = doc(ordersRef, id);
+         const orderSnap = await getDoc(orderRef);
+         
+         if (!orderSnap.exists()) {
+           throw new Error("Order not found");
+         }
+
+         const orderData = orderSnap.data();
+         const items = [...(orderData.items || [])];
+         
+         if (itemIndex < 0 || itemIndex >= items.length) {
+           throw new Error('Invalid item index');
+         }
+
+         // Toggle or set fulfilled status
+         items[itemIndex] = {
+           ...items[itemIndex],
+           fulfilled: fulfilled !== undefined ? fulfilled : !items[itemIndex].fulfilled,
+           fulfilled_at: fulfilled !== false ? new Date().toISOString() : null
+         };
+
+         // Check if all items are fulfilled
+         const allFulfilled = items.every(item => item.fulfilled);
+
+         await updateDoc(orderRef, {
+           items,
+           fulfillment_status: allFulfilled ? 'Fulfilled' : items.some(i => i.fulfilled) ? 'Partial' : 'Pending',
+           updated_at: new Date().toISOString()
+         });
+
+         // Log activity
+         const itemName = items[itemIndex].product_name;
+         const action = items[itemIndex].fulfilled ? 'fulfilled' : 'unfulfilled';
+         await api.logActivity('item_fulfillment', 'order', `Item "${itemName}" marked as ${action} in order #${id.slice(0, 8)}`, { 
+           id,
+           item_index: itemIndex,
+           item_name: itemName,
+           fulfilled: items[itemIndex].fulfilled
+         });
+
+         const snapshot = await getDoc(orderRef);
+         return { data: { data: normalizeDoc(snapshot) } };
+       }
+
+       // Mark all items as fulfilled/unfulfilled
+       if (payload.action === 'set_all_items_fulfilled') {
+         const { fulfilled } = payload;
+         
+         const orderRef = doc(ordersRef, id);
+         const orderSnap = await getDoc(orderRef);
+         
+         if (!orderSnap.exists()) {
+           throw new Error("Order not found");
+         }
+
+         const orderData = orderSnap.data();
+         const items = (orderData.items || []).map(item => ({
+           ...item,
+           fulfilled: fulfilled,
+           fulfilled_at: fulfilled ? new Date().toISOString() : null
+         }));
+
+         await updateDoc(orderRef, {
+           items,
+           fulfillment_status: fulfilled ? 'Fulfilled' : 'Pending',
+           updated_at: new Date().toISOString()
+         });
+
+         // Log activity
+         await api.logActivity('bulk_fulfillment', 'order', `All items marked as ${fulfilled ? 'fulfilled' : 'unfulfilled'} in order #${id.slice(0, 8)}`, { 
+           id,
+           fulfilled
+         });
+
+         const snapshot = await getDoc(orderRef);
          return { data: { data: normalizeDoc(snapshot) } };
        }
 

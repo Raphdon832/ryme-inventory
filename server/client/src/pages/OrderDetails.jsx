@@ -14,7 +14,20 @@ import {
   AlertCircleIcon,
   CheckIcon,
   CopyIcon,
-  EditIcon
+  EditIcon,
+  PaymentIcon,
+  CloseIcon,
+  DeleteIcon,
+  HistoryIcon,
+  CashIcon,
+  CreditCardIcon,
+  BankIcon,
+  LinkIcon,
+  UnlinkIcon,
+  PackageCheckIcon,
+  GroupIcon,
+  SearchIcon,
+  CartIcon
 } from '../components/CustomIcons';
 import api from '../api';
 import jsPDF from 'jspdf';
@@ -23,12 +36,13 @@ import { useSettings } from '../contexts/SettingsContext';
 import { useToast } from '../components/Toast';
 import soundManager from '../utils/soundManager';
 import { usePageState } from '../hooks/usePageState';
+import useScrollLock from '../hooks/useScrollLock';
 import './OrderDetails.css';
 
 const OrderDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { formatCurrency } = useSettings();
+  const { formatCurrency, currencySymbol } = useSettings();
   const toast = useToast();
 
   // Persist scroll position
@@ -38,6 +52,34 @@ const OrderDetails = () => {
   const [loading, setLoading] = useState(true);
   const [showShareMenu, setShowShareMenu] = useState(false);
   const [copied, setCopied] = useState(false);
+  
+  // Payment modal state
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [paymentLoading, setPaymentLoading] = useState(false);
+  const [paymentForm, setPaymentForm] = useState({
+    amount: '',
+    payment_method: 'Cash',
+    notes: '',
+    date: new Date().toISOString().split('T')[0]
+  });
+  const [showPaymentHistory, setShowPaymentHistory] = useState(false);
+  
+  // Invoice options
+  const [includePaymentInInvoice, setIncludePaymentInInvoice] = useState(false);
+  
+  // Linking orders state
+  const [showLinkModal, setShowLinkModal] = useState(false);
+  const [linkedOrders, setLinkedOrders] = useState([]);
+  const [customerOrders, setCustomerOrders] = useState([]);
+  const [linkingLoading, setLinkingLoading] = useState(false);
+  const [selectedOrdersToLink, setSelectedOrdersToLink] = useState([]);
+  const [linkSearchQuery, setLinkSearchQuery] = useState('');
+  
+  // Fulfillment state
+  const [fulfillmentLoading, setFulfillmentLoading] = useState(null); // Holds item index being toggled
+  
+  // Lock scroll when modals are open
+  useScrollLock(showPaymentModal || showLinkModal);
 
   useEffect(() => {
     const unsubscribe = api.subscribe(`/orders/${id}`, (response) => {
@@ -46,6 +88,27 @@ const OrderDetails = () => {
     });
     return () => unsubscribe();
   }, [id]);
+  
+  // Fetch linked orders when order changes
+  useEffect(() => {
+    const fetchLinkedOrders = async () => {
+      if (order?.linked_group_id) {
+        try {
+          const response = await api.get(`/orders/${id}/linked`);
+          setLinkedOrders(response.data.data || []);
+        } catch (error) {
+          console.error('Error fetching linked orders:', error);
+        }
+      } else {
+        setLinkedOrders([]);
+      }
+    };
+    
+    if (order) {
+      fetchLinkedOrders();
+    }
+  }, [order?.linked_group_id, id]);
+
 
   // Close share menu on click outside
   useEffect(() => {
@@ -73,6 +136,243 @@ const OrderDetails = () => {
         } finally {
             setLoading(false);
         }
+    }
+  };
+
+  // Payment handling functions
+  const resetPaymentForm = () => {
+    setPaymentForm({
+      amount: '',
+      payment_method: 'Cash',
+      notes: '',
+      date: new Date().toISOString().split('T')[0]
+    });
+  };
+
+  const openPaymentModal = () => {
+    resetPaymentForm();
+    // Pre-fill with remaining balance
+    if (order) {
+      const grandTotal = (order.total_sales_price || 0) + (order.vat_amount || 0);
+      const totalPaid = order.total_paid || 0;
+      const remaining = grandTotal - totalPaid;
+      if (remaining > 0) {
+        setPaymentForm(prev => ({ ...prev, amount: remaining.toString() }));
+      }
+    }
+    setShowPaymentModal(true);
+  };
+
+  const handlePaymentSubmit = async (e) => {
+    e.preventDefault();
+    if (!paymentForm.amount || parseFloat(paymentForm.amount) <= 0) {
+      toast.error('Please enter a valid payment amount');
+      return;
+    }
+
+    setPaymentLoading(true);
+    try {
+      await api.put(`/orders/${id}`, {
+        action: 'record_payment',
+        amount: parseFloat(paymentForm.amount),
+        payment_method: paymentForm.payment_method,
+        notes: paymentForm.notes,
+        date: paymentForm.date
+      });
+      toast.success('Payment recorded successfully!');
+      soundManager.playSuccess();
+      setShowPaymentModal(false);
+      resetPaymentForm();
+    } catch (error) {
+      console.error('Error recording payment:', error);
+      toast.error(error.message || 'Failed to record payment');
+      soundManager.playError();
+    } finally {
+      setPaymentLoading(false);
+    }
+  };
+
+  const handleDeletePayment = async (paymentId) => {
+    if (!window.confirm('Are you sure you want to delete this payment record?')) return;
+    
+    try {
+      setPaymentLoading(true);
+      await api.put(`/orders/${id}`, {
+        action: 'delete_payment',
+        paymentId
+      });
+      toast.success('Payment deleted successfully');
+      soundManager.playSuccess();
+    } catch (error) {
+      console.error('Error deleting payment:', error);
+      toast.error(error.message || 'Failed to delete payment');
+      soundManager.playError();
+    } finally {
+      setPaymentLoading(false);
+    }
+  };
+
+  // =============== ORDER LINKING FUNCTIONS ===============
+  
+  const openLinkModal = async () => {
+    if (!order?.customer_id && !order?.customer_name) {
+      toast.error('Cannot link orders: No customer associated with this order');
+      return;
+    }
+    
+    setShowLinkModal(true);
+    setLinkingLoading(true);
+    setSelectedOrdersToLink([]);
+    setLinkSearchQuery('');
+    
+    try {
+      let availableOrders = [];
+      
+      if (order.customer_id) {
+        // If customer_id exists, fetch by customer_id
+        const response = await api.get(`/orders/customer/${order.customer_id}`);
+        availableOrders = response.data.data || [];
+      } else {
+        // Fallback: fetch all orders and filter by customer_name
+        const response = await api.get('/orders');
+        availableOrders = (response.data.data || []).filter(o => 
+          o.customer_name?.toLowerCase() === order.customer_name?.toLowerCase()
+        );
+      }
+      
+      // Only allow unlinked orders (exclude current order)
+      availableOrders = availableOrders.filter(o => 
+        o.id !== id && !o.linked_group_id
+      );
+      
+      setCustomerOrders(availableOrders);
+    } catch (error) {
+      console.error('Error fetching customer orders:', error);
+      toast.error('Failed to load customer orders');
+    } finally {
+      setLinkingLoading(false);
+    }
+  };
+
+  const handleLinkOrders = async () => {
+    if (selectedOrdersToLink.length === 0) {
+      toast.error('Please select at least one order to link');
+      return;
+    }
+    
+    try {
+      setLinkingLoading(true);
+      await api.put(`/orders/${id}`, {
+        action: 'link_orders',
+        orderIds: selectedOrdersToLink
+      });
+      toast.success(`Successfully linked ${selectedOrdersToLink.length + 1} orders`);
+      soundManager.playSuccess();
+      setShowLinkModal(false);
+      setSelectedOrdersToLink([]);
+    } catch (error) {
+      console.error('Error linking orders:', error);
+      toast.error(error.message || 'Failed to link orders');
+      soundManager.playError();
+    } finally {
+      setLinkingLoading(false);
+    }
+  };
+
+  const handleUnlinkOrder = async () => {
+    if (!window.confirm('Are you sure you want to unlink this order from the group?')) return;
+    
+    try {
+      setLinkingLoading(true);
+      await api.put(`/orders/${id}`, { action: 'unlink_order' });
+      toast.success('Order unlinked successfully');
+      soundManager.playSuccess();
+    } catch (error) {
+      console.error('Error unlinking order:', error);
+      toast.error(error.message || 'Failed to unlink order');
+      soundManager.playError();
+    } finally {
+      setLinkingLoading(false);
+    }
+  };
+
+  const toggleOrderSelection = (orderId) => {
+    setSelectedOrdersToLink(prev => 
+      prev.includes(orderId) 
+        ? prev.filter(id => id !== orderId)
+        : [...prev, orderId]
+    );
+  };
+
+  const filteredCustomerOrders = customerOrders.filter(o => {
+    if (!linkSearchQuery) return true;
+    const query = linkSearchQuery.toLowerCase();
+    return (
+      o.id?.toLowerCase().includes(query) ||
+      o.customer_name?.toLowerCase().includes(query) ||
+      o.items?.some(item => item.product_name?.toLowerCase().includes(query))
+    );
+  });
+
+  // Calculate aggregated totals for linked orders
+  const getLinkedOrdersTotal = () => {
+    const allOrders = [order, ...linkedOrders].filter(Boolean);
+    const totalAmount = allOrders.reduce((sum, o) => 
+      sum + (o.total_sales_price || 0) + (o.vat_amount || 0), 0
+    );
+    const totalPaid = allOrders.reduce((sum, o) => sum + (o.total_paid || 0), 0);
+    const balance = totalAmount - totalPaid;
+    return { totalAmount, totalPaid, balance, orderCount: allOrders.length };
+  };
+
+  // =============== FULFILLMENT FUNCTIONS ===============
+  
+  const handleToggleItemFulfilled = async (itemIndex) => {
+    try {
+      setFulfillmentLoading(itemIndex);
+      await api.put(`/orders/${id}`, {
+        action: 'toggle_item_fulfilled',
+        itemIndex
+      });
+      soundManager.playSuccess();
+    } catch (error) {
+      console.error('Error toggling fulfillment:', error);
+      toast.error(error.message || 'Failed to update item');
+      soundManager.playError();
+    } finally {
+      setFulfillmentLoading(null);
+    }
+  };
+
+  const handleSetAllFulfilled = async (fulfilled) => {
+    const action = fulfilled ? 'fulfill' : 'unfulfill';
+    if (!window.confirm(`Are you sure you want to mark all items as ${fulfilled ? 'fulfilled' : 'unfulfilled'}?`)) return;
+    
+    try {
+      setFulfillmentLoading('all');
+      await api.put(`/orders/${id}`, {
+        action: 'set_all_items_fulfilled',
+        fulfilled
+      });
+      toast.success(`All items marked as ${fulfilled ? 'fulfilled' : 'unfulfilled'}`);
+      soundManager.playSuccess();
+    } catch (error) {
+      console.error('Error setting all fulfillment:', error);
+      toast.error(error.message || 'Failed to update items');
+      soundManager.playError();
+    } finally {
+      setFulfillmentLoading(null);
+    }
+  };
+
+  const getPaymentMethodIcon = (method) => {
+    switch (method) {
+      case 'Card':
+        return <CreditCardIcon size={14} />;
+      case 'Bank Transfer':
+        return <BankIcon size={14} />;
+      default:
+        return <CashIcon size={14} />;
     }
   };
 
@@ -356,7 +656,58 @@ Sent from Ryme Inventory`;
     doc.line(totalsRightMargin - 70, currentY - 6, totalsRightMargin, currentY - 6);
     const grandTotal = (order.total_sales_price || 0) + (order.vat_amount || 0);
     drawTotalRow('Total', grandTotal, true, false);
-    drawTotalRow('Amount due', grandTotal, true, true);
+    
+    // Payment Summary Section (if enabled)
+    if (includePaymentInInvoice) {
+      const totalPaid = order.total_paid || 0;
+      const balanceDue = grandTotal - totalPaid;
+      
+      currentY += 4;
+      doc.setDrawColor(240, 240, 240);
+      doc.line(totalsRightMargin - 70, currentY - 6, totalsRightMargin, currentY - 6);
+      
+      // Amount Paid
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(...secondaryColor);
+      doc.text('Amount Paid', totalsLabelX, currentY, { align: 'right' });
+      doc.setTextColor(16, 185, 129); // Green color
+      doc.text(safeCurrency(totalPaid), totalsRightMargin, currentY, { align: 'right' });
+      currentY += 8;
+      
+      // Balance Due
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(11);
+      doc.setTextColor(...primaryColor);
+      doc.text('Balance Due', totalsLabelX, currentY, { align: 'right' });
+      if (balanceDue > 0) {
+        doc.setTextColor(239, 68, 68); // Red for unpaid
+      } else {
+        doc.setTextColor(16, 185, 129); // Green for fully paid
+      }
+      doc.text(safeCurrency(balanceDue), totalsRightMargin, currentY, { align: 'right' });
+      currentY += 8;
+      
+      // Payment Status Badge
+      if (order.payment_status === 'Paid') {
+        currentY += 2;
+        const statusText = 'PAID IN FULL';
+        doc.setFontSize(8);
+        doc.setFont('helvetica', 'bold');
+        const textWidth = doc.getTextWidth(statusText);
+        const badgeWidth = textWidth + 8;
+        const badgeHeight = 6;
+        const badgeX = totalsRightMargin - badgeWidth;
+        const badgeY = currentY - 4;
+        doc.setFillColor(16, 185, 129);
+        doc.roundedRect(badgeX, badgeY, badgeWidth, badgeHeight, 1.5, 1.5, 'F');
+        doc.setTextColor(255, 255, 255);
+        doc.text(statusText, badgeX + badgeWidth / 2, currentY - 0.5, { align: 'center' });
+        currentY += 8;
+      }
+    } else {
+      drawTotalRow('Amount due', grandTotal, true, true);
+    }
 
     const footerY = pageHeight - 35;
     
@@ -491,13 +842,13 @@ Sent from Ryme Inventory`;
                 <span>Edit</span>
               </button>
               <button 
-                className="btn-primary" 
-                onClick={handleMarkAsPaid} 
-                style={{ marginRight: '8px', backgroundColor: '#F59E0B' }}
-                title="Mark order as paid and deduct stock"
+                className="btn-primary btn-payment" 
+                onClick={openPaymentModal}
+                style={{ marginRight: '8px' }}
+                title="Record a payment for this order"
               >
-                <CheckCircleIcon size={18} />
-                <span>Mark as Paid</span>
+                <PaymentIcon size={18} />
+                <span>Record Payment</span>
               </button>
             </>
           )}
@@ -541,20 +892,33 @@ Sent from Ryme Inventory`;
           <h1 className="order-number">#{String(order.id).padStart(4, '0')}</h1>
           <div className="order-meta">
             <div className="meta-item">
-              <span className={`badge ${order.payment_status === 'Paid' ? 'badge-success' : 'badge-warning'}`} 
-                style={{ 
-                  backgroundColor: order.payment_status === 'Paid' ? 'rgba(16, 185, 129, 0.1)' : 'rgba(245, 158, 11, 0.1)',
-                  color: order.payment_status === 'Paid' ? '#10B981' : '#F59E0B',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  padding: '6px 12px',
-                  borderRadius: '20px',
-                  border: `1px solid ${order.payment_status === 'Paid' ? 'rgba(16, 185, 129, 0.2)' : 'rgba(245, 158, 11, 0.2)'}`
-                }}>
-                {order.payment_status === 'Paid' ? <CheckCircleIcon size={16} /> : <AlertCircleIcon size={16} />}
-                <span>Status: {order.payment_status || 'Paid'}</span>
-              </span>
+              {(() => {
+                const status = order.payment_status || 'Pending';
+                const isPaid = status === 'Paid';
+                const isPartial = status === 'Partial';
+                const statusColors = {
+                  Paid: { bg: 'rgba(16, 185, 129, 0.1)', text: '#10B981', border: 'rgba(16, 185, 129, 0.2)' },
+                  Partial: { bg: 'rgba(59, 130, 246, 0.1)', text: '#3B82F6', border: 'rgba(59, 130, 246, 0.2)' },
+                  Pending: { bg: 'rgba(245, 158, 11, 0.1)', text: '#F59E0B', border: 'rgba(245, 158, 11, 0.2)' }
+                };
+                const colors = statusColors[status] || statusColors.Pending;
+                return (
+                  <span className={`badge ${isPaid ? 'badge-success' : isPartial ? 'badge-info' : 'badge-warning'}`} 
+                    style={{ 
+                      backgroundColor: colors.bg,
+                      color: colors.text,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      padding: '6px 12px',
+                      borderRadius: '20px',
+                      border: `1px solid ${colors.border}`
+                    }}>
+                    {isPaid ? <CheckCircleIcon size={16} /> : isPartial ? <PaymentIcon size={16} /> : <AlertCircleIcon size={16} />}
+                    <span>Status: {status}</span>
+                  </span>
+                );
+              })()}
             </div>
             <div className="meta-item">
               <CalendarIcon size={16} className="meta-icon" />
@@ -607,7 +971,35 @@ Sent from Ryme Inventory`;
       {/* Order Items Section */}
       <div className="order-items-card">
         <div className="card-header">
-          <h2>Order Items</h2>
+          <div className="card-header-left">
+            <h2>Order Items</h2>
+            {order.fulfillment_status && (
+              <span className={`fulfillment-badge ${order.fulfillment_status.toLowerCase()}`}>
+                {order.fulfillment_status}
+              </span>
+            )}
+          </div>
+          <div className="card-header-actions">
+            {order.items?.some(i => !i.fulfilled) && (
+              <button 
+                className="btn-text btn-fulfill-all"
+                onClick={() => handleSetAllFulfilled(true)}
+                disabled={fulfillmentLoading === 'all'}
+              >
+                <PackageCheckIcon size={16} />
+                <span>Fulfill All</span>
+              </button>
+            )}
+            {order.items?.some(i => i.fulfilled) && (
+              <button 
+                className="btn-text btn-unfulfill-all"
+                onClick={() => handleSetAllFulfilled(false)}
+                disabled={fulfillmentLoading === 'all'}
+              >
+                <span>Reset All</span>
+              </button>
+            )}
+          </div>
         </div>
         
         {/* Desktop View Table */}
@@ -615,6 +1007,7 @@ Sent from Ryme Inventory`;
           <table className="order-items-table">
             <thead>
               <tr>
+                <th className="th-fulfilled">Fulfilled</th>
                 <th>Product</th>
                 <th>Quantity</th>
                 <th>Cost of Production</th>
@@ -628,15 +1021,30 @@ Sent from Ryme Inventory`;
                 const totalPrice = item.sales_price_at_time * item.quantity;
                 const totalProfit = item.profit_at_time * item.quantity;
                 const costPerUnit = item.sales_price_at_time - item.profit_at_time;
+                const isFulfilled = item.fulfilled;
                 
                 return (
-                  <tr key={item.id || index}>
+                  <tr key={item.id || index} className={isFulfilled ? 'row-fulfilled' : ''}>
+                    <td className="td-fulfilled">
+                      <button
+                        className={`fulfillment-checkbox ${isFulfilled ? 'checked' : ''}`}
+                        onClick={() => handleToggleItemFulfilled(index)}
+                        disabled={fulfillmentLoading === index}
+                        title={isFulfilled ? 'Mark as unfulfilled' : 'Mark as fulfilled'}
+                      >
+                        {fulfillmentLoading === index ? (
+                          <span className="checkbox-loading"></span>
+                        ) : isFulfilled ? (
+                          <CheckIcon size={14} />
+                        ) : null}
+                      </button>
+                    </td>
                     <td>
                       <div className="product-cell">
                         <div className="product-avatar">
                           {item.product_name?.charAt(0) || 'P'}
                         </div>
-                        <span className="product-name">
+                        <span className={`product-name ${isFulfilled ? 'fulfilled' : ''}`}>
                           {item.product_name}
                           {item.discount_percentage > 0 && (
                             <span className="item-discount-badge">-{item.discount_percentage}%</span>
@@ -672,16 +1080,28 @@ Sent from Ryme Inventory`;
             const totalPrice = item.sales_price_at_time * item.quantity;
             const totalProfit = item.profit_at_time * item.quantity;
             const costPerUnit = item.sales_price_at_time - item.profit_at_time;
+            const isFulfilled = item.fulfilled;
             
             return (
-              <div key={item.id || index} className="mobile-item-card">
+              <div key={item.id || index} className={`mobile-item-card ${isFulfilled ? 'fulfilled' : ''}`}>
                  <div className="mobile-item-header">
+                    <button
+                      className={`fulfillment-checkbox ${isFulfilled ? 'checked' : ''}`}
+                      onClick={() => handleToggleItemFulfilled(index)}
+                      disabled={fulfillmentLoading === index}
+                    >
+                      {fulfillmentLoading === index ? (
+                        <span className="checkbox-loading"></span>
+                      ) : isFulfilled ? (
+                        <CheckIcon size={14} />
+                      ) : null}
+                    </button>
                     <div className="product-cell">
                         <div className="product-avatar">
                           {item.product_name?.charAt(0) || 'P'}
                         </div>
                         <div className="product-info">
-                           <span className="product-name">
+                           <span className={`product-name ${isFulfilled ? 'fulfilled' : ''}`}>
                              {item.product_name}
                              {item.discount_percentage > 0 && (
                                <span className="item-discount-badge">-{item.discount_percentage}%</span>
@@ -750,6 +1170,494 @@ Sent from Ryme Inventory`;
           </div>
         </div>
       </div>
+
+      {/* Payment Summary Card */}
+      <div className="payment-summary-card">
+        <div className="card-header payment-header">
+          <div className="payment-header-left">
+            <PaymentIcon size={20} />
+            <h2>Payment Summary</h2>
+          </div>
+          {(order.payments?.length > 0) && (
+            <button 
+              className="btn-text"
+              onClick={() => setShowPaymentHistory(!showPaymentHistory)}
+            >
+              <HistoryIcon size={16} />
+              <span>{showPaymentHistory ? 'Hide' : 'Show'} History ({order.payments.length})</span>
+            </button>
+          )}
+        </div>
+        
+        <div className="payment-summary-content">
+          {(() => {
+            const grandTotal = (order.total_sales_price || 0) + (order.vat_amount || 0);
+            const totalPaid = order.total_paid || 0;
+            const balance = grandTotal - totalPaid;
+            const paymentPercentage = grandTotal > 0 ? Math.min((totalPaid / grandTotal) * 100, 100) : 0;
+            
+            return (
+              <>
+                <div className="payment-progress-section">
+                  <div className="payment-progress-bar">
+                    <div 
+                      className="payment-progress-fill" 
+                      style={{ width: `${paymentPercentage}%` }}
+                    />
+                  </div>
+                  <div className="payment-progress-label">
+                    {paymentPercentage.toFixed(0)}% Paid
+                  </div>
+                </div>
+                
+                <div className="payment-stats">
+                  <div className="payment-stat">
+                    <span className="payment-stat-label">Total Amount</span>
+                    <span className="payment-stat-value">{formatCurrency(grandTotal)}</span>
+                  </div>
+                  <div className="payment-stat">
+                    <span className="payment-stat-label">Amount Paid</span>
+                    <span className="payment-stat-value paid">{formatCurrency(totalPaid)}</span>
+                  </div>
+                  <div className="payment-stat">
+                    <span className="payment-stat-label">Balance Due</span>
+                    <span className={`payment-stat-value ${balance > 0 ? 'due' : 'paid'}`}>
+                      {formatCurrency(balance)}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="invoice-payment-toggle">
+                  <label className="invoice-toggle">
+                    <input 
+                      type="checkbox" 
+                      checked={includePaymentInInvoice} 
+                      onChange={(e) => setIncludePaymentInInvoice(e.target.checked)}
+                    />
+                    <span className="toggle-slider"></span>
+                    <span className="toggle-label">Include payment info in invoice</span>
+                  </label>
+                </div>
+
+                {balance > 0 && order.payment_status !== 'Paid' && (
+                  <button className="btn-primary btn-record-payment" onClick={openPaymentModal}>
+                    <PaymentIcon size={18} />
+                    <span>Record Payment</span>
+                  </button>
+                )}
+              </>
+            );
+          })()}
+        </div>
+
+        {/* Payment History */}
+        {showPaymentHistory && order.payments?.length > 0 && (
+          <div className="payment-history">
+            <div className="payment-history-header">
+              <h3>Payment History</h3>
+            </div>
+            <div className="payment-history-list">
+              {order.payments.map((payment, index) => (
+                <div key={payment.id || index} className="payment-history-item">
+                  <div className="payment-item-left">
+                    <div className="payment-method-icon">
+                      {getPaymentMethodIcon(payment.payment_method)}
+                    </div>
+                    <div className="payment-item-info">
+                      <span className="payment-item-method">{payment.payment_method}</span>
+                      <span className="payment-item-date">
+                        {new Date(payment.date).toLocaleDateString('en-US', {
+                          month: 'short',
+                          day: 'numeric',
+                          year: 'numeric'
+                        })}
+                      </span>
+                      {payment.notes && (
+                        <span className="payment-item-notes">{payment.notes}</span>
+                      )}
+                    </div>
+                  </div>
+                  <div className="payment-item-right">
+                    <span className="payment-item-amount">{formatCurrency(payment.amount)}</span>
+                    {order.payment_status !== 'Paid' && (
+                      <button 
+                        className="btn-delete-payment"
+                        onClick={() => handleDeletePayment(payment.id)}
+                        title="Delete payment"
+                        disabled={paymentLoading}
+                      >
+                        <DeleteIcon size={14} />
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Linked Orders Section */}
+      <div className="linked-orders-card">
+        <div className="card-header linked-orders-header">
+          <div className="linked-header-left">
+            <GroupIcon size={20} />
+            <h2>Linked Orders</h2>
+            {linkedOrders.length > 0 && (
+              <span className="linked-count">{linkedOrders.length + 1} orders</span>
+            )}
+          </div>
+          <div className="linked-header-actions">
+            {order.linked_group_id ? (
+              <>
+                <button 
+                  className="btn-text btn-link"
+                  onClick={openLinkModal}
+                  disabled={linkingLoading || (!order.customer_id && !order.customer_name)}
+                  title={(!order.customer_id && !order.customer_name) ? 'Order must have a customer to link' : 'Add more orders to this group'}
+                >
+                  <LinkIcon size={16} />
+                  <span>Add Orders</span>
+                </button>
+                <button 
+                  className="btn-text btn-unlink"
+                  onClick={handleUnlinkOrder}
+                  disabled={linkingLoading}
+                >
+                  <UnlinkIcon size={16} />
+                  <span>Unlink</span>
+                </button>
+              </>
+            ) : (
+              <button 
+                className="btn-text btn-link"
+                onClick={openLinkModal}
+                disabled={!order.customer_id && !order.customer_name}
+                title={(!order.customer_id && !order.customer_name) ? 'Order must have a customer to link' : 'Link with other orders'}
+              >
+                <LinkIcon size={16} />
+                <span>Link Orders</span>
+              </button>
+            )}
+          </div>
+        </div>
+
+        <div className="linked-orders-content">
+          {linkedOrders.length > 0 ? (
+            <>
+              {/* Aggregated Summary */}
+              {(() => {
+                const totals = getLinkedOrdersTotal();
+                const paymentPercentage = totals.totalAmount > 0 
+                  ? Math.min((totals.totalPaid / totals.totalAmount) * 100, 100) 
+                  : 0;
+                
+                return (
+                  <div className="linked-summary">
+                    <div className="linked-summary-header">
+                      <span>Combined Payment Progress</span>
+                      <span className="linked-progress-percent">{paymentPercentage.toFixed(0)}%</span>
+                    </div>
+                    <div className="linked-progress-bar">
+                      <div 
+                        className="linked-progress-fill" 
+                        style={{ width: `${paymentPercentage}%` }}
+                      />
+                    </div>
+                    <div className="linked-summary-stats">
+                      <div className="linked-stat">
+                        <span className="linked-stat-label">Total ({totals.orderCount} orders)</span>
+                        <span className="linked-stat-value">{formatCurrency(totals.totalAmount)}</span>
+                      </div>
+                      <div className="linked-stat">
+                        <span className="linked-stat-label">Paid</span>
+                        <span className="linked-stat-value paid">{formatCurrency(totals.totalPaid)}</span>
+                      </div>
+                      <div className="linked-stat">
+                        <span className="linked-stat-label">Balance</span>
+                        <span className={`linked-stat-value ${totals.balance > 0 ? 'due' : 'paid'}`}>
+                          {formatCurrency(totals.balance)}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {/* Linked Orders List */}
+              <div className="linked-orders-list">
+                {linkedOrders.map(linkedOrder => {
+                  const orderTotal = (linkedOrder.total_sales_price || 0) + (linkedOrder.vat_amount || 0);
+                  const orderPaid = linkedOrder.total_paid || 0;
+                  
+                  return (
+                    <Link 
+                      key={linkedOrder.id} 
+                      to={`/orders/${linkedOrder.id}`}
+                      className="linked-order-item"
+                    >
+                      <div className="linked-order-info">
+                        <span className="linked-order-id">
+                          #{linkedOrder.id?.slice(0, 8).toUpperCase()}
+                        </span>
+                        <span className="linked-order-date">
+                          {new Date(linkedOrder.order_date).toLocaleDateString('en-US', {
+                            month: 'short',
+                            day: 'numeric'
+                          })}
+                        </span>
+                      </div>
+                      <div className="linked-order-items">
+                        {linkedOrder.items?.slice(0, 2).map((item, i) => (
+                          <span key={i} className="linked-item-name">{item.product_name}</span>
+                        ))}
+                        {linkedOrder.items?.length > 2 && (
+                          <span className="linked-item-more">+{linkedOrder.items.length - 2} more</span>
+                        )}
+                      </div>
+                      <div className="linked-order-amount">
+                        <span className={`linked-order-status ${linkedOrder.payment_status?.toLowerCase()}`}>
+                          {linkedOrder.payment_status}
+                        </span>
+                        <span className="linked-order-total">{formatCurrency(orderTotal)}</span>
+                      </div>
+                    </Link>
+                  );
+                })}
+              </div>
+            </>
+          ) : (
+            <div className="linked-orders-empty">
+              <GroupIcon size={32} />
+              <p>No linked orders</p>
+              <span>Link multiple orders from the same customer to track combined payments</span>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Link Orders Modal */}
+      {showLinkModal && (
+        <div className="modal-overlay" onClick={() => setShowLinkModal(false)}>
+          <div className="link-orders-modal" onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>
+                <LinkIcon size={20} />
+                Link Orders
+              </h2>
+              <button className="modal-close" onClick={() => setShowLinkModal(false)}>
+                <CloseIcon size={20} />
+              </button>
+            </div>
+
+            <div className="link-modal-content">
+              <p className="link-modal-subtitle">
+                Select orders from <strong>{order.customer_name || 'this customer'}</strong> to link together
+              </p>
+
+              <div className="link-search-wrapper">
+                <SearchIcon size={18} />
+                <input
+                  type="text"
+                  placeholder="Search orders..."
+                  value={linkSearchQuery}
+                  onChange={(e) => setLinkSearchQuery(e.target.value)}
+                />
+              </div>
+
+              {linkingLoading && customerOrders.length === 0 ? (
+                <div className="link-loading">
+                  <div className="loading-spinner"></div>
+                  <p>Loading orders...</p>
+                </div>
+              ) : filteredCustomerOrders.length === 0 ? (
+                <div className="link-empty">
+                  <CartIcon size={32} />
+                  <p>No other orders found for this customer</p>
+                </div>
+              ) : (
+                <div className="link-orders-list">
+                  {filteredCustomerOrders.map(customerOrder => {
+                    const orderTotal = (customerOrder.total_sales_price || 0) + (customerOrder.vat_amount || 0);
+                    const isSelected = selectedOrdersToLink.includes(customerOrder.id);
+                    
+                    return (
+                      <div 
+                        key={customerOrder.id}
+                        className={`link-order-item ${isSelected ? 'selected' : ''}`}
+                        onClick={() => toggleOrderSelection(customerOrder.id)}
+                      >
+                        <div className={`link-order-checkbox ${isSelected ? 'checked' : ''}`}>
+                          {isSelected && <CheckIcon size={14} />}
+                        </div>
+                        <div className="link-order-details">
+                          <div className="link-order-header">
+                            <span className="link-order-id">
+                              #{customerOrder.id?.slice(0, 8).toUpperCase()}
+                            </span>
+                            <span className={`link-order-status ${customerOrder.payment_status?.toLowerCase()}`}>
+                              {customerOrder.payment_status}
+                            </span>
+                          </div>
+                          <div className="link-order-meta">
+                            <span className="link-order-date">
+                              {new Date(customerOrder.order_date).toLocaleDateString()}
+                            </span>
+                            <span className="link-order-items-count">
+                              {customerOrder.items?.length || 0} items
+                            </span>
+                          </div>
+                          <div className="link-order-products">
+                            {customerOrder.items?.slice(0, 3).map((item, i) => (
+                              <span key={i}>{item.product_name}</span>
+                            ))}
+                            {customerOrder.items?.length > 3 && (
+                              <span>+{customerOrder.items.length - 3} more</span>
+                            )}
+                          </div>
+                        </div>
+                        <div className="link-order-amount">
+                          {formatCurrency(orderTotal)}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            <div className="modal-actions">
+              <button 
+                type="button" 
+                className="btn-secondary"
+                onClick={() => setShowLinkModal(false)}
+                disabled={linkingLoading}
+              >
+                Cancel
+              </button>
+              <button 
+                type="button"
+                className="btn-primary"
+                disabled={linkingLoading || selectedOrdersToLink.length === 0}
+                onClick={handleLinkOrders}
+              >
+                {linkingLoading ? 'Linking...' : `Link ${selectedOrdersToLink.length + 1} Orders`}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Payment Modal */}
+      {showPaymentModal && (
+        <div className="modal-overlay" onClick={() => setShowPaymentModal(false)}>
+          <div className="payment-modal" onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>
+                <PaymentIcon size={20} />
+                Record Payment
+              </h2>
+              <button className="modal-close" onClick={() => setShowPaymentModal(false)}>
+                <CloseIcon size={20} />
+              </button>
+            </div>
+            
+            <form onSubmit={handlePaymentSubmit} className="payment-form">
+              <div className="form-group">
+                <label>Payment Amount</label>
+                <div className="amount-input-wrapper">
+                  <span className="currency-prefix">{currencySymbol}</span>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0.01"
+                    value={paymentForm.amount}
+                    onChange={(e) => setPaymentForm(prev => ({ ...prev, amount: e.target.value }))}
+                    placeholder="0.00"
+                    required
+                    autoFocus
+                  />
+                </div>
+                {order && (() => {
+                  const grandTotal = (order.total_sales_price || 0) + (order.vat_amount || 0);
+                  const totalPaid = order.total_paid || 0;
+                  const remaining = grandTotal - totalPaid;
+                  return remaining > 0 && (
+                    <div className="amount-helper">
+                      <span>Outstanding: {formatCurrency(remaining)}</span>
+                      <button 
+                        type="button" 
+                        className="btn-fill-balance"
+                        onClick={() => setPaymentForm(prev => ({ ...prev, amount: remaining.toString() }))}
+                      >
+                        Pay Full
+                      </button>
+                    </div>
+                  );
+                })()}
+              </div>
+
+              <div className="form-group">
+                <label>Payment Method</label>
+                <div className="payment-method-options">
+                  {['Cash', 'Card', 'Bank Transfer'].map(method => (
+                    <button
+                      key={method}
+                      type="button"
+                      className={`payment-method-btn ${paymentForm.payment_method === method ? 'active' : ''}`}
+                      onClick={() => setPaymentForm(prev => ({ ...prev, payment_method: method }))}
+                    >
+                      {method === 'Cash' && <CashIcon size={20} />}
+                      {method === 'Card' && <CreditCardIcon size={20} />}
+                      {method === 'Bank Transfer' && <BankIcon size={20} />}
+                      <span>{method}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="form-group">
+                <label>Payment Date</label>
+                <input
+                  type="date"
+                  value={paymentForm.date}
+                  onChange={(e) => setPaymentForm(prev => ({ ...prev, date: e.target.value }))}
+                  required
+                />
+              </div>
+
+              <div className="form-group">
+                <label>Notes (Optional)</label>
+                <textarea
+                  value={paymentForm.notes}
+                  onChange={(e) => setPaymentForm(prev => ({ ...prev, notes: e.target.value }))}
+                  placeholder="Add any notes about this payment..."
+                  rows={3}
+                />
+              </div>
+            </form>
+
+            <div className="modal-actions">
+              <button 
+                type="button" 
+                className="btn-secondary"
+                onClick={() => setShowPaymentModal(false)}
+                disabled={paymentLoading}
+              >
+                Cancel
+              </button>
+              <button 
+                type="button"
+                className="btn-primary"
+                disabled={paymentLoading || !paymentForm.amount}
+                onClick={handlePaymentSubmit}
+              >
+                {paymentLoading ? 'Recording...' : 'Record Payment'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
