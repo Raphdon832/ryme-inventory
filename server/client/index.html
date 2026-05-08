@@ -21,8 +21,8 @@
             var m = p && p.display && p.display.darkMode;
             if (m) {
               var d = (m === 'dark' || m === true) || (m === 'auto' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
-              var el = document.documentElement;
-              if (d && el) {
+              var el = document.documentElement || document.body;
+              if (d && el && el.classList) {
                 el.classList.add('theme-dark');
               }
             }

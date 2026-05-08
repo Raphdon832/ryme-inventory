@@ -90,7 +90,12 @@ export const usePageState = (pageKey, defaultState = {}, options = {}) => {
   // Partial state update
   const updateState = useCallback((updates) => {
     setStateInternal(prev => {
-      const updated = { ...prev, ...updates };
+      const partialUpdates = typeof updates === 'function' ? updates(prev) : updates;
+      const resolvedUpdates = Object.entries(partialUpdates || {}).reduce((acc, [key, value]) => {
+        acc[key] = typeof value === 'function' ? value(prev[key]) : value;
+        return acc;
+      }, {});
+      const updated = { ...prev, ...resolvedUpdates };
       saveState(updated);
       return updated;
     });

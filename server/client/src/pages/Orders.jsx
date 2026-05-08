@@ -50,6 +50,13 @@ const Orders = () => {
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [syncing, setSyncing] = useState(false);
 
+  const toNumber = (value) => {
+    const numeric = Number(value);
+    return Number.isFinite(numeric) ? numeric : 0;
+  };
+
+  const getOrderGrandTotal = (order) => toNumber(order?.total_sales_price) + toNumber(order?.vat_amount);
+
   // Use persisted state
   const showAllOrders = pageState.showAllOrders;
   const setShowAllOrders = (value) => updatePageState({ showAllOrders: value });
@@ -96,22 +103,38 @@ const Orders = () => {
 
   // Combine server orders with offline orders
   const allOrders = [
-    ...offlineOrders.map(o => ({
-      id: o.tempId,
-      customer_name: o.customer_name,
-      customer_address: o.customer_address,
-      order_date: o.createdAt,
-      payment_status: 'Pending',
-      total_sales_price: o.items?.reduce((acc, item) => {
-        const discount = item.discount_percentage || 0;
-        const effectivePrice = (item.sales_price || 0) * (1 - discount / 100);
-        return acc + (effectivePrice * item.quantity);
-      }, 0) || 0,
-      total_profit: 0,
-      items: o.items || [],
-      _offline: true,
-      _syncStatus: o.status
-    })),
+    ...offlineOrders.map((o) => {
+      const computedSubtotal = o.items?.reduce((acc, item) => {
+        const discount = toNumber(item.discount_percentage);
+        const effectivePrice = toNumber(item.sales_price) * (1 - discount / 100);
+        return acc + (effectivePrice * toNumber(item.quantity));
+      }, 0) || 0;
+      const orderLevelDiscount = o.discount?.value > 0
+        ? (o.discount?.type === 'percentage'
+            ? computedSubtotal * (toNumber(o.discount.value) / 100)
+            : toNumber(o.discount.value))
+        : 0;
+      const vatAmount = toNumber(o.vat_amount);
+      const fallbackSalesTotal = Math.max(0, computedSubtotal - orderLevelDiscount);
+      const derivedSalesTotalFromGrand = toNumber(o.total) > 0 ? Math.max(0, toNumber(o.total) - vatAmount) : 0;
+      const totalSales = toNumber(o.total_sales_price) > 0
+        ? toNumber(o.total_sales_price)
+        : (derivedSalesTotalFromGrand > 0 ? derivedSalesTotalFromGrand : fallbackSalesTotal);
+
+      return {
+        id: o.tempId,
+        customer_name: o.customer_name,
+        customer_address: o.customer_address,
+        order_date: o.createdAt,
+        payment_status: 'Pending',
+        total_sales_price: totalSales,
+        vat_amount: vatAmount,
+        total_profit: 0,
+        items: o.items || [],
+        _offline: true,
+        _syncStatus: o.status
+      };
+    }),
     ...orders
   ];
 
@@ -893,7 +916,7 @@ const Orders = () => {
                 <th>Order ID</th>
                 <th>Customer</th>
                 <th>Date</th>
-                <th>Total Sales</th>
+                <th>Total</th>
                 <th>Total Profit</th>
                 <th>Status</th>
                 {!deleteMode && !bulkDownloadMode && <th>Actions</th>}
@@ -950,7 +973,7 @@ const Orders = () => {
                       minute: '2-digit'
                     })}
                   </td>
-                  <td style={{ fontWeight: 700 }}>{formatCurrency(order.total_sales_price)}</td>
+                  <td style={{ fontWeight: 700 }}>{formatCurrency(getOrderGrandTotal(order))}</td>
                   <td>
                     <span style={{ fontWeight: 600, color: order.total_profit >= 0 ? 'var(--success-text)' : 'var(--danger-text)' }}>
                       {formatCurrency(order.total_profit, { showSign: true })}
@@ -1096,7 +1119,7 @@ const Orders = () => {
                           <div className="order-card-footer">
                             <div className="order-card-amount">
                               <span className="order-card-amount-label">Total</span>
-                              <span className="order-card-amount-value">{formatCurrency(order.total_sales_price, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</span>
+                              <span className="order-card-amount-value">{formatCurrency(getOrderGrandTotal(order), { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</span>
                             </div>
                             <div className="order-card-profit">
                               <span className="order-card-amount-label">Profit</span>
@@ -1147,7 +1170,7 @@ const Orders = () => {
                           <div className="order-card-footer">
                             <div className="order-card-amount">
                               <span className="order-card-amount-label">Total</span>
-                              <span className="order-card-amount-value">{formatCurrency(order.total_sales_price, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</span>
+                              <span className="order-card-amount-value">{formatCurrency(getOrderGrandTotal(order), { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</span>
                             </div>
                             <div className="order-card-profit">
                               <span className="order-card-amount-label">Profit</span>
@@ -1184,7 +1207,7 @@ const Orders = () => {
                         <div className="order-card-footer">
                           <div className="order-card-amount">
                             <span className="order-card-amount-label">Total</span>
-                            <span className="order-card-amount-value">{formatCurrency(order.total_sales_price, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</span>
+                            <span className="order-card-amount-value">{formatCurrency(getOrderGrandTotal(order), { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</span>
                           </div>
                           <div className="order-card-profit">
                             <span className="order-card-amount-label">Items</span>
@@ -1219,7 +1242,7 @@ const Orders = () => {
                       <div className="order-card-footer">
                         <div className="order-card-amount">
                           <span className="order-card-amount-label">Total</span>
-                          <span className="order-card-amount-value">{formatCurrency(order.total_sales_price, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</span>
+                          <span className="order-card-amount-value">{formatCurrency(getOrderGrandTotal(order), { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</span>
                         </div>
                         <div className="order-card-profit">
                           <span className="order-card-amount-label">Profit</span>
