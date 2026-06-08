@@ -52,6 +52,9 @@ const Inventory = () => {
   const [isAddingNewBulkCategory, setIsAddingNewBulkCategory] = useState(false);
   const [newBulkCategoryName, setNewBulkCategoryName] = useState('');
   const [bulkUpdateForm, setBulkUpdateForm] = useState({
+    pricingMode: 'margin',
+    marginPercentage: '',
+    marginSalesPrice: '',
     markupType: 'percentage', // percentage, amount, or set_price
     markupValue: '',
     costType: 'percentage', // percentage or fixed
@@ -238,6 +241,16 @@ const Inventory = () => {
   const handleBulkUpdate = async () => {
     setBulkUpdating(true);
     try {
+      const hasMarginUpdate = bulkUpdateForm.pricingMode === 'margin' && bulkUpdateForm.marginPercentage !== '';
+      const hasMarkupUpdate = bulkUpdateForm.pricingMode === 'markup' && bulkUpdateForm.markupValue !== '';
+
+      if (hasMarginUpdate) {
+        const marginPercent = Number(bulkUpdateForm.marginPercentage);
+        if (Number.isNaN(marginPercent) || marginPercent < 0 || marginPercent >= 100) {
+          throw new Error('Margin percentage must be between 0 and 99.99.');
+        }
+      }
+
       const updates = selectedProducts.map(async (productId) => {
         const product = products.find(p => p.id === productId);
         if (!product) return;
@@ -255,19 +268,53 @@ const Inventory = () => {
         // 2. Calculate Markup/Pricing
         let newMarkupPercentage = product.markup_percentage;
         let newMarkupAmount = product.markup_amount;
+        let newMarginPercentage = product.margin_percentage || '';
+        let newSalesPrice = Number(product.sales_price || 0);
+        let newPricingMode = product.pricing_mode || 'markup';
 
-        if (bulkUpdateForm.markupValue) {
+        if (hasMarginUpdate) {
+          const marginPercent = Number(bulkUpdateForm.marginPercentage);
+          const targetSalesPrice = bulkUpdateForm.marginSalesPrice !== ''
+            ? Number(bulkUpdateForm.marginSalesPrice)
+            : newSalesPrice;
+
+          if (!targetSalesPrice || Number.isNaN(targetSalesPrice) || targetSalesPrice <= 0) {
+            throw new Error('Selected products need a sales price, or enter a fixed sales price for the bulk margin update.');
+          }
+
+          const profitInsidePrice = targetSalesPrice * marginPercent / 100;
+          newSalesPrice = targetSalesPrice;
+          newCost = targetSalesPrice - profitInsidePrice;
+          newMarkupAmount = profitInsidePrice;
+          newMarkupPercentage = '';
+          newMarginPercentage = marginPercent;
+          newPricingMode = 'margin';
+        } else if (hasMarkupUpdate) {
           if (bulkUpdateForm.markupType === 'percentage') {
             newMarkupPercentage = Number(bulkUpdateForm.markupValue);
             newMarkupAmount = ''; // Clear amount to ensure percentage is used
+            newMarginPercentage = '';
+            newPricingMode = 'markup';
           } else if (bulkUpdateForm.markupType === 'amount') {
             newMarkupAmount = Number(bulkUpdateForm.markupValue);
             newMarkupPercentage = ''; // Clear percentage
+            newMarginPercentage = '';
+            newPricingMode = 'markup';
           } else if (bulkUpdateForm.markupType === 'set_price') {
             // Target sales price provided, calculate required markup amount
-            newMarkupAmount = Number(bulkUpdateForm.markupValue) - newCost;
+            newSalesPrice = Number(bulkUpdateForm.markupValue);
+            newMarkupAmount = newSalesPrice - newCost;
             newMarkupPercentage = ''; // Clear percentage
+            newMarginPercentage = '';
+            newPricingMode = 'markup';
           }
+        }
+
+        if (bulkUpdateForm.costAdjustment && !hasMarginUpdate && !hasMarkupUpdate && newPricingMode === 'margin') {
+          newMarkupAmount = Number(product.profit ?? (Number(product.sales_price || 0) - Number(product.cost_of_production || 0)));
+          newMarkupPercentage = '';
+          newMarginPercentage = '';
+          newPricingMode = 'markup';
         }
 
         // 3. New Stock Quantity
@@ -281,9 +328,12 @@ const Inventory = () => {
 
         const payload = {
           ...product,
+          pricing_mode: newPricingMode,
           cost_of_production: newCost,
+          margin_percentage: newMarginPercentage,
           markup_percentage: newMarkupPercentage,
           markup_amount: newMarkupAmount,
+          sales_price: newSalesPrice,
           category: bulkUpdateForm.category || product.category,
           stock_quantity: Math.max(0, newStock)
         };
@@ -302,6 +352,9 @@ const Inventory = () => {
       setNewBulkCategoryName('');
       // Reset form
       setBulkUpdateForm({
+        pricingMode: 'margin',
+        marginPercentage: '',
+        marginSalesPrice: '',
         markupType: 'percentage',
         markupValue: '',
         costType: 'percentage',
@@ -312,7 +365,7 @@ const Inventory = () => {
       });
     } catch (error) {
       console.error('Error bulk updating products:', error);
-      toast.error('Failed to update some products. Please try again.');
+      toast.error(error.message || 'Failed to update some products. Please try again.');
       soundManager.playError();
     } finally {
       setBulkUpdating(false);
@@ -446,6 +499,15 @@ const Inventory = () => {
   const paginatedProducts = sortedProducts.slice(startIndex, startIndex + pageSize);
   const showingStart = sortedProducts.length === 0 ? 0 : startIndex + 1;
   const showingEnd = sortedProducts.length === 0 ? 0 : endIndex;
+  const hasBulkPricingChange = bulkUpdateForm.pricingMode === 'margin'
+    ? Boolean(bulkUpdateForm.marginPercentage)
+    : Boolean(bulkUpdateForm.markupValue);
+  const canApplyBulkUpdate = Boolean(
+    bulkUpdateForm.costAdjustment ||
+    hasBulkPricingChange ||
+    bulkUpdateForm.category ||
+    bulkUpdateForm.stockValue
+  );
 
   return (
     <div>
@@ -663,9 +725,9 @@ const Inventory = () => {
                 <button 
                   className="icon-btn-circle"
                   onClick={() => setShowBulkUpdateModal(true)}
-                  disabled={selectedProducts.length === 0}
-                  title={`Update ${selectedProducts.length} selected`}
-                  style={{ width: '40px', height: '40px', borderRadius: '50%', padding: 0, background: selectedProducts.length > 0 ? 'var(--info-bg)' : 'var(--bg-surface)', border: '1px solid var(--border-color)', color: 'var(--primary-color)' }}
+                  disabled={selectedProducts.length < 2}
+                  title={selectedProducts.length < 2 ? 'Select at least 2 products to bulk update' : `Update ${selectedProducts.length} selected`}
+                  style={{ width: '40px', height: '40px', borderRadius: '50%', padding: 0, background: selectedProducts.length >= 2 ? 'var(--info-bg)' : 'var(--bg-surface)', border: '1px solid var(--border-color)', color: 'var(--primary-color)' }}
                 >
                   <TagsIcon size={18} />
                 </button>
@@ -790,7 +852,7 @@ const Inventory = () => {
                               <th>Product</th>
                               <th>Category</th>
                               <th>Cost of Production</th>
-                              <th>Markup</th>
+                              <th>Margin / Markup</th>
                               <th>Sales Price</th>
                               <th>Profit/Unit</th>
                               <th>Stock</th>
@@ -867,7 +929,9 @@ const Inventory = () => {
                                 <td style={{ fontWeight: 500 }}>{formatCurrency(product.cost_of_production)}</td>
                                 <td>
                                   <span className="badge badge-info">
-                                    {product.markup_amount && Number(product.markup_amount) > 0
+                                    {product.pricing_mode === 'margin' && product.margin_percentage !== undefined && product.margin_percentage !== ''
+                                      ? `Margin ${product.margin_percentage}%`
+                                      : product.markup_amount && Number(product.markup_amount) > 0
                                       ? formatCurrency(Number(product.markup_amount))
                                       : `${product.markup_percentage}%`}
                                   </span>
@@ -925,7 +989,7 @@ const Inventory = () => {
                       <th>Product</th>
                       <th>Category</th>
                       <th>Cost of Production</th>
-                      <th>Markup</th>
+                      <th>Margin / Markup</th>
                       <th>Sales Price</th>
                       <th>Profit/Unit</th>
                       <th>Stock</th>
@@ -1002,7 +1066,9 @@ const Inventory = () => {
                       <td style={{ fontWeight: 500 }}>{formatCurrency(product.cost_of_production)}</td>
                       <td>
                         <span className="badge badge-info">
-                          {product.markup_amount && Number(product.markup_amount) > 0
+                          {product.pricing_mode === 'margin' && product.margin_percentage !== undefined && product.margin_percentage !== ''
+                            ? `Margin ${product.margin_percentage}%`
+                            : product.markup_amount && Number(product.markup_amount) > 0
                             ? formatCurrency(Number(product.markup_amount))
                             : `${product.markup_percentage}%`}
                         </span>
@@ -1151,31 +1217,98 @@ const Inventory = () => {
                 </div>
               </div>
 
-              {/* Pricing / Markup Update */}
+              {/* Pricing / Margin Update */}
               <div>
-                <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, marginBottom: '6px' }}>Sales Price or Markup Change</label>
-                <div style={{ display: 'flex', gap: '8px' }}>
-                  <div style={{ position: 'relative', flex: 1 }}>
-                    <input 
-                      type="number" 
-                      placeholder="Value"
-                      value={bulkUpdateForm.markupValue}
-                      onChange={(e) => setBulkUpdateForm(prev => ({ ...prev, markupValue: e.target.value }))}
-                      style={{ paddingLeft: (bulkUpdateForm.markupType === 'amount' || bulkUpdateForm.markupType === 'set_price') ? '24px' : '12px' }}
-                    />
-                    {(bulkUpdateForm.markupType === 'amount' || bulkUpdateForm.markupType === 'set_price') && <span style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)', fontSize: '14px' }}>{currencySymbol}</span>}
-                  </div>
-                  <select 
-                    style={{ width: '130px', padding: '8px' }}
-                    value={bulkUpdateForm.markupType}
-                    onChange={(e) => setBulkUpdateForm(prev => ({ ...prev, markupType: e.target.value }))}
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, marginBottom: '6px' }}>Sales Price and Profit Method</label>
+                <div style={{ display: 'flex', gap: '8px', marginBottom: '10px' }}>
+                  <button
+                    type="button"
+                    onClick={() => setBulkUpdateForm(prev => ({ ...prev, pricingMode: 'margin', markupValue: '' }))}
+                    style={{
+                      flex: 1,
+                      height: '38px',
+                      borderRadius: '8px',
+                      border: '1px solid var(--border-color)',
+                      background: bulkUpdateForm.pricingMode === 'margin' ? 'var(--primary-color)' : 'var(--bg-surface)',
+                      color: bulkUpdateForm.pricingMode === 'margin' ? 'white' : 'var(--text-secondary)',
+                      fontWeight: 600
+                    }}
                   >
-                    <option value="percentage">% Markup</option>
-                    <option value="amount">Markup Amt</option>
-                    <option value="set_price">Fix Sales Price</option>
-                  </select>
+                    Margin
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setBulkUpdateForm(prev => ({ ...prev, pricingMode: 'markup', marginPercentage: '', marginSalesPrice: '' }))}
+                    style={{
+                      flex: 1,
+                      height: '38px',
+                      borderRadius: '8px',
+                      border: '1px solid var(--border-color)',
+                      background: bulkUpdateForm.pricingMode === 'markup' ? 'var(--primary-color)' : 'var(--bg-surface)',
+                      color: bulkUpdateForm.pricingMode === 'markup' ? 'white' : 'var(--text-secondary)',
+                      fontWeight: 600
+                    }}
+                  >
+                    Markup
+                  </button>
                 </div>
-                <p style={{ margin: '4px 0 0', fontSize: '11px', color: 'var(--text-tertiary)' }}>Set Markup % or Amount, OR define a target Sales Price.</p>
+
+                {bulkUpdateForm.pricingMode === 'margin' ? (
+                  <>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '8px' }}>
+                      <div style={{ position: 'relative' }}>
+                        <input
+                          type="number"
+                          placeholder="Sales Price"
+                          value={bulkUpdateForm.marginSalesPrice}
+                          onChange={(e) => setBulkUpdateForm(prev => ({ ...prev, marginSalesPrice: e.target.value }))}
+                          style={{ paddingLeft: '24px', width: '100%' }}
+                        />
+                        <span style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)', fontSize: '14px' }}>{currencySymbol}</span>
+                      </div>
+                      <div style={{ position: 'relative' }}>
+                        <input
+                          type="number"
+                          placeholder="Margin %"
+                          value={bulkUpdateForm.marginPercentage}
+                          onChange={(e) => setBulkUpdateForm(prev => ({ ...prev, marginPercentage: e.target.value }))}
+                          style={{ paddingRight: '28px', width: '100%' }}
+                        />
+                        <span style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)', fontSize: '14px' }}>%</span>
+                      </div>
+                    </div>
+                    <p style={{ margin: '4px 0 0', fontSize: '11px', color: 'var(--text-tertiary)' }}>
+                      Leave Sales Price blank to use each item&apos;s current Sales Price. Example: {currencySymbol}100,000 at 30% margin becomes {currencySymbol}70,000 CoP + {currencySymbol}30,000 profit.
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <div style={{ position: 'relative', flex: 1 }}>
+                        <input
+                          type="number"
+                          placeholder="Value"
+                          value={bulkUpdateForm.markupValue}
+                          onChange={(e) => setBulkUpdateForm(prev => ({ ...prev, markupValue: e.target.value }))}
+                          style={{ paddingLeft: (bulkUpdateForm.markupType === 'amount' || bulkUpdateForm.markupType === 'set_price') ? '24px' : '12px' }}
+                        />
+                        {(bulkUpdateForm.markupType === 'amount' || bulkUpdateForm.markupType === 'set_price') && <span style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)', fontSize: '14px' }}>{currencySymbol}</span>}
+                      </div>
+                      <select
+                        style={{ width: '135px', padding: '8px' }}
+                        value={bulkUpdateForm.markupType}
+                        onChange={(e) => setBulkUpdateForm(prev => ({ ...prev, markupType: e.target.value }))}
+                      >
+                        <option value="percentage">% Markup</option>
+                        <option value="amount">Markup Amt</option>
+                        <option value="set_price">Fix Sales Price</option>
+                      </select>
+                    </div>
+                    <p style={{ margin: '4px 0 0', fontSize: '11px', color: 'var(--text-tertiary)' }}>
+                      Markup adds profit on top of Cost of Production.
+                    </p>
+                  </>
+                )}
               </div>
 
               {/* Product Info Section Title */}
@@ -1272,7 +1405,7 @@ const Inventory = () => {
                 <button 
                   onClick={handleBulkUpdate}
                   style={{ flex: 1, borderRadius: '12px' }}
-                  disabled={(!bulkUpdateForm.costAdjustment && !bulkUpdateForm.markupValue && !bulkUpdateForm.category && !bulkUpdateForm.stockValue) || bulkUpdating}
+                  disabled={!canApplyBulkUpdate || bulkUpdating}
                 >
                   {bulkUpdating ? (
                     <><span className="btn-spinner"></span> Applying...</>

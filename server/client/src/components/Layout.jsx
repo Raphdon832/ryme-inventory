@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { MenuIcon, SearchIcon, NotificationsIcon, MailIcon } from './CustomIcons';
+import { MenuIcon, SearchIcon, MailIcon } from './CustomIcons';
 import Sidebar from './Sidebar';
 import Splash from './Splash';
 import OfflineIndicator from './OfflineIndicator';
 import PullToRefresh from './PullToRefresh';
 import GlobalSearch from './GlobalSearch';
+import NotificationCenter from './NotificationCenter';
 import QuickNavBar from './QuickNavBar';
 import Calculator from './Calculator';
 import UnitConverter from './UnitConverter';
@@ -15,37 +16,51 @@ import QuickScratchpad from './QuickScratchpad';
 import { useSettings } from '../contexts/SettingsContext';
 import { useUI } from '../contexts/UIContext';
 
+const MOBILE_BREAKPOINT = 768;
+const NAV_DRAWER_BREAKPOINT = 1024;
+
 const Layout = ({ children }) => {
   const { settings } = useSettings();
   const { activeTool, openTool, closeTool } = useUI();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [showSplash, setShowSplash] = useState(true);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
-  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
-  
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth <= MOBILE_BREAKPOINT);
+  const [isCompactNav, setIsCompactNav] = useState(() => window.innerWidth <= NAV_DRAWER_BREAKPOINT);
+
   const hasQuickNav = settings.quickNav?.enabled && settings.quickNav?.items?.length > 0;
+  const isSidebarDrawerOpen = isCompactNav && isSidebarOpen;
 
   // Lock body scroll
   useEffect(() => {
-    if (isSidebarOpen || isSearchOpen || activeTool) {
+    if (isSidebarDrawerOpen || isSearchOpen || activeTool) {
       document.body.style.overflow = 'hidden';
       document.body.style.touchAction = 'none';
     } else {
       document.body.style.overflow = '';
       document.body.style.touchAction = '';
     }
-    
+
     return () => {
       document.body.style.overflow = '';
       document.body.style.touchAction = '';
     };
-  }, [isSidebarOpen, isSearchOpen, activeTool]);
+  }, [isSidebarDrawerOpen, isSearchOpen, activeTool]);
 
-  // Track window resize for mobile detection
+  // Track window resize for responsive navigation behavior
   useEffect(() => {
     const handleResize = () => {
-      setIsMobile(window.innerWidth <= 768);
+      const width = window.innerWidth;
+      const nextIsCompactNav = width <= NAV_DRAWER_BREAKPOINT;
+
+      setIsMobile(width <= MOBILE_BREAKPOINT);
+      setIsCompactNav(nextIsCompactNav);
+
+      if (!nextIsCompactNav) {
+        setIsSidebarOpen(false);
+      }
     };
+
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
@@ -72,12 +87,12 @@ const Layout = ({ children }) => {
   return (
     <div className={`dashboard-layout ${hasQuickNav && isMobile ? 'has-quick-nav' : ''}`}>
       <div
-        className={`sidebar-overlay ${isSidebarOpen ? 'show' : ''}`}
+        className={`sidebar-overlay ${isSidebarDrawerOpen ? 'show' : ''}`}
         onClick={() => setIsSidebarOpen(false)}
       />
-      <Sidebar 
-        isOpen={isSidebarOpen} 
-        onClose={() => setIsSidebarOpen(false)} 
+      <Sidebar
+        isOpen={isSidebarDrawerOpen}
+        onClose={() => setIsSidebarOpen(false)}
         onOpenCalculator={() => openTool('calculator')}
         onOpenConverter={() => openTool('converter')}
         onOpenBarcode={() => openTool('barcode')}
@@ -91,22 +106,23 @@ const Layout = ({ children }) => {
           <div className="header-left">
             <button
               className="menu-toggle"
-              onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+              onClick={() => setIsSidebarOpen((isOpen) => !isOpen)}
               aria-label="Toggle menu"
+              aria-expanded={isSidebarDrawerOpen}
             >
               <MenuIcon size={20} />
             </button>
             {/* Desktop Search Bar */}
-            <div 
+            <div
               className="search-bar search-bar--compact"
               onClick={() => setIsSearchOpen(true)}
               style={{ cursor: 'pointer' }}
             >
               <SearchIcon color="var(--text-tertiary)" size={18} />
-              <input 
-                type="text" 
-                placeholder="Search anything..." 
-                readOnly 
+              <input
+                type="text"
+                placeholder="Search anything..."
+                readOnly
                 style={{ cursor: 'pointer' }}
               />
               <span className="search-shortcut">⌘ F</span>
@@ -125,9 +141,7 @@ const Layout = ({ children }) => {
             <button className="icon-button" aria-label="Messages">
               <MailIcon size={18} />
             </button>
-            <button className="icon-button" aria-label="Notifications">
-              <NotificationsIcon size={18} />
-            </button>
+            <NotificationCenter />
             <div className="header-profile">
               <div className="avatar">RI</div>
               <div className="profile-info">
@@ -137,62 +151,62 @@ const Layout = ({ children }) => {
             </div>
           </div>
         </header>
-        <PullToRefresh onRefresh={handleRefresh} disabled={isSidebarOpen || isSearchOpen}>
+        <PullToRefresh onRefresh={handleRefresh} disabled={isSidebarDrawerOpen || isSearchOpen}>
           <div className="content-wrapper">
             {children}
           </div>
         </PullToRefresh>
         <OfflineIndicator />
       </main>
-      
+
       {/* Quick Navigation Bar - Mobile Only */}
       {isMobile && (
-        <QuickNavBar 
-          onSearchClick={() => setIsSearchOpen(true)} 
-          isHidden={isSidebarOpen}
+        <QuickNavBar
+          onSearchClick={() => setIsSearchOpen(true)}
+          isHidden={isSidebarDrawerOpen}
         />
       )}
-      
+
       {/* Global Search Modal */}
-      <GlobalSearch 
-        isOpen={isSearchOpen} 
+      <GlobalSearch
+        isOpen={isSearchOpen}
         onClose={() => setIsSearchOpen(false)}
         isMobile={isMobile}
       />
 
       {/* Calculator Modal */}
-      <Calculator 
-        isOpen={activeTool === 'calculator'} 
+      <Calculator
+        isOpen={activeTool === 'calculator'}
         onClose={closeTool}
       />
 
       {/* Unit Converter Modal */}
-      <UnitConverter 
-        isOpen={activeTool === 'converter'} 
+      <UnitConverter
+        isOpen={activeTool === 'converter'}
         onClose={closeTool}
       />
 
       {/* Barcode Generator Modal */}
-      <BarcodeGenerator 
-        isOpen={activeTool === 'barcode'} 
+      <BarcodeGenerator
+        isOpen={activeTool === 'barcode'}
         onClose={closeTool}
       />
 
       {/* Currency Converter Modal */}
-      <CurrencyConverter 
-        isOpen={activeTool === 'currency'} 
+      <CurrencyConverter
+        isOpen={activeTool === 'currency'}
         onClose={closeTool}
       />
 
       {/* Pricing Simulator Modal */}
-      <PricingSimulator 
-        isOpen={activeTool === 'pricing'} 
+      <PricingSimulator
+        isOpen={activeTool === 'pricing'}
         onClose={closeTool}
       />
 
       {/* Quick Scratchpad Modal */}
-      <QuickScratchpad 
-        isOpen={activeTool === 'scratchpad'} 
+      <QuickScratchpad
+        isOpen={activeTool === 'scratchpad'}
         onClose={closeTool}
       />
     </div>

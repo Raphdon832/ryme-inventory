@@ -213,7 +213,7 @@
   width: fit-content;
 }
 
-@media (max-width: 768px) {
+@media (max-width: 1024px) {
   .sidebar {
     transform: translateX(-100%);
     width: min(85vw, 280px);

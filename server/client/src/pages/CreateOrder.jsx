@@ -28,6 +28,46 @@ import { useToast } from '../components/Toast';
 import { usePageState } from '../hooks/usePageState';
 import './CreateOrder.css';
 
+const ORDER_DRAFT_KEY = 'ryme_create_order_draft';
+const RECENT_CUSTOMERS_KEY = 'ryme_recent_order_customers';
+const RECENT_PRODUCTS_KEY = 'ryme_recent_order_products';
+const MAX_RECENT_ITEMS = 6;
+
+const createEmptyOrderData = () => ({
+  customer_id: '',
+  customer_name: '',
+  customer_address: '',
+  items: [],
+  discount: { type: 'none', value: 0 },
+  status: 'pending',
+  order_number: '',
+  include_vat: false
+});
+
+const createEmptyItem = () => ({
+  product_id: '',
+  quantity: 1,
+  discount: 0
+});
+
+const readLocalJson = (key, fallback) => {
+  try {
+    const raw = localStorage.getItem(key);
+    return raw ? JSON.parse(raw) : fallback;
+  } catch (error) {
+    console.warn(`Failed to read ${key}:`, error);
+    return fallback;
+  }
+};
+
+const upsertRecentItem = (items, item) => {
+  const itemKey = item.id || item.name;
+  return [
+    item,
+    ...items.filter(existing => (existing.id || existing.name) !== itemKey)
+  ].slice(0, MAX_RECENT_ITEMS);
+};
+
 const CreateOrder = () => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -57,27 +97,20 @@ const CreateOrder = () => {
   const [showCustomerDropdown, setShowCustomerDropdown] = useState(false);
   const [editingItemIndex, setEditingItemIndex] = useState(null);
   const [originalOrder, setOriginalOrder] = useState(null);
+  const [recentCustomers, setRecentCustomers] = useState(() => readLocalJson(RECENT_CUSTOMERS_KEY, []));
+  const [recentProducts, setRecentProducts] = useState(() => readLocalJson(RECENT_PRODUCTS_KEY, []));
+  const [draftStatus, setDraftStatus] = useState('');
+  const [draftRestored, setDraftRestored] = useState(false);
+  const [draftLoaded, setDraftLoaded] = useState(isEditing);
   const productSearchRef = useRef(null);
   const customerSearchRef = useRef(null);
+  const draftTimerRef = useRef(null);
 
-  const [orderData, setOrderData] = useState({
-    customer_id: '',
-    customer_name: '',
-    customer_address: '',
-    items: [],
-    discount: { type: 'none', value: 0 },
-    status: 'pending',
-    order_number: '',
-    include_vat: false
-  });
+  const [orderData, setOrderData] = useState(() => createEmptyOrderData());
 
   const VAT_RATE = 0.075; // 7.5% Nigerian VAT
 
-  const [currentItem, setCurrentItem] = useState({
-    product_id: '',
-    quantity: 1,
-    discount: 0
-  });
+  const [currentItem, setCurrentItem] = useState(() => createEmptyItem());
 
   // Subscribe to offline status
   useEffect(() => {
@@ -214,6 +247,110 @@ const CreateOrder = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  // Restore unsaved draft for new orders
+  useEffect(() => {
+    if (isEditing || draftLoaded) return;
+
+    const savedDraft = readLocalJson(ORDER_DRAFT_KEY, null);
+    if (savedDraft?.orderData && (savedDraft.orderData.customer_name || savedDraft.orderData.items?.length > 0)) {
+      setOrderData({
+        ...createEmptyOrderData(),
+        ...savedDraft.orderData,
+        items: savedDraft.orderData.items || []
+      });
+      setCustomerSearch(savedDraft.customerSearch || savedDraft.orderData.customer_name || '');
+      setDraftRestored(true);
+      setDraftStatus('Draft restored');
+    }
+
+    setDraftLoaded(true);
+  }, [draftLoaded, isEditing]);
+
+  // Autosave draft for new orders
+  useEffect(() => {
+    if (isEditing || !draftLoaded) return undefined;
+
+    if (draftTimerRef.current) {
+      clearTimeout(draftTimerRef.current);
+    }
+
+    const hasDraftContent = Boolean(orderData.customer_name || orderData.customer_address || orderData.items.length > 0);
+    if (!hasDraftContent) {
+      localStorage.removeItem(ORDER_DRAFT_KEY);
+      setDraftStatus('');
+      return undefined;
+    }
+
+    draftTimerRef.current = setTimeout(() => {
+      localStorage.setItem(ORDER_DRAFT_KEY, JSON.stringify({
+        orderData,
+        customerSearch,
+        savedAt: new Date().toISOString()
+      }));
+      setDraftStatus('Draft saved');
+    }, 600);
+
+    return () => {
+      if (draftTimerRef.current) {
+        clearTimeout(draftTimerRef.current);
+      }
+    };
+  }, [customerSearch, draftLoaded, isEditing, orderData]);
+
+  const rememberCustomer = useCallback((customer) => {
+    if (!customer?.name) return;
+
+    setRecentCustomers(prev => {
+      const next = upsertRecentItem(Array.isArray(prev) ? prev : [], {
+        id: customer.id || '',
+        name: customer.name,
+        address: customer.address || '',
+        email: customer.email || '',
+        phone: customer.phone || ''
+      });
+      localStorage.setItem(RECENT_CUSTOMERS_KEY, JSON.stringify(next));
+      return next;
+    });
+  }, []);
+
+  const rememberProduct = useCallback((product) => {
+    if (!product?.name) return;
+
+    setRecentProducts(prev => {
+      const next = upsertRecentItem(Array.isArray(prev) ? prev : [], {
+        id: product.id || '',
+        name: product.name,
+        sorting_code: product.sorting_code || ''
+      });
+      localStorage.setItem(RECENT_PRODUCTS_KEY, JSON.stringify(next));
+      return next;
+    });
+  }, []);
+
+  const rememberCurrentCustomer = useCallback(() => {
+    const name = orderData.customer_name?.trim();
+    if (!name) return;
+
+    rememberCustomer({
+      id: orderData.customer_id || '',
+      name,
+      address: orderData.customer_address || ''
+    });
+  }, [orderData.customer_address, orderData.customer_id, orderData.customer_name, rememberCustomer]);
+
+  const clearOrderDraft = useCallback((resetForm = false) => {
+    localStorage.removeItem(ORDER_DRAFT_KEY);
+    setDraftRestored(false);
+    setDraftStatus('');
+
+    if (resetForm && !isEditing) {
+      setOrderData(createEmptyOrderData());
+      setCustomerSearch('');
+      setProductSearch('');
+      setCurrentItem(createEmptyItem());
+    }
+  }, [isEditing]);
+
   // Filter products by sorting code or name
   const filteredProducts = products
     .filter(p => p.stock_quantity > 0)
@@ -249,6 +386,44 @@ const CreateOrder = () => {
     });
     setCustomerSearch(customer.name || '');
     setShowCustomerDropdown(false);
+    rememberCustomer(customer);
+  };
+
+  const handleSelectRecentProduct = (recentProduct) => {
+    const product = products.find(p => (
+      p.id === recentProduct.id ||
+      (recentProduct.sorting_code && p.sorting_code === recentProduct.sorting_code) ||
+      p.name === recentProduct.name
+    ));
+
+    if (!product || Number(product.stock_quantity || 0) <= 0) {
+      toast.error('This recent product is unavailable or out of stock');
+      return;
+    }
+
+    handleSelectProduct(product);
+  };
+
+  const handleCustomerSearchKeyDown = (event) => {
+    if (event.key !== 'Enter') return;
+    if (filteredCustomers.length === 0) return;
+
+    event.preventDefault();
+    handleSelectCustomer(filteredCustomers[0]);
+  };
+
+  const handleProductSearchKeyDown = (event) => {
+    if (event.key !== 'Enter') return;
+    event.preventDefault();
+
+    if (currentItem.product_id) {
+      handleAddItem();
+      return;
+    }
+
+    if (filteredProducts.length > 0) {
+      handleSelectProduct(filteredProducts[0]);
+    }
   };
 
   const handleAddItem = () => {
@@ -293,7 +468,8 @@ const CreateOrder = () => {
         }]
       });
     }
-    setCurrentItem({ product_id: '', quantity: 1, discount: 0 });
+    rememberProduct(product);
+    setCurrentItem(createEmptyItem());
     setProductSearch('');
     setShowProductDropdown(false);
   };
@@ -381,6 +557,8 @@ const CreateOrder = () => {
         }
         
         soundManager.playSuccess();
+        rememberCurrentCustomer();
+        clearOrderDraft(false);
         setHasUnsavedChanges(false);
         setTimeout(() => navigate('/orders'), 1500);
         return;
@@ -404,6 +582,8 @@ const CreateOrder = () => {
       }
 
       soundManager.playSuccess();
+      rememberCurrentCustomer();
+      clearOrderDraft(false);
       setHasUnsavedChanges(false);
       navigate('/orders');
     } catch (error) {
@@ -473,6 +653,8 @@ const CreateOrder = () => {
       }
 
       soundManager.playSuccess();
+      rememberCurrentCustomer();
+      clearOrderDraft(false);
       setLocalSaveSuccess(true);
       setHasUnsavedChanges(false);
       toast.success('Order saved locally!');
@@ -537,6 +719,8 @@ const CreateOrder = () => {
       }
       
       soundManager.playSuccess();
+      rememberCurrentCustomer();
+      clearOrderDraft(false);
       toast.success('Order saved offline successfully!');
       setHasUnsavedChanges(false);
       setTimeout(() => navigate('/orders'), 1500);
@@ -648,6 +832,14 @@ const CreateOrder = () => {
         </div>
       )}
 
+      {!isEditing && draftRestored && (
+        <div className="draft-banner">
+          <SaveIcon size={16} />
+          <span>Unsaved order draft restored.</span>
+          <button type="button" onClick={() => clearOrderDraft(true)}>Discard draft</button>
+        </div>
+      )}
+
       {/* Success Toast */}
       {successMessage && (
         <div className="success-toast">
@@ -682,6 +874,11 @@ const CreateOrder = () => {
             {isOfflineOrder && (
               <span className="offline-order-badge">
                 <WifiOffIcon size={12} /> Offline
+              </span>
+            )}
+            {!isEditing && draftStatus && (
+              <span className="draft-save-badge">
+                <SaveIcon size={12} /> {draftStatus}
               </span>
             )}
           </h1>
@@ -767,6 +964,7 @@ const CreateOrder = () => {
                         setOrderData({ ...orderData, customer_name: value, customer_id: '' });
                         setShowCustomerDropdown(true);
                       }}
+                      onKeyDown={handleCustomerSearchKeyDown}
                       onFocus={() => setShowCustomerDropdown(true)}
                     />
                   </div>
@@ -822,6 +1020,23 @@ const CreateOrder = () => {
                 />
               </div>
             </div>
+            {Array.isArray(recentCustomers) && recentCustomers.length > 0 && (
+              <div className="quick-picks">
+                <span className="quick-picks-label">Recent customers</span>
+                <div className="quick-picks-list">
+                  {recentCustomers.map(customer => (
+                    <button
+                      type="button"
+                      className="quick-pick-chip"
+                      key={customer.id || customer.name}
+                      onClick={() => handleSelectCustomer(customer)}
+                    >
+                      {customer.name}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Add Products Card */}
@@ -829,6 +1044,24 @@ const CreateOrder = () => {
             <h3 className="card-title">
               <CartIcon /> Order Items
             </h3>
+
+            {Array.isArray(recentProducts) && recentProducts.length > 0 && (
+              <div className="quick-picks product-quick-picks">
+                <span className="quick-picks-label">Recent products</span>
+                <div className="quick-picks-list">
+                  {recentProducts.map(product => (
+                    <button
+                      type="button"
+                      className="quick-pick-chip"
+                      key={product.id || product.name}
+                      onClick={() => handleSelectRecentProduct(product)}
+                    >
+                      {product.sorting_code ? `${product.sorting_code} · ${product.name}` : product.name}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
             
             {/* Add Product Row */}
             <div className="add-product-row">
@@ -846,6 +1079,7 @@ const CreateOrder = () => {
                       setShowProductDropdown(true);
                       if (!e.target.value) setCurrentItem({ ...currentItem, product_id: '' });
                     }}
+                    onKeyDown={handleProductSearchKeyDown}
                     onFocus={() => setShowProductDropdown(true)}
                   />
                 </div>

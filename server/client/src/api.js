@@ -65,7 +65,36 @@ const withOfflineSupport = async (method, path, payload, operation) => {
   return operation();
 };
 
-const computePricing = ({ cost_of_production, markup_percentage, markup_amount }) => {
+const computePricing = ({ pricing_mode, cost_of_production, markup_percentage, markup_amount, margin_percentage, sales_price }) => {
+  const mode = pricing_mode === 'margin' ? 'margin' : 'markup';
+
+  if (mode === 'margin') {
+    const salesPrice = Number(sales_price || 0);
+    const marginProvided = margin_percentage !== undefined && margin_percentage !== null && margin_percentage !== '';
+
+    if (!salesPrice || !marginProvided) {
+      throw new Error('Sales price and margin percentage are required.');
+    }
+
+    const marginValue = Number(margin_percentage);
+    if (Number.isNaN(marginValue) || marginValue < 0 || marginValue >= 100) {
+      throw new Error('Margin percentage must be between 0 and 99.99.');
+    }
+
+    const profit = salesPrice * marginValue / 100;
+    const cost = salesPrice - profit;
+
+    return {
+      cost_of_production: cost,
+      markup_percentage: 0,
+      markup_amount: profit,
+      margin_percentage: marginValue,
+      pricing_mode: 'margin',
+      sales_price: salesPrice,
+      profit
+    };
+  }
+
   const cost = Number(cost_of_production || 0);
   const percentProvided = markup_percentage !== undefined && markup_percentage !== null && markup_percentage !== '';
   const amountProvided = markup_amount !== undefined && markup_amount !== null && markup_amount !== '';
@@ -77,14 +106,16 @@ const computePricing = ({ cost_of_production, markup_percentage, markup_amount }
   const percentValue = percentProvided ? Number(markup_percentage) : 0;
   const amountValue = amountProvided ? Number(markup_amount) : 0;
   const appliedMarkup = amountProvided ? amountValue : (cost * percentValue / 100);
-  const sales_price = cost + appliedMarkup;
-  const profit = sales_price - cost;
+  const computedSalesPrice = cost + appliedMarkup;
+  const profit = computedSalesPrice - cost;
 
   return {
     cost_of_production: cost,
     markup_percentage: amountProvided ? 0 : percentValue,
     markup_amount: amountProvided ? amountValue : 0,
-    sales_price,
+    margin_percentage: computedSalesPrice > 0 ? (profit / computedSalesPrice) * 100 : 0,
+    pricing_mode: 'markup',
+    sales_price: computedSalesPrice,
     profit
   };
 };

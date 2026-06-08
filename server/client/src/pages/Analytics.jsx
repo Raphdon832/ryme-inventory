@@ -1,12 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   TrendingUpIcon,
   TrendingDownIcon,
   CartIcon,
   PackageIcon,
+  ProfileIcon,
   AnalyticsIcon,
   PieChartIcon,
   CalendarIcon,
+  AlertCircleIcon,
   DownloadIcon,
   ReportsIcon
 } from '../components/CustomIcons';
@@ -19,6 +21,20 @@ import { usePageState } from '../hooks/usePageState';
 import './Analytics.css';
 
 const incomeRef = collection(db, 'income');
+
+const getDateValue = (value) => {
+  if (!value) return null;
+  if (value instanceof Date) return Number.isNaN(value.valueOf()) ? null : value;
+  if (typeof value.toDate === 'function') {
+    const converted = value.toDate();
+    return Number.isNaN(converted.valueOf()) ? null : converted;
+  }
+
+  const date = new Date(value);
+  return Number.isNaN(date.valueOf()) ? null : date;
+};
+
+const getMonthKey = (date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
 
 const Analytics = () => {
   const { formatCurrency, currencySymbol } = useSettings();
@@ -50,20 +66,20 @@ const Analytics = () => {
         getDocs(collection(db, 'products')),
         getDocs(query(incomeRef, orderBy('date', 'desc')))
       ]);
-      
+
       setOrders(ordersSnap.docs.map(doc => ({
         id: doc.id,
         ...doc.data(),
         order_date: doc.data().order_date?.toDate?.() || new Date(doc.data().order_date)
       })));
-      
+
       setProducts(productsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-      
+
       setIncomeRecords(incomeSnap.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       })));
-      
+
       setLoading(false);
     } catch (error) {
       console.error('Error fetching data:', error);
@@ -87,8 +103,8 @@ const Analytics = () => {
     return items.filter(item => new Date(item.date) >= daysAgo);
   };
 
-  const filteredOrders = filterByDateRange(orders);
-  const filteredIncome = filterIncomeByDateRange(incomeRecords);
+  const filteredOrders = useMemo(() => filterByDateRange(orders), [orders, dateRange]);
+  const filteredIncome = useMemo(() => filterIncomeByDateRange(incomeRecords), [incomeRecords, dateRange]);
 
   // Calculate stats (including manual income)
   const orderRevenue = filteredOrders.reduce((sum, o) => sum + (o.total_sales_price || 0), 0);
@@ -106,7 +122,7 @@ const Analytics = () => {
     const days = parseInt(dateRange);
     const periodStart = new Date(now.setDate(now.getDate() - days));
     const previousStart = new Date(periodStart.setDate(periodStart.getDate() - days));
-    
+
     return orders.filter(o => {
       const orderDate = new Date(o.order_date);
       return orderDate >= previousStart && orderDate < new Date(new Date().setDate(new Date().getDate() - days));
@@ -118,7 +134,7 @@ const Analytics = () => {
   const revenueChange = previousRevenue > 0 ? ((totalRevenue - previousRevenue) / previousRevenue * 100) : 0;
 
   // Sales by day chart data
-  const getSalesByDay = () => {
+  const salesByDay = useMemo(() => {
     const salesMap = {};
     filteredOrders.forEach(order => {
       const date = new Date(order.order_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
@@ -130,19 +146,20 @@ const Analytics = () => {
       salesMap[date].orders += 1;
     });
     return Object.values(salesMap).reverse();
-  };
+  }, [filteredOrders]);
 
   // Top products by revenue
-  const getTopProducts = () => {
+  const productSales = useMemo(() => {
     const productSales = {};
     filteredOrders.forEach(order => {
       (order.items || []).forEach(item => {
-        const key = item.product_name || item.product_id;
+        const key = item.product_id || item.product_name || 'unknown';
         if (!productSales[key]) {
-          productSales[key] = { 
-            name: item.product_name || 'Unknown', 
-            revenue: 0, 
-            quantity: 0 
+          productSales[key] = {
+            id: item.product_id,
+            name: item.product_name || 'Unknown',
+            revenue: 0,
+            quantity: 0
           };
         }
         productSales[key].revenue += (item.sales_price_at_time || item.sales_price || 0) * (item.quantity || 0);
@@ -150,12 +167,108 @@ const Analytics = () => {
       });
     });
     return Object.values(productSales)
+      .sort((a, b) => b.revenue - a.revenue);
+  }, [filteredOrders]);
+
+  const topProducts = productSales.slice(0, 5);
+
+  const soldProductKeys = useMemo(() => {
+    const keys = new Set();
+    productSales.forEach(product => {
+      if (product.id) keys.add(product.id);
+      if (product.name) keys.add(product.name.toLowerCase());
+    });
+    return keys;
+  }, [productSales]);
+
+  const deadStockProducts = useMemo(() => {
+    return products.filter(product => {
+      const stock = Number(product.stock_quantity || 0);
+      if (stock <= 0) return false;
+      const productName = (product.name || '').toLowerCase();
+      return !soldProductKeys.has(product.id) && !soldProductKeys.has(productName);
+    });
+  }, [products, soldProductKeys]);
+
+  const topCustomers = useMemo(() => {
+    const customerMap = {};
+    filteredOrders.forEach(order => {
+      const key = order.customer_id || order.customer_name || 'Walk-in';
+      if (!customerMap[key]) {
+        customerMap[key] = {
+          name: order.customer_name || 'Walk-in',
+          revenue: 0,
+          profit: 0,
+          orders: 0
+        };
+      }
+      customerMap[key].revenue += Number(order.total_sales_price || 0);
+      customerMap[key].profit += Number(order.total_profit || 0);
+      customerMap[key].orders += 1;
+    });
+
+    return Object.values(customerMap)
       .sort((a, b) => b.revenue - a.revenue)
       .slice(0, 5);
-  };
+  }, [filteredOrders]);
+
+  const monthlyTrend = useMemo(() => {
+    const today = new Date();
+    const buckets = Array.from({ length: 6 }, (_, index) => {
+      const date = new Date(today.getFullYear(), today.getMonth() - (5 - index), 1);
+      return {
+        key: getMonthKey(date),
+        month: date.toLocaleDateString('en-US', { month: 'short' }),
+        revenue: 0,
+        profit: 0,
+        orders: 0
+      };
+    });
+
+    const bucketMap = new Map(buckets.map(bucket => [bucket.key, bucket]));
+
+    orders.forEach(order => {
+      const date = getDateValue(order.order_date);
+      if (!date) return;
+      const bucket = bucketMap.get(getMonthKey(date));
+      if (!bucket) return;
+      bucket.revenue += Number(order.total_sales_price || 0);
+      bucket.profit += Number(order.total_profit || 0);
+      bucket.orders += 1;
+    });
+
+    incomeRecords.forEach(record => {
+      const date = getDateValue(record.date);
+      if (!date) return;
+      const bucket = bucketMap.get(getMonthKey(date));
+      if (!bucket) return;
+      bucket.revenue += Number(record.amount || 0);
+      bucket.profit += Number(record.profit || 0);
+    });
+
+    return buckets;
+  }, [orders, incomeRecords]);
+
+  const monthlyComparison = useMemo(() => {
+    const current = monthlyTrend[monthlyTrend.length - 1] || { revenue: 0, profit: 0, orders: 0 };
+    const previous = monthlyTrend[monthlyTrend.length - 2] || { revenue: 0, profit: 0, orders: 0 };
+
+    return {
+      current,
+      previous,
+      revenueChange: previous.revenue > 0 ? ((current.revenue - previous.revenue) / previous.revenue) * 100 : 0,
+      profitChange: previous.profit > 0 ? ((current.profit - previous.profit) / previous.profit) * 100 : 0
+    };
+  }, [monthlyTrend]);
+
+  const inventoryValue = useMemo(() => {
+    return products.reduce((sum, product) => (
+      sum + (Number(product.cost_of_production || 0) * Number(product.stock_quantity || 0))
+    ), 0);
+  }, [products]);
 
   // Category breakdown
-  const getCategoryBreakdown = () => {
+  const categoryBreakdown = useMemo(() => {
     const categories = {};
     products.forEach(product => {
       const cat = product.category || 'Uncategorized';
@@ -165,7 +278,7 @@ const Analytics = () => {
       categories[cat].value += 1;
     });
     return Object.values(categories);
-  };
+  }, [products]);
 
   const COLORS = ['#2563eb', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899'];
 
@@ -210,16 +323,16 @@ const Analytics = () => {
         </div>
         <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
           <div style={{ display: 'flex', gap: '8px' }}>
-            <button 
-              className="secondary" 
+            <button
+              className="secondary"
               onClick={() => handleExport('csv')}
               title="Export Full Financial Report (CSV)"
               style={{ padding: '0 16px', display: 'flex', alignItems: 'center', gap: '8px', height: '42px', borderRadius: '10px', background: 'var(--bg-surface)', border: '1px solid var(--border-color)', color: 'var(--text-secondary)', cursor: 'pointer', transition: 'all 0.2s' }}
             >
               <ReportsIcon size={16} /> <span className="hide-mobile">CSV</span>
             </button>
-            <button 
-              className="secondary" 
+            <button
+              className="secondary"
               onClick={() => handleExport('pdf')}
               title="Export Full Financial Report (PDF)"
               style={{ padding: '0 16px', display: 'flex', alignItems: 'center', gap: '8px', height: '42px', borderRadius: '10px', background: 'var(--bg-surface)', border: '1px solid var(--border-color)', color: 'var(--text-secondary)', cursor: 'pointer', transition: 'all 0.2s' }}
@@ -279,23 +392,63 @@ const Analytics = () => {
         </div>
       </div>
 
+      <div className="analytics-insights-grid">
+        <div className="insight-card">
+          <div className="insight-icon blue"><CalendarIcon size={18} /></div>
+          <div className="insight-content">
+            <span className="insight-label">This Month Revenue</span>
+            <strong>{formatCurrency(monthlyComparison.current.revenue, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</strong>
+            <span className={`insight-change ${monthlyComparison.revenueChange >= 0 ? 'positive' : 'negative'}`}>
+              {monthlyComparison.revenueChange >= 0 ? '+' : ''}{monthlyComparison.revenueChange.toFixed(1)}% vs previous month
+            </span>
+          </div>
+        </div>
+
+        <div className="insight-card">
+          <div className="insight-icon green"><ProfileIcon size={18} /></div>
+          <div className="insight-content">
+            <span className="insight-label">Top Customer</span>
+            <strong>{topCustomers[0]?.name || 'No customer data'}</strong>
+            <span>{topCustomers[0] ? `${formatCurrency(topCustomers[0].revenue, { minimumFractionDigits: 0, maximumFractionDigits: 0 })} across ${topCustomers[0].orders} order${topCustomers[0].orders === 1 ? '' : 's'}` : 'Create orders to build value history'}</span>
+          </div>
+        </div>
+
+        <div className="insight-card">
+          <div className="insight-icon purple"><PackageIcon size={18} /></div>
+          <div className="insight-content">
+            <span className="insight-label">Inventory Value</span>
+            <strong>{formatCurrency(inventoryValue, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</strong>
+            <span>{new Intl.NumberFormat('en-US').format(products.length)} active product records</span>
+          </div>
+        </div>
+
+        <div className="insight-card">
+          <div className="insight-icon orange"><AlertCircleIcon size={18} /></div>
+          <div className="insight-content">
+            <span className="insight-label">Dead Stock Watch</span>
+            <strong>{new Intl.NumberFormat('en-US').format(deadStockProducts.length)}</strong>
+            <span>Stocked item{deadStockProducts.length === 1 ? '' : 's'} with no sales in this range</span>
+          </div>
+        </div>
+      </div>
+
       {/* Charts Row */}
       <div className="charts-grid">
         <div className="chart-card">
           <h3><AnalyticsIcon /> Revenue Over Time</h3>
           <div className="chart-container">
             <ResponsiveContainer width="100%" height={280}>
-              <BarChart data={getSalesByDay()}>
+              <BarChart data={salesByDay}>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--border-color)" />
                 <XAxis dataKey="date" tick={{ fontSize: 11 }} stroke="var(--text-tertiary)" />
                 <YAxis tick={{ fontSize: 11 }} stroke="var(--text-tertiary)" />
-                <Tooltip 
-                  contentStyle={{ 
-                    background: 'var(--bg-surface)', 
+                <Tooltip
+                  contentStyle={{
+                    background: 'var(--bg-surface)',
                     border: '1px solid var(--border-color)',
                     borderRadius: '8px',
                     fontSize: '12px'
-                  }} 
+                  }}
                 />
                 <Bar dataKey="revenue" fill="#2563eb" radius={[4, 4, 0, 0]} />
               </BarChart>
@@ -307,21 +460,66 @@ const Analytics = () => {
           <h3><TrendingUpIcon /> Profit Trend</h3>
           <div className="chart-container">
             <ResponsiveContainer width="100%" height={280}>
-              <LineChart data={getSalesByDay()}>
+              <LineChart data={salesByDay}>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--border-color)" />
                 <XAxis dataKey="date" tick={{ fontSize: 11 }} stroke="var(--text-tertiary)" />
                 <YAxis tick={{ fontSize: 11 }} stroke="var(--text-tertiary)" />
-                <Tooltip 
-                  contentStyle={{ 
-                    background: 'var(--bg-surface)', 
+                <Tooltip
+                  contentStyle={{
+                    background: 'var(--bg-surface)',
                     border: '1px solid var(--border-color)',
                     borderRadius: '8px',
                     fontSize: '12px'
-                  }} 
+                  }}
                 />
                 <Line type="monotone" dataKey="profit" stroke="#10B981" strokeWidth={2} dot={{ r: 3 }} />
               </LineChart>
             </ResponsiveContainer>
+          </div>
+        </div>
+      </div>
+
+      <div className="charts-grid">
+        <div className="chart-card">
+          <h3><CalendarIcon /> Monthly Revenue vs Profit</h3>
+          <div className="chart-container">
+            <ResponsiveContainer width="100%" height={280}>
+              <BarChart data={monthlyTrend}>
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--border-color)" />
+                <XAxis dataKey="month" tick={{ fontSize: 11 }} stroke="var(--text-tertiary)" />
+                <YAxis tick={{ fontSize: 11 }} stroke="var(--text-tertiary)" />
+                <Tooltip
+                  contentStyle={{
+                    background: 'var(--bg-surface)',
+                    border: '1px solid var(--border-color)',
+                    borderRadius: '8px',
+                    fontSize: '12px'
+                  }}
+                />
+                <Legend formatter={(value) => <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>{value}</span>} />
+                <Bar dataKey="revenue" fill="#2563eb" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="profit" fill="#10B981" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        <div className="chart-card">
+          <h3><ProfileIcon /> Customer Value</h3>
+          <div className="customer-value-list">
+            {topCustomers.map((customer, index) => (
+              <div key={`${customer.name}-${index}`} className="customer-value-item">
+                <div className="customer-rank">{index + 1}</div>
+                <div className="customer-info">
+                  <div className="customer-name">{customer.name}</div>
+                  <div className="customer-meta">{customer.orders} order{customer.orders === 1 ? '' : 's'} · {formatCurrency(customer.profit, { minimumFractionDigits: 0, maximumFractionDigits: 0 })} profit</div>
+                </div>
+                <div className="customer-revenue">{formatCurrency(customer.revenue, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</div>
+              </div>
+            ))}
+            {topCustomers.length === 0 && (
+              <p className="no-data">No customer value data available</p>
+            )}
           </div>
         </div>
       </div>
@@ -331,7 +529,7 @@ const Analytics = () => {
         <div className="chart-card">
           <h3><PackageIcon /> Top Products</h3>
           <div className="top-products-list">
-            {getTopProducts().map((product, index) => (
+            {topProducts.map((product, index) => (
               <div key={index} className="top-product-item">
                 <div className="product-rank">{index + 1}</div>
                 <div className="product-info">
@@ -341,7 +539,7 @@ const Analytics = () => {
                 <div className="product-revenue">{formatCurrency(product.revenue, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</div>
               </div>
             ))}
-            {getTopProducts().length === 0 && (
+            {topProducts.length === 0 && (
               <p className="no-data">No product data available</p>
             )}
           </div>
@@ -353,7 +551,7 @@ const Analytics = () => {
             <ResponsiveContainer width="100%" height={220}>
               <PieChart>
                 <Pie
-                  data={getCategoryBreakdown()}
+                  data={categoryBreakdown}
                   cx="50%"
                   cy="50%"
                   innerRadius={50}
@@ -361,20 +559,20 @@ const Analytics = () => {
                   paddingAngle={2}
                   dataKey="value"
                 >
-                  {getCategoryBreakdown().map((entry, index) => (
+                  {categoryBreakdown.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                   ))}
                 </Pie>
-                <Tooltip 
-                  contentStyle={{ 
-                    background: 'var(--bg-surface)', 
+                <Tooltip
+                  contentStyle={{
+                    background: 'var(--bg-surface)',
                     border: '1px solid var(--border-color)',
                     borderRadius: '8px',
                     fontSize: '12px'
-                  }} 
+                  }}
                 />
-                <Legend 
-                  verticalAlign="bottom" 
+                <Legend
+                  verticalAlign="bottom"
                   height={36}
                   formatter={(value) => <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>{value}</span>}
                 />

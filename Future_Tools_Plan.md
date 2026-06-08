@@ -17,6 +17,11 @@ This document outlines the planned improvements for existing tools and the intro
 - [x] **Markup & Discount Simulator**: View potential profit scenarios across different pricing strategies.
 - [x] **Recent Tools Dashboard**: Dedicated section on home screen for one-tap utility access.
 
+## 📈 3. Selected Business Upgrade Recommendations
+- [ ] **Speed Up Order Creation**: Add draft autosave, recent customers/products, keyboard-friendly product search, faster customer selection, and duplicate/reorder shortcuts.
+- [ ] **Strengthen Analytics**: Add monthly revenue/profit comparisons, customer purchase value, inventory value, dead stock detection, and clearer best-seller insights.
+- [ ] **Improve Notifications**: Add an actionable notification center for low stock, overdue tasks, pending orders, unpaid invoices, and important stock/order changes.
+
 ---
 
 ## 🚀 Implementation Log

@@ -29,7 +29,7 @@ const useAddProductScroll = () => {
  * - First letter of first two words of brand name
  * - First 2 letters of first word of product name + first letter of each subsequent word
  * - First number from volume/size (or first 2 numbers if volume >= 1000)
- * 
+ *
  * Example: "Dr Vranjes" + "Rosso Nobile Diffuser" + "500ml" = "DVROND5"
  * Example: "Dr Vranjes" + "Rosso Nobile Diffuser" + "2000ml" = "DVROND20"
  */
@@ -62,8 +62,8 @@ const generateSortingCode = (brandName, productName, volumeSize) => {
   if (volumeNumberMatch) {
     const volumeNumber = parseInt(volumeNumberMatch[0], 10);
     // If volume >= 1000, use first 2 digits; otherwise use first digit
-    volumeDigits = volumeNumber >= 1000 
-      ? volumeNumberMatch[0].slice(0, 2) 
+    volumeDigits = volumeNumber >= 1000
+      ? volumeNumberMatch[0].slice(0, 2)
       : volumeNumberMatch[0].charAt(0);
   }
 
@@ -99,10 +99,11 @@ const AddProduct = () => {
     sorting_code: '',
     description: '',
     cost_of_production: '',
+    margin_percentage: '',
     markup_percentage: '',
     markup_amount: '',
     sales_price: '',
-    pricing_mode: 'sales', // 'cop' or 'sales'
+    pricing_mode: 'margin',
     stock_quantity: ''
   });
   const [lineItems, setLineItems] = useState([]);
@@ -137,10 +138,11 @@ const AddProduct = () => {
   // Bulk mode state
   const [bulkDefaults, setBulkDefaults] = useState({
     cost_of_production: '',
+    margin_percentage: '',
     markup_percentage: '',
     markup_amount: '',
     sales_price: '',
-    pricing_mode: 'sales',
+    pricing_mode: 'margin',
     stock_quantity: ''
   });
   const [newBulkProduct, setNewBulkProduct] = useState({
@@ -149,10 +151,11 @@ const AddProduct = () => {
     category: '',
     description: '',
     cost_of_production: '',
+    margin_percentage: '',
     markup_percentage: '',
     markup_amount: '',
     sales_price: '',
-    pricing_mode: 'sales',
+    pricing_mode: 'margin',
     stock_quantity: ''
   });
   const [useDefaults, setUseDefaults] = useState(true);
@@ -184,19 +187,27 @@ const AddProduct = () => {
     try {
       const response = await api.get(`/products/${id}`);
       const product = response.data.data;
-      
+
       // Handle legacy products that might not have segmented fields
       const brandName = product.brand_name || '';
       const productName = product.product_name || '';
       const volumeSize = product.volume_size || '';
       const sortingCode = product.sorting_code || '';
-      
+
       // If legacy product with only 'name' field, try to use it
       let legacyName = '';
       if (!brandName && !productName && product.name) {
         legacyName = product.name;
       }
-      
+
+      const productSalesPrice = Number(product.sales_price || 0);
+      const productProfit = Number(product.profit || 0);
+      const inferredMargin = product.margin_percentage !== undefined && product.margin_percentage !== null
+        ? product.margin_percentage
+        : productSalesPrice > 0
+          ? Number(((productProfit / productSalesPrice) * 100).toFixed(2))
+          : '';
+
       setFormData({
         brand_name: brandName || legacyName,
         product_name: productName,
@@ -205,13 +216,14 @@ const AddProduct = () => {
         sorting_code: sortingCode,
         description: product.description || '',
         cost_of_production: product.cost_of_production,
+        margin_percentage: inferredMargin,
         markup_percentage: product.markup_percentage,
         markup_amount: product.markup_amount || '',
         sales_price: product.sales_price || '',
-        pricing_mode: 'sales',
+        pricing_mode: product.pricing_mode === 'markup' ? 'markup' : 'margin',
         stock_quantity: product.stock_quantity
       });
-      
+
       // If there's an existing sorting code, assume it was manually set
       if (sortingCode) {
         setManualCodeEdit(true);
@@ -224,14 +236,14 @@ const AddProduct = () => {
   const handleChange = (e) => {
     const { name, value } = e.target;
     setPricingError('');
-    
+
     // If user manually edits sorting code, mark it as manual
     if (name === 'sorting_code') {
       setManualCodeEdit(true);
     }
-    
+
     // For number fields, allow empty string so user can delete and type
-    const fieldsToFix = ['cost_of_production', 'markup_percentage', 'markup_amount', 'sales_price', 'stock_quantity'];
+    const fieldsToFix = ['cost_of_production', 'margin_percentage', 'markup_percentage', 'markup_amount', 'sales_price', 'stock_quantity'];
     if (fieldsToFix.includes(name)) {
       setFormData(prev => ({ ...prev, [name]: value }));
     } else {
@@ -262,7 +274,7 @@ const AddProduct = () => {
       const response = await api.post('/categories', { name });
       const newCat = response.data.data;
       setExistingCategories(prev => [...prev, newCat].sort((a, b) => a.name.localeCompare(b.name)));
-      
+
       if (type === 'single') {
         setFormData(prev => ({ ...prev, category: newCat.name }));
         setIsAddingNewCategory(false);
@@ -289,19 +301,20 @@ const AddProduct = () => {
   };
 
   const calculatedCoP = lineItems.reduce((sum, item) => sum + Number(item.cost || 0), 0);
-  
-  // Pricing mode logic
-  let finalCoP, appliedMarkup, estimatedSP, estimatedProfit, hasMarkupAmount, hasMarkupPercent;
 
-  if (formData.pricing_mode === 'sales') {
+  // Pricing mode logic
+  let finalCoP, appliedMarkup, estimatedSP, estimatedProfit, hasMarkupAmount, hasMarkupPercent, hasMarginPercent;
+
+  if (formData.pricing_mode === 'margin') {
     estimatedSP = Number(formData.sales_price || 0);
-    hasMarkupPercent = formData.markup_percentage !== '' && formData.markup_percentage !== null;
-    estimatedProfit = hasMarkupPercent 
-      ? (estimatedSP * Number(formData.markup_percentage) / 100) 
+    hasMarginPercent = formData.margin_percentage !== '' && formData.margin_percentage !== null;
+    estimatedProfit = hasMarginPercent
+      ? (estimatedSP * Number(formData.margin_percentage) / 100)
       : 0;
     finalCoP = estimatedSP - estimatedProfit;
     appliedMarkup = estimatedProfit;
     hasMarkupAmount = false;
+    hasMarkupPercent = false;
   } else {
     finalCoP = lineItems.length > 0 ? calculatedCoP : Number(formData.cost_of_production || 0);
     hasMarkupAmount = formData.markup_amount !== '' && formData.markup_amount !== null;
@@ -318,16 +331,28 @@ const AddProduct = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-    
+
     try {
-      if (formData.pricing_mode === 'cop' && !hasMarkupAmount && !hasMarkupPercent) {
+      if (formData.pricing_mode === 'markup' && !hasMarkupAmount && !hasMarkupPercent) {
         setPricingError('Please provide either a markup percentage or a markup amount.');
         setLoading(false);
         return;
       }
 
-      if (formData.pricing_mode === 'sales' && !formData.sales_price) {
+      if (formData.pricing_mode === 'margin' && !formData.sales_price) {
         setPricingError('Please provide a sales price.');
+        setLoading(false);
+        return;
+      }
+
+      if (formData.pricing_mode === 'margin' && !hasMarginPercent) {
+        setPricingError('Please provide a margin percentage.');
+        setLoading(false);
+        return;
+      }
+
+      if (formData.pricing_mode === 'margin' && (Number(formData.margin_percentage) < 0 || Number(formData.margin_percentage) >= 100)) {
+        setPricingError('Margin must be between 0% and 99.99%.');
         setLoading(false);
         return;
       }
@@ -357,12 +382,15 @@ const AddProduct = () => {
         // Combined display name
         name: fullName,
         description: formData.description,
-        cost_of_production: formData.pricing_mode === 'sales' ? finalCoP : (lineItems.length > 0 ? calculatedCoP : formData.cost_of_production),
-        markup_percentage: formData.markup_percentage,
-        markup_amount: formData.pricing_mode === 'sales' ? appliedMarkup : formData.markup_amount,
+        pricing_mode: formData.pricing_mode,
+        cost_of_production: formData.pricing_mode === 'margin' ? finalCoP : (lineItems.length > 0 ? calculatedCoP : formData.cost_of_production),
+        margin_percentage: formData.pricing_mode === 'margin' ? formData.margin_percentage : '',
+        sales_price: formData.pricing_mode === 'margin' ? estimatedSP : '',
+        markup_percentage: formData.pricing_mode === 'markup' ? formData.markup_percentage : '',
+        markup_amount: formData.pricing_mode === 'margin' ? appliedMarkup : formData.markup_amount,
         stock_quantity: formData.stock_quantity
       };
-      
+
       if (isEditing) {
         await api.put(`/products/${id}`, productData);
         toast.success(`Product "${fullName}" updated successfully`);
@@ -371,7 +399,7 @@ const AddProduct = () => {
         toast.success(`Product "${fullName}" added successfully`);
       }
       soundManager.playSuccess();
-      
+
       navigate('/inventory');
     } catch (error) {
       console.error('Error saving product:', error);
@@ -395,19 +423,21 @@ const AddProduct = () => {
 
     // Get pricing values based on defaults or individual overrides
     const pricingMode = useDefaults ? bulkDefaults.pricing_mode : newBulkProduct.pricing_mode;
-    let cost, markupPct, markupAmt;
+    let cost, markupPct, markupAmt, marginPct, salesPrice;
 
-    if (pricingMode === 'sales') {
-      const sp = useDefaults ? Number(bulkDefaults.sales_price || 0) : Number(newBulkProduct.sales_price || 0);
-      const margin = useDefaults ? Number(bulkDefaults.markup_percentage || 0) : Number(newBulkProduct.markup_percentage || 0);
-      const profit = sp * margin / 100;
-      cost = sp - profit;
+    if (pricingMode === 'margin') {
+      salesPrice = useDefaults ? Number(bulkDefaults.sales_price || 0) : Number(newBulkProduct.sales_price || 0);
+      marginPct = useDefaults ? Number(bulkDefaults.margin_percentage || 0) : Number(newBulkProduct.margin_percentage || 0);
+      const profit = salesPrice * marginPct / 100;
+      cost = salesPrice - profit;
       markupPct = 0;
       markupAmt = profit;
     } else {
       cost = useDefaults ? bulkDefaults.cost_of_production : newBulkProduct.cost_of_production;
       markupPct = useDefaults ? bulkDefaults.markup_percentage : newBulkProduct.markup_percentage;
       markupAmt = useDefaults ? bulkDefaults.markup_amount : newBulkProduct.markup_amount;
+      marginPct = '';
+      salesPrice = '';
     }
 
     const productToAdd = {
@@ -419,9 +449,12 @@ const AddProduct = () => {
       sorting_code: sortingCode,
       name: fullName,
       description: newBulkProduct.description || '',
+      pricing_mode: pricingMode,
       cost_of_production: cost,
+      margin_percentage: marginPct,
       markup_percentage: markupPct,
       markup_amount: markupAmt,
+      sales_price: salesPrice,
       stock_quantity: useDefaults ? bulkDefaults.stock_quantity : newBulkProduct.stock_quantity
     };
 
@@ -432,10 +465,11 @@ const AddProduct = () => {
       category: '',
       description: '',
       cost_of_production: '',
+      margin_percentage: '',
       markup_percentage: '',
       markup_amount: '',
       sales_price: '',
-      pricing_mode: 'sales',
+      pricing_mode: 'margin',
       stock_quantity: ''
     });
     setPricingError('');
@@ -458,10 +492,20 @@ const AddProduct = () => {
 
     // Validate all products have required pricing
     for (const product of bulkProducts) {
-      const hasMarkup = (product.markup_amount !== '' && product.markup_amount !== null) || 
-                        (product.markup_percentage !== '' && product.markup_percentage !== null);
-      if (!hasMarkup) {
-        setPricingError(`Product "${product.product_name}" needs markup percentage or amount.`);
+      const hasMarkup = product.pricing_mode === 'markup' && (
+        (product.markup_amount !== '' && product.markup_amount !== null) ||
+        (product.markup_percentage !== '' && product.markup_percentage !== null)
+      );
+      const hasMargin = product.pricing_mode === 'margin' &&
+        product.margin_percentage !== '' &&
+        product.margin_percentage !== null &&
+        product.sales_price !== '' &&
+        product.sales_price !== null &&
+        Number(product.margin_percentage) >= 0 &&
+        Number(product.margin_percentage) < 100 &&
+        Number(product.sales_price) > 0;
+      if (!hasMarkup && !hasMargin) {
+        setPricingError(`Product "${product.product_name}" needs margin details or markup details.`);
         return;
       }
       if (!product.cost_of_production && product.cost_of_production !== 0) {
@@ -484,9 +528,12 @@ const AddProduct = () => {
           sorting_code: product.sorting_code.toUpperCase(),
           name: product.name,
           description: product.description,
+          pricing_mode: product.pricing_mode,
           cost_of_production: product.cost_of_production,
+          margin_percentage: product.margin_percentage,
           markup_percentage: product.markup_percentage,
           markup_amount: product.markup_amount,
+          sales_price: product.sales_price,
           stock_quantity: product.stock_quantity || 0
         });
       }
@@ -524,7 +571,7 @@ const AddProduct = () => {
           {/* Mode Toggle - Only show when not editing */}
           {!isEditing && (
             <div className="mode-toggle-card">
-              <button 
+              <button
                 type="button"
                 className={`mode-btn ${mode === 'single' ? 'active' : ''}`}
                 onClick={() => setMode('single')}
@@ -532,7 +579,7 @@ const AddProduct = () => {
                 <PackageIcon size={18} />
                 <span>Single Product</span>
               </button>
-              <button 
+              <button
                 type="button"
                 className={`mode-btn ${mode === 'bulk' ? 'active' : ''}`}
                 onClick={() => setMode('bulk')}
@@ -554,30 +601,30 @@ const AddProduct = () => {
               <p className="section-description">
                 Enter the brand and product details. The sorting code will be auto-generated.
               </p>
-              
+
               <div className="form-row">
                 <div className="form-group">
                   <label>Brand Name <span className="required">*</span></label>
-                  <input 
-                    type="text" 
-                    name="brand_name" 
-                    placeholder="e.g., Dr Vranjes" 
-                    value={formData.brand_name} 
-                    onChange={handleChange} 
-                    required 
+                  <input
+                    type="text"
+                    name="brand_name"
+                    placeholder="e.g., Dr Vranjes"
+                    value={formData.brand_name}
+                    onChange={handleChange}
+                    required
                   />
                   <small className="helper-text">The manufacturer or brand of the product</small>
                 </div>
 
                 <div className="form-group">
                   <label>Product Name <span className="required">*</span></label>
-                  <input 
-                    type="text" 
-                    name="product_name" 
-                    placeholder="e.g., Rosso Nobile Diffuser" 
-                    value={formData.product_name} 
-                    onChange={handleChange} 
-                    required 
+                  <input
+                    type="text"
+                    name="product_name"
+                    placeholder="e.g., Rosso Nobile Diffuser"
+                    value={formData.product_name}
+                    onChange={handleChange}
+                    required
                   />
                   <small className="helper-text">The specific product name from this brand</small>
                 </div>
@@ -586,12 +633,12 @@ const AddProduct = () => {
               <div className="form-row">
                 <div className="form-group">
                   <label>Volume / Size</label>
-                  <input 
-                    type="text" 
-                    name="volume_size" 
-                    placeholder="e.g., 500ml, Large, 2L" 
-                    value={formData.volume_size} 
-                    onChange={handleChange} 
+                  <input
+                    type="text"
+                    name="volume_size"
+                    placeholder="e.g., 500ml, Large, 2L"
+                    value={formData.volume_size}
+                    onChange={handleChange}
                   />
                   <small className="helper-text">The size, volume, or variant of the product</small>
                 </div>
@@ -600,9 +647,9 @@ const AddProduct = () => {
                   <label>Category</label>
                   {!isAddingNewCategory ? (
                     <div className="category-select-wrapper" style={{ display: 'flex', gap: '8px' }}>
-                      <select 
-                        name="category" 
-                        value={formData.category} 
+                      <select
+                        name="category"
+                        value={formData.category}
                         onChange={(e) => {
                           if (e.target.value === 'new') {
                             setIsAddingNewCategory(true);
@@ -621,24 +668,24 @@ const AddProduct = () => {
                     </div>
                   ) : (
                     <div className="category-add-wrapper" style={{ display: 'flex', gap: '8px' }}>
-                      <input 
-                        type="text" 
-                        placeholder="New category name" 
+                      <input
+                        type="text"
+                        placeholder="New category name"
                         value={newCatName}
                         onChange={(e) => setNewCatName(e.target.value)}
                         autoFocus
                       />
-                      <button 
-                        type="button" 
-                        className="btn-primary" 
+                      <button
+                        type="button"
+                        className="btn-primary"
                         onClick={() => handleAddNewCategory('single')}
                         style={{ padding: '0 12px', height: '38px' }}
                       >
                         Add
                       </button>
-                      <button 
-                        type="button" 
-                        className="btn-secondary" 
+                      <button
+                        type="button"
+                        className="btn-secondary"
                         onClick={() => {
                           setIsAddingNewCategory(false);
                           setNewCatName('');
@@ -656,8 +703,8 @@ const AddProduct = () => {
                   <label>
                     Sorting Code
                     {manualCodeEdit && (
-                      <button 
-                        type="button" 
+                      <button
+                        type="button"
                         className="btn-reset-code"
                         onClick={resetToAutoCode}
                         title="Reset to auto-generated code"
@@ -667,17 +714,17 @@ const AddProduct = () => {
                     )}
                   </label>
                   <div className="sorting-code-input">
-                    <input 
-                      type="text" 
-                      name="sorting_code" 
-                      placeholder="Auto-generated" 
-                      value={formData.sorting_code} 
+                    <input
+                      type="text"
+                      name="sorting_code"
+                      placeholder="Auto-generated"
+                      value={formData.sorting_code}
                       onChange={handleChange}
                       className="code-input"
                       style={{ textTransform: 'uppercase', fontFamily: 'monospace', letterSpacing: '1px' }}
                     />
-                    <button 
-                      type="button" 
+                    <button
+                      type="button"
                       className="btn-copy-code"
                       onClick={copyCode}
                       title="Copy code"
@@ -698,13 +745,13 @@ const AddProduct = () => {
                   <span className="preview-name">{displayName}</span>
                 </div>
               )}
-              
+
               <div className="form-group">
                 <label>Description</label>
-                <textarea 
-                  name="description" 
-                  placeholder="Additional notes or description" 
-                  value={formData.description} 
+                <textarea
+                  name="description"
+                  placeholder="Additional notes or description"
+                  value={formData.description}
                   onChange={handleChange}
                   rows="2"
                 />
@@ -712,29 +759,29 @@ const AddProduct = () => {
             </div>
 
             <div className="pricing-mode-toggle">
-              <label className={`mode-option ${formData.pricing_mode === 'cop' ? 'active' : ''}`}>
-                <input 
-                  type="radio" 
-                  name="pricing_mode" 
-                  value="cop" 
-                  checked={formData.pricing_mode === 'cop'} 
-                  onChange={() => setFormData(prev => ({ ...prev, pricing_mode: 'cop' }))}
+              <label className={`mode-option ${formData.pricing_mode === 'margin' ? 'active' : ''}`}>
+                <input
+                  type="radio"
+                  name="pricing_mode"
+                  value="margin"
+                  checked={formData.pricing_mode === 'margin'}
+                  onChange={() => setFormData(prev => ({ ...prev, pricing_mode: 'margin' }))}
                 />
-                <span>Manual Cost Entry</span>
+                <span>Margin</span>
               </label>
-              <label className={`mode-option ${formData.pricing_mode === 'sales' ? 'active' : ''}`}>
-                <input 
-                  type="radio" 
-                  name="pricing_mode" 
-                  value="sales" 
-                  checked={formData.pricing_mode === 'sales'} 
-                  onChange={() => setFormData(prev => ({ ...prev, pricing_mode: 'sales' }))}
+              <label className={`mode-option ${formData.pricing_mode === 'markup' ? 'active' : ''}`}>
+                <input
+                  type="radio"
+                  name="pricing_mode"
+                  value="markup"
+                  checked={formData.pricing_mode === 'markup'}
+                  onChange={() => setFormData(prev => ({ ...prev, pricing_mode: 'markup' }))}
                 />
-                <span>Sales Price Target</span>
+                <span>Markup</span>
               </label>
             </div>
 
-            {formData.pricing_mode === 'cop' ? (
+            {formData.pricing_mode === 'markup' ? (
               <div className="form-card">
                 <h3 className="section-title">
                   <PackageIcon size={18} /> Cost of Production
@@ -751,7 +798,7 @@ const AddProduct = () => {
                           <span className="line-item-name">{item.item_name}</span>
                           <span className="line-item-cost">{formatCurrency(item.cost)}</span>
                         </div>
-                        <button 
+                        <button
                           type="button"
                           onClick={() => removeLineItem(item.id)}
                           className="btn-remove"
@@ -768,22 +815,22 @@ const AddProduct = () => {
                 )}
 
                 <div className="add-line-item-form">
-                  <input 
-                    type="text" 
-                    placeholder="Item/Material name" 
+                  <input
+                    type="text"
+                    placeholder="Item/Material name"
                     value={newLineItem.item_name}
                     onChange={(e) => setNewLineItem({ ...newLineItem, item_name: e.target.value })}
                     className="line-item-input"
                   />
-                  <input 
-                    type="number" 
-                    placeholder="Cost" 
+                  <input
+                    type="number"
+                    placeholder="Cost"
                     step="0.01"
                     value={newLineItem.cost}
                     onChange={(e) => setNewLineItem({ ...newLineItem, cost: e.target.value })}
                     className="line-item-cost-input"
                   />
-                  <button 
+                  <button
                     type="button"
                     onClick={addLineItem}
                     className="btn-add-item"
@@ -795,13 +842,13 @@ const AddProduct = () => {
                 {lineItems.length === 0 && (
                   <div className="form-group" style={{ marginTop: '1rem' }}>
                     <label>Or enter Cost of Production directly ({currencySymbol}) <span className="required">*</span></label>
-                    <input 
-                      type="number" 
-                      name="cost_of_production" 
-                      placeholder="0.00" 
+                    <input
+                      type="number"
+                      name="cost_of_production"
+                      placeholder="0.00"
                       step="0.01"
-                      value={formData.cost_of_production} 
-                      onChange={handleChange} 
+                      value={formData.cost_of_production}
+                      onChange={handleChange}
                       required={lineItems.length === 0}
                     />
                   </div>
@@ -811,44 +858,44 @@ const AddProduct = () => {
 
             <div className="form-card">
               <h3 className="section-title">Pricing & Stock</h3>
-              
+
               <div className="form-row">
-                {formData.pricing_mode === 'sales' ? (
+                {formData.pricing_mode === 'margin' ? (
                   <>
                     <div className="form-group">
                       <label>Sales Price ({currencySymbol}) <span className="required">*</span></label>
-                      <input 
-                        type="number" 
-                        name="sales_price" 
-                        placeholder="0.00" 
+                      <input
+                        type="number"
+                        name="sales_price"
+                        placeholder="0.00"
                         step="0.01"
-                        value={formData.sales_price} 
+                        value={formData.sales_price}
                         onChange={handleChange}
-                        required 
+                        required
                       />
                     </div>
                     <div className="form-group">
-                      <label>Profit Margin (%)</label>
-                      <input 
-                        type="number" 
-                        name="markup_percentage" 
-                        placeholder="e.g., 30" 
-                        value={formData.markup_percentage} 
-                        onChange={handleChange} 
+                      <label>Margin Inside Sales Price (%) <span className="required">*</span></label>
+                      <input
+                        type="number"
+                        name="margin_percentage"
+                        placeholder="e.g., 30"
+                        value={formData.margin_percentage}
+                        onChange={handleChange}
                       />
-                      <small className="helper-text">{formData.markup_percentage}% of Sales Price is profit</small>
+                      <small className="helper-text">{formData.margin_percentage || 0}% of Sales Price is profit. CoP is the remainder.</small>
                     </div>
                   </>
                 ) : (
                   <>
                     <div className="form-group">
                       <label>Markup Percentage (%)</label>
-                      <input 
-                        type="number" 
-                        name="markup_percentage" 
-                        placeholder="e.g., 50" 
-                        value={formData.markup_percentage} 
-                        onChange={handleChange} 
+                      <input
+                        type="number"
+                        name="markup_percentage"
+                        placeholder="e.g., 50"
+                        value={formData.markup_percentage}
+                        onChange={handleChange}
                       />
                       <small className="helper-text">Use percentage or amount — one is required.</small>
                     </div>
@@ -866,16 +913,16 @@ const AddProduct = () => {
                     </div>
                   </>
                 )}
-                
+
                 <div className="form-group">
                   <label>Stock Quantity <span className="required">*</span></label>
-                  <input 
-                    type="number" 
-                    name="stock_quantity" 
-                    placeholder="0" 
-                    value={formData.stock_quantity} 
-                    onChange={handleChange} 
-                    required 
+                  <input
+                    type="number"
+                    name="stock_quantity"
+                    placeholder="0"
+                    value={formData.stock_quantity}
+                    onChange={handleChange}
+                    required
                   />
                 </div>
               </div>
@@ -892,7 +939,7 @@ const AddProduct = () => {
                 <span className="summary-value">{formatCurrency(finalCoP)}</span>
               </div>
               <div className="summary-item">
-                <span className="summary-label">Markup/Profit:</span>
+                <span className="summary-label">{formData.pricing_mode === 'margin' ? 'Margin/Profit:' : 'Markup/Profit:'}</span>
                 <span className="summary-value">{formatCurrency(appliedMarkup)}</span>
               </div>
               <div className="summary-item total">
@@ -902,15 +949,15 @@ const AddProduct = () => {
             </div>
 
             <div className="form-actions">
-              <button 
-                type="button" 
-                className="btn-secondary" 
+              <button
+                type="button"
+                className="btn-secondary"
                 onClick={() => navigate('/inventory')}
               >
                 Cancel
               </button>
-              <button 
-                type="submit" 
+              <button
+                type="submit"
                 className="btn-primary"
                 disabled={loading}
               >
@@ -931,22 +978,22 @@ const AddProduct = () => {
                 <p className="section-description">
                   Set the brand and category once. All products below will use these.
                 </p>
-                
+
                 <div className="form-row">
                   <div className="form-group">
                     <label>Brand Name <span className="required">*</span></label>
-                    <input 
-                      type="text" 
-                      placeholder="e.g., Dr Vranjes" 
-                      value={bulkBrandName} 
+                    <input
+                      type="text"
+                      placeholder="e.g., Dr Vranjes"
+                      value={bulkBrandName}
                       onChange={(e) => setBulkBrandName(e.target.value)}
                     />
                   </div>
                   <div className="form-group">
                     <label>Category</label>
                     {!isAddingNewBulkCategory ? (
-                      <select 
-                        value={bulkCategory} 
+                      <select
+                        value={bulkCategory}
                         onChange={(e) => {
                           if (e.target.value === 'new') {
                             setIsAddingNewBulkCategory(true);
@@ -963,24 +1010,24 @@ const AddProduct = () => {
                       </select>
                     ) : (
                       <div style={{ display: 'flex', gap: '8px' }}>
-                        <input 
-                          type="text" 
-                          placeholder="New category name" 
+                        <input
+                          type="text"
+                          placeholder="New category name"
                           value={newCatName}
                           onChange={(e) => setNewCatName(e.target.value)}
                           autoFocus
                         />
-                        <button 
-                          type="button" 
-                          className="btn-primary" 
+                        <button
+                          type="button"
+                          className="btn-primary"
                           onClick={() => handleAddNewCategory('bulk')}
                           style={{ padding: '0 12px', height: '38px' }}
                         >
                           Add
                         </button>
-                        <button 
-                          type="button" 
-                          className="btn-secondary" 
+                        <button
+                          type="button"
+                          className="btn-secondary"
                           onClick={() => {
                             setIsAddingNewBulkCategory(false);
                             setNewCatName('');
@@ -1005,9 +1052,9 @@ const AddProduct = () => {
                 </p>
 
                 <label className="checkbox-label" style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
-                  <input 
-                    type="checkbox" 
-                    checked={useDefaults} 
+                  <input
+                    type="checkbox"
+                    checked={useDefaults}
                     onChange={(e) => setUseDefaults(e.target.checked)}
                     style={{ width: '16px', height: '16px' }}
                   />
@@ -1015,46 +1062,46 @@ const AddProduct = () => {
                 </label>
 
                 <div className="pricing-mode-toggle" style={{ marginBottom: '1rem' }}>
-                  <label className={`mode-option ${bulkDefaults.pricing_mode === 'cop' ? 'active' : ''}`}>
-                    <input 
-                      type="radio" 
-                      name="bulk_pricing_mode" 
-                      checked={bulkDefaults.pricing_mode === 'cop'} 
-                      onChange={() => setBulkDefaults(prev => ({ ...prev, pricing_mode: 'cop' }))}
+                  <label className={`mode-option ${bulkDefaults.pricing_mode === 'margin' ? 'active' : ''}`}>
+                    <input
+                      type="radio"
+                      name="bulk_pricing_mode"
+                      checked={bulkDefaults.pricing_mode === 'margin'}
+                      onChange={() => setBulkDefaults(prev => ({ ...prev, pricing_mode: 'margin' }))}
                     />
-                    <span>Manual Cost</span>
+                    <span>Margin</span>
                   </label>
-                  <label className={`mode-option ${bulkDefaults.pricing_mode === 'sales' ? 'active' : ''}`}>
-                    <input 
-                      type="radio" 
-                      name="bulk_pricing_mode" 
-                      checked={bulkDefaults.pricing_mode === 'sales'} 
-                      onChange={() => setBulkDefaults(prev => ({ ...prev, pricing_mode: 'sales' }))}
+                  <label className={`mode-option ${bulkDefaults.pricing_mode === 'markup' ? 'active' : ''}`}>
+                    <input
+                      type="radio"
+                      name="bulk_pricing_mode"
+                      checked={bulkDefaults.pricing_mode === 'markup'}
+                      onChange={() => setBulkDefaults(prev => ({ ...prev, pricing_mode: 'markup' }))}
                     />
-                    <span>Sales Price Target</span>
+                    <span>Markup</span>
                   </label>
                 </div>
 
                 <div className="form-row">
-                  {bulkDefaults.pricing_mode === 'sales' ? (
+                  {bulkDefaults.pricing_mode === 'margin' ? (
                     <>
                       <div className="form-group">
                         <label>Default Sales Price ({currencySymbol})</label>
-                        <input 
-                          type="number" 
-                          placeholder="0.00" 
+                        <input
+                          type="number"
+                          placeholder="0.00"
                           step="0.01"
-                          value={bulkDefaults.sales_price} 
+                          value={bulkDefaults.sales_price}
                           onChange={(e) => setBulkDefaults({ ...bulkDefaults, sales_price: e.target.value })}
                         />
                       </div>
                       <div className="form-group">
-                        <label>Default Profit Margin (%)</label>
-                        <input 
-                          type="number" 
-                          placeholder="e.g., 30" 
-                          value={bulkDefaults.markup_percentage} 
-                          onChange={(e) => setBulkDefaults({ ...bulkDefaults, markup_percentage: e.target.value })}
+                        <label>Default Margin Inside Sales Price (%)</label>
+                        <input
+                          type="number"
+                          placeholder="e.g., 30"
+                          value={bulkDefaults.margin_percentage}
+                          onChange={(e) => setBulkDefaults({ ...bulkDefaults, margin_percentage: e.target.value })}
                         />
                       </div>
                     </>
@@ -1062,30 +1109,30 @@ const AddProduct = () => {
                     <>
                       <div className="form-group">
                         <label>Cost of Production ({currencySymbol})</label>
-                        <input 
-                          type="number" 
-                          placeholder="0.00" 
+                        <input
+                          type="number"
+                          placeholder="0.00"
                           step="0.01"
-                          value={bulkDefaults.cost_of_production} 
+                          value={bulkDefaults.cost_of_production}
                           onChange={(e) => setBulkDefaults({ ...bulkDefaults, cost_of_production: e.target.value })}
                         />
                       </div>
                       <div className="form-group">
                         <label>Markup %</label>
-                        <input 
-                          type="number" 
-                          placeholder="e.g., 50" 
-                          value={bulkDefaults.markup_percentage} 
+                        <input
+                          type="number"
+                          placeholder="e.g., 50"
+                          value={bulkDefaults.markup_percentage}
                           onChange={(e) => setBulkDefaults({ ...bulkDefaults, markup_percentage: e.target.value })}
                         />
                       </div>
                       <div className="form-group">
                         <label>Or Markup Amount ({currencySymbol})</label>
-                        <input 
-                          type="number" 
-                          placeholder="e.g., 1500" 
+                        <input
+                          type="number"
+                          placeholder="e.g., 1500"
                           step="0.01"
-                          value={bulkDefaults.markup_amount} 
+                          value={bulkDefaults.markup_amount}
                           onChange={(e) => setBulkDefaults({ ...bulkDefaults, markup_amount: e.target.value })}
                         />
                       </div>
@@ -1093,10 +1140,10 @@ const AddProduct = () => {
                   )}
                   <div className="form-group">
                     <label>Stock Qty</label>
-                    <input 
-                      type="number" 
-                      placeholder="0" 
-                      value={bulkDefaults.stock_quantity} 
+                    <input
+                      type="number"
+                      placeholder="0"
+                      value={bulkDefaults.stock_quantity}
                       onChange={(e) => setBulkDefaults({ ...bulkDefaults, stock_quantity: e.target.value })}
                     />
                   </div>
@@ -1116,18 +1163,18 @@ const AddProduct = () => {
                   <div className="form-row">
                     <div className="form-group">
                       <label>Product Name <span className="required">*</span></label>
-                      <input 
-                        type="text" 
-                        placeholder="e.g., Rosso Nobile Diffuser" 
+                      <input
+                        type="text"
+                        placeholder="e.g., Rosso Nobile Diffuser"
                         value={newBulkProduct.product_name}
                         onChange={(e) => setNewBulkProduct({ ...newBulkProduct, product_name: e.target.value })}
                       />
                     </div>
                     <div className="form-group">
                       <label>Volume / Size</label>
-                      <input 
-                        type="text" 
-                        placeholder="e.g., 500ml" 
+                      <input
+                        type="text"
+                        placeholder="e.g., 500ml"
                         value={newBulkProduct.volume_size}
                         onChange={(e) => setNewBulkProduct({ ...newBulkProduct, volume_size: e.target.value })}
                       />
@@ -1135,8 +1182,8 @@ const AddProduct = () => {
                     {!bulkCategory && (
                     <div className="form-group">
                       <label>Category</label>
-                      <select 
-                        value={newBulkProduct.category} 
+                      <select
+                        value={newBulkProduct.category}
                         onChange={(e) => setNewBulkProduct({ ...newBulkProduct, category: e.target.value })}
                       >
                         <option value="">Select Category</option>
@@ -1157,46 +1204,46 @@ const AddProduct = () => {
                   {!useDefaults && (
                     <div style={{ marginTop: '0.75rem' }}>
                       <div className="pricing-mode-toggle" style={{ marginBottom: '0.75rem' }}>
-                        <label className={`mode-option ${newBulkProduct.pricing_mode === 'cop' ? 'active' : ''}`}>
-                          <input 
-                            type="radio" 
-                            name="new_bulk_pricing_mode" 
-                            checked={newBulkProduct.pricing_mode === 'cop'} 
-                            onChange={() => setNewBulkProduct(prev => ({ ...prev, pricing_mode: 'cop' }))}
+                        <label className={`mode-option ${newBulkProduct.pricing_mode === 'margin' ? 'active' : ''}`}>
+                          <input
+                            type="radio"
+                            name="new_bulk_pricing_mode"
+                            checked={newBulkProduct.pricing_mode === 'margin'}
+                            onChange={() => setNewBulkProduct(prev => ({ ...prev, pricing_mode: 'margin' }))}
                           />
-                          <span>Manual Cost</span>
+                          <span>Margin</span>
                         </label>
-                        <label className={`mode-option ${newBulkProduct.pricing_mode === 'sales' ? 'active' : ''}`}>
-                          <input 
-                            type="radio" 
-                            name="new_bulk_pricing_mode" 
-                            checked={newBulkProduct.pricing_mode === 'sales'} 
-                            onChange={() => setNewBulkProduct(prev => ({ ...prev, pricing_mode: 'sales' }))}
+                        <label className={`mode-option ${newBulkProduct.pricing_mode === 'markup' ? 'active' : ''}`}>
+                          <input
+                            type="radio"
+                            name="new_bulk_pricing_mode"
+                            checked={newBulkProduct.pricing_mode === 'markup'}
+                            onChange={() => setNewBulkProduct(prev => ({ ...prev, pricing_mode: 'markup' }))}
                           />
-                          <span>Sales Price Target</span>
+                          <span>Markup</span>
                         </label>
                       </div>
 
                       <div className="form-row">
-                        {newBulkProduct.pricing_mode === 'sales' ? (
+                        {newBulkProduct.pricing_mode === 'margin' ? (
                           <>
                             <div className="form-group">
                               <label>Sales Price ({currencySymbol})</label>
-                              <input 
-                                type="number" 
-                                placeholder="0.00" 
+                              <input
+                                type="number"
+                                placeholder="0.00"
                                 step="0.01"
                                 value={newBulkProduct.sales_price}
                                 onChange={(e) => setNewBulkProduct({ ...newBulkProduct, sales_price: e.target.value })}
                               />
                             </div>
                             <div className="form-group">
-                              <label>Profit Margin (%)</label>
-                              <input 
-                                type="number" 
+                              <label>Margin Inside Sales Price (%)</label>
+                              <input
+                                type="number"
                                 placeholder="30"
-                                value={newBulkProduct.markup_percentage}
-                                onChange={(e) => setNewBulkProduct({ ...newBulkProduct, markup_percentage: e.target.value })}
+                                value={newBulkProduct.margin_percentage}
+                                onChange={(e) => setNewBulkProduct({ ...newBulkProduct, margin_percentage: e.target.value })}
                               />
                             </div>
                           </>
@@ -1204,9 +1251,9 @@ const AddProduct = () => {
                           <>
                             <div className="form-group">
                               <label>Cost ({currencySymbol})</label>
-                              <input 
-                                type="number" 
-                                placeholder="0.00" 
+                              <input
+                                type="number"
+                                placeholder="0.00"
                                 step="0.01"
                                 value={newBulkProduct.cost_of_production}
                                 onChange={(e) => setNewBulkProduct({ ...newBulkProduct, cost_of_production: e.target.value })}
@@ -1214,8 +1261,8 @@ const AddProduct = () => {
                             </div>
                             <div className="form-group">
                               <label>Markup %</label>
-                              <input 
-                                type="number" 
+                              <input
+                                type="number"
                                 placeholder="50"
                                 value={newBulkProduct.markup_percentage}
                                 onChange={(e) => setNewBulkProduct({ ...newBulkProduct, markup_percentage: e.target.value })}
@@ -1223,9 +1270,9 @@ const AddProduct = () => {
                             </div>
                             <div className="form-group">
                               <label>Or Amount ({currencySymbol})</label>
-                              <input 
-                                type="number" 
-                                placeholder="1500" 
+                              <input
+                                type="number"
+                                placeholder="1500"
                                 step="0.01"
                                 value={newBulkProduct.markup_amount}
                                 onChange={(e) => setNewBulkProduct({ ...newBulkProduct, markup_amount: e.target.value })}
@@ -1235,8 +1282,8 @@ const AddProduct = () => {
                         )}
                         <div className="form-group">
                           <label>Stock</label>
-                          <input 
-                            type="number" 
+                          <input
+                            type="number"
                             placeholder="0"
                             value={newBulkProduct.stock_quantity}
                             onChange={(e) => setNewBulkProduct({ ...newBulkProduct, stock_quantity: e.target.value })}
@@ -1246,7 +1293,7 @@ const AddProduct = () => {
                     </div>
                   )}
 
-                  <button 
+                  <button
                     type="button"
                     className="btn-add-to-list"
                     onClick={addBulkProduct}
@@ -1275,12 +1322,14 @@ const AddProduct = () => {
                           <div className="bulk-product-details">
                             <span>CoP: {formatCurrency(product.cost_of_production || 0)}</span>
                             <span>
-                              Markup: {product.markup_amount ? formatCurrency(product.markup_amount) : `${product.markup_percentage || 0}%`}
+                              {product.pricing_mode === 'margin'
+                                ? `Margin: ${product.margin_percentage || 0}%`
+                                : `Markup: ${product.markup_amount ? formatCurrency(product.markup_amount) : `${product.markup_percentage || 0}%`}`}
                             </span>
                             <span>Stock: {product.stock_quantity || 0}</span>
                           </div>
                         </div>
-                        <button 
+                        <button
                           type="button"
                           className="btn-remove-bulk"
                           onClick={() => removeBulkProduct(product.id)}
@@ -1298,15 +1347,15 @@ const AddProduct = () => {
               )}
 
               <div className="form-actions">
-                <button 
-                  type="button" 
-                  className="btn-secondary" 
+                <button
+                  type="button"
+                  className="btn-secondary"
                   onClick={() => navigate('/inventory')}
                 >
                   Cancel
                 </button>
-                <button 
-                  type="button" 
+                <button
+                  type="button"
                   className="btn-primary"
                   onClick={handleBulkSubmit}
                   disabled={loading || bulkProducts.length === 0}
@@ -1357,26 +1406,28 @@ const AddProduct = () => {
           {/* Price Preview */}
           <div className="preview-card">
             <h3>Price Preview</h3>
-            
+
             <div className="preview-item">
               <span>Cost of Production:</span>
               <span className="preview-value">{formatCurrency(finalCoP)}</span>
             </div>
-            
+
             <div className="preview-item">
               <span>
-                Markup {hasMarkupAmount ? '(Amount)' : `(${formData.markup_percentage || 0}%)`}:
+                {formData.pricing_mode === 'margin'
+                  ? `Margin (${formData.margin_percentage || 0}%):`
+                  : `Markup ${hasMarkupAmount ? '(Amount)' : `(${formData.markup_percentage || 0}%)`}:`}
               </span>
               <span className="preview-value">{formatCurrency(estimatedSP - finalCoP, { showSign: true })}</span>
             </div>
-            
+
             <div className="preview-divider"></div>
-            
+
             <div className="preview-item">
               <span>Sales Price:</span>
               <span className="preview-value primary">{formatCurrency(estimatedSP)}</span>
             </div>
-            
+
             <div className="preview-item">
               <span>Profit per Unit:</span>
               <span className="preview-value success">{formatCurrency(estimatedProfit, { showSign: true })}</span>
