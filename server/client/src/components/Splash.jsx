@@ -1,9 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { 
-  BoxIcon, 
-  CartIcon, 
-  ShippingIcon, 
-  AnalyticsIcon, 
+import {
+  BoxIcon,
+  CartIcon,
+  AnalyticsIcon,
   ProfileIcon,
   TargetIcon
 } from './CustomIcons';
@@ -18,12 +17,12 @@ const Splash = ({ duration = 2500, onDone }) => {
     const fadeTimer = setTimeout(() => {
       setHiding(true);
     }, duration);
-    
+
     const hideTimer = setTimeout(() => {
       setVisible(false);
       onDone && onDone();
     }, duration + 800);
-    
+
     return () => {
       clearTimeout(fadeTimer);
       clearTimeout(hideTimer);
@@ -39,7 +38,7 @@ const Splash = ({ duration = 2500, onDone }) => {
         <div className="splash-center-logo">
           <img src="/Ryme Icon.png" alt="Ryme Interiors" />
         </div>
-        
+
         {/* Orbiting Icons Container */}
         <div className="splash-orbit">
           {/* Icons positioned in a circle */}
@@ -51,37 +50,26 @@ const Splash = ({ duration = 2500, onDone }) => {
               <path d="M7 11h10"></path>
               <path d="M7 15h10"></path>
             </svg>
-            {/* Using SVG for barcode-like look since we want to stick to fi or simple SVGs to avoid missing icon errors if possible, or just FiBarChart rotated? */}
           </div>
-          
+
           {/* Top Right */}
           <div className="orbit-icon icon-2"><AnalyticsIcon size={24} /></div>
-          
+
           {/* Bottom Right */}
           <div className="orbit-icon icon-3"><CartIcon size={24} /></div>
-          
+
           {/* Bottom */}
           <div className="orbit-icon icon-4"><ProfileIcon size={24} /></div>
-          
+
           {/* Bottom Left */}
           <div className="orbit-icon icon-5"><BoxIcon size={24} /></div>
-          
+
           {/* Top Left */}
           <div className="orbit-icon icon-6"><TargetIcon size={24} /></div>
         </div>
       </div>
-      
-      <div style={{
-        position: 'absolute',
-        bottom: '40px',
-        fontFamily: 'var(--font-sans)',
-        fontWeight: '600',
-        color: 'var(--text-secondary)',
-        fontSize: '14px',
-        letterSpacing: '0.05em'
-      }}>
-        LOADING...
-      </div>
+
+      <div className="splash-loading-label">LOADING...</div>
     </div>
   );
 };

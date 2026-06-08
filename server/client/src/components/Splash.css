@@ -1,10 +1,13 @@
 .splash-overlay {
   position: fixed;
-  top: 0;
-  left: 0;
+  inset: 0;
   width: 100vw;
   height: 100vh;
-  background-color: #ffffff;
+  overflow: hidden;
+  isolation: isolate;
+  background:
+    linear-gradient(135deg, rgba(239, 246, 255, 0.9), rgba(248, 250, 252, 0.8)),
+    #edf5ff;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -12,16 +15,42 @@
   transition: opacity 0.8s ease, transform 0.8s ease;
 }
 
+.splash-overlay::before {
+  content: '';
+  position: absolute;
+  inset: -28%;
+  z-index: -2;
+  background:
+    radial-gradient(ellipse at 18% 28%, rgba(37, 99, 235, 0.66) 0%, rgba(59, 130, 246, 0.42) 24%, transparent 52%),
+    radial-gradient(ellipse at 78% 70%, rgba(2, 6, 23, 0.58) 0%, rgba(15, 23, 42, 0.34) 28%, transparent 56%),
+    radial-gradient(ellipse at 54% 12%, rgba(147, 197, 253, 0.5) 0%, transparent 42%);
+  filter: blur(58px);
+  opacity: 1;
+  transform: translate3d(-3%, -2%, 0) scale(1.04);
+}
+
+.splash-overlay::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background:
+    linear-gradient(120deg, rgba(255, 255, 255, 0.56), rgba(255, 255, 255, 0.26)),
+    radial-gradient(circle at center, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0.44));
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+
 .splash-overlay.hiding {
   opacity: 0;
   pointer-events: none;
-  transform: scale(1.1);
+  transform: scale(1.06);
 }
 
 .splash-content {
   position: relative;
-  width: 300px;
-  height: 300px;
+  width: clamp(240px, 68vw, 320px);
+  height: clamp(240px, 68vw, 320px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -30,32 +59,33 @@
 .splash-center-logo {
   position: absolute;
   z-index: 10;
-  width: 100px;
-  height: 100px;
+  width: 104px;
+  height: 104px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: white;
-  border-radius: 20px;
-  box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-  animation: pulse-logo 2s infinite ease-in-out;
+  background: transparent;
+  border: none;
+  border-radius: 22px;
+  box-shadow: none;
+  animation: pulse-logo 1.35s infinite ease-in-out;
 }
 
 .splash-center-logo img {
-  width: 60px;
+  width: 62px;
   height: auto;
   object-fit: contain;
 }
 
 .splash-orbit {
+  --splash-orbit-duration: 11s;
   position: absolute;
   width: 100%;
   height: 100%;
   border-radius: 50%;
-  animation: orbit-rotate 20s linear infinite;
+  animation: orbit-rotate var(--splash-orbit-duration) linear infinite;
 }
 
-/* Optional: Faint circle border */
 .splash-orbit::before {
   content: '';
   position: absolute;
@@ -63,9 +93,10 @@
   left: 10%;
   width: 80%;
   height: 80%;
-  border: 1px dashed rgba(37, 99, 235, 0.2);
+  border: 1px dashed rgba(37, 99, 235, 0.3);
   border-radius: 50%;
   box-sizing: border-box;
+  box-shadow: 0 0 40px rgba(37, 99, 235, 0.08);
 }
 
 .orbit-icon {
@@ -74,137 +105,199 @@
   left: 50%;
   width: 44px;
   height: 44px;
-  background: white;
+  margin-top: -22px;
+  margin-left: -22px;
+  background: transparent;
+  border: none;
   border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
+  color: #2563eb;
   font-size: 20px;
-  color: #0f172a;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-  margin-top: -22px;
-  margin-left: -22px;
+  box-shadow: none;
 }
 
-/* 
-  Position icons in a circle (radius ~ 110px) 
-  and counter-rotate them to keep them upright 
-*/
-.orbit-icon:nth-child(1) { transform: rotate(0deg) translate(110px) rotate(0deg); animation: counter-rotate 20s linear infinite; }
-.orbit-icon:nth-child(2) { transform: rotate(60deg) translate(110px) rotate(-60deg); animation: counter-rotate 20s linear infinite; animation-delay: -3.33s; }
-.orbit-icon:nth-child(3) { transform: rotate(120deg) translate(110px) rotate(-120deg); animation: counter-rotate 20s linear infinite; animation-delay: -6.66s; }
-.orbit-icon:nth-child(4) { transform: rotate(180deg) translate(110px) rotate(-180deg); animation: counter-rotate 20s linear infinite; animation-delay: -10s; }
-.orbit-icon:nth-child(5) { transform: rotate(240deg) translate(110px) rotate(-240deg); animation: counter-rotate 20s linear infinite; animation-delay: -13.33s; }
-.orbit-icon:nth-child(6) { transform: rotate(300deg) translate(110px) rotate(-300deg); animation: counter-rotate 20s linear infinite; animation-delay: -16.66s; }
+.orbit-icon svg {
+  width: 1em;
+  height: 1em;
+  color: inherit;
+}
 
-/* 
-  Actually, the transform method above sets the initial position.
-  Only the container .splash-orbit rotates.
-  To keep icons upright, we need to rotate them in reverse.
-  The animation needs to apply rotation on top of initial transform?
-  
-  Better approach:
-  Use animation on the icon to rotate it 360 to 0 (counter-clockwise).
-*/
+.orbit-icon:nth-child(1) {
+  animation:
+    icon-spin-1 var(--splash-orbit-duration) linear infinite,
+    orbit-icon-tone var(--splash-orbit-duration) linear infinite;
+  animation-delay: 0s, 0s;
+}
+
+.orbit-icon:nth-child(2) {
+  animation:
+    icon-spin-2 var(--splash-orbit-duration) linear infinite,
+    orbit-icon-tone var(--splash-orbit-duration) linear infinite;
+  animation-delay: 0s, -1.83s;
+}
+
+.orbit-icon:nth-child(3) {
+  animation:
+    icon-spin-3 var(--splash-orbit-duration) linear infinite,
+    orbit-icon-tone var(--splash-orbit-duration) linear infinite;
+  animation-delay: 0s, -3.66s;
+}
+
+.orbit-icon:nth-child(4) {
+  animation:
+    icon-spin-4 var(--splash-orbit-duration) linear infinite,
+    orbit-icon-tone var(--splash-orbit-duration) linear infinite;
+  animation-delay: 0s, -5.5s;
+}
+
+.orbit-icon:nth-child(5) {
+  animation:
+    icon-spin-5 var(--splash-orbit-duration) linear infinite,
+    orbit-icon-tone var(--splash-orbit-duration) linear infinite;
+  animation-delay: 0s, -7.33s;
+}
+
+.orbit-icon:nth-child(6) {
+  animation:
+    icon-spin-6 var(--splash-orbit-duration) linear infinite,
+    orbit-icon-tone var(--splash-orbit-duration) linear infinite;
+  animation-delay: 0s, -9.16s;
+}
+
+.splash-loading-label {
+  position: absolute;
+  bottom: max(40px, env(safe-area-inset-bottom));
+  z-index: 1;
+  color: #1f2937;
+  font-family: var(--font-sans, Inter, system-ui, sans-serif);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-shadow: 0 1px 18px rgba(255, 255, 255, 0.9);
+  animation: loading-label-pulse 1.2s ease-in-out infinite;
+}
 
 @keyframes orbit-rotate {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
 }
 
-@keyframes counter-rotate {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(-360deg); }
+@keyframes icon-spin-1 {
+  from { transform: rotate(0deg) translate(110px) rotate(0deg); }
+  to { transform: rotate(0deg) translate(110px) rotate(-360deg); }
 }
 
-/* 
-  Correct approach for counter-rotation with initial position:
-  We need the animation to modify the 'rotate' part of the transform?
-  No, that replaces the transform.
-  
-  Alternative HTML structure:
-  <div class="arm"> <div class="icon-wrapper"> <Icon /> </div> </div>
-  Rotate arm, Counter-rotate icon-wrapper.
-*/
-
-.orbit-arm {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  animation: orbit-rotate 20s linear infinite;
-  /* Each arm starts at a different angle but shares the same animation time? No. */
+@keyframes icon-spin-2 {
+  from { transform: rotate(60deg) translate(110px) rotate(-60deg); }
+  to { transform: rotate(60deg) translate(110px) rotate(-420deg); }
 }
 
-/* Let's simplify: 
-   .splash-orbit rotates.
-   .orbit-icon is placed at specific angle.
-   .orbit-icon needs to rotate around its own center to stay upright relative to page.
-*/
-
-.orbit-icon {
-  animation: keep-upright 20s linear infinite;
+@keyframes icon-spin-3 {
+  from { transform: rotate(120deg) translate(110px) rotate(-120deg); }
+  to { transform: rotate(120deg) translate(110px) rotate(-480deg); }
 }
 
-@keyframes keep-upright {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(-360deg); }
+@keyframes icon-spin-4 {
+  from { transform: rotate(180deg) translate(110px) rotate(-180deg); }
+  to { transform: rotate(180deg) translate(110px) rotate(-540deg); }
 }
 
-/*
-  But wait, if I use:
-  transform: rotate(60deg) translate(110px) rotate(-60deg);
-  The last rotate(-60deg) makes it upright initially.
-  If the parent rotates by X, the child rotates by X (because it's inside).
-  So child needs to rotate by -X additionally.
-  So at time t, parent is at angle A. Child is at angle 60 relative to parent.
-  Child on screen is at angle (A + 60).
-  Child rotation is (-60).
-  Child total rotation = A + (-60) = A - 60.
-  We want Child total rotation = 0.
-  So Child needs rotation -A on top of -60?
-  
-  Yes.
-  
-  Easier way:
-  Parent rotates.
-  Child has `transform: rotate(N deg) translate(R) rotate(- N deg)` initially.
-  Add animation to child: `transform: rotate(N deg) translate(R) rotate(- N deg - 360deg)`?
-*/
+@keyframes icon-spin-5 {
+  from { transform: rotate(240deg) translate(110px) rotate(-240deg); }
+  to { transform: rotate(240deg) translate(110px) rotate(-600deg); }
+}
 
-@keyframes icon-spin-1 { from { transform: rotate(0deg) translate(110px) rotate(0deg); } to { transform: rotate(0deg) translate(110px) rotate(-360deg); } }
-@keyframes icon-spin-2 { from { transform: rotate(60deg) translate(110px) rotate(-60deg); } to { transform: rotate(60deg) translate(110px) rotate(-420deg); } }
-@keyframes icon-spin-3 { from { transform: rotate(120deg) translate(110px) rotate(-120deg); } to { transform: rotate(120deg) translate(110px) rotate(-480deg); } }
-@keyframes icon-spin-4 { from { transform: rotate(180deg) translate(110px) rotate(-180deg); } to { transform: rotate(180deg) translate(110px) rotate(-540deg); } }
-@keyframes icon-spin-5 { from { transform: rotate(240deg) translate(110px) rotate(-240deg); } to { transform: rotate(240deg) translate(110px) rotate(-600deg); } }
-@keyframes icon-spin-6 { from { transform: rotate(300deg) translate(110px) rotate(-300deg); } to { transform: rotate(300deg) translate(110px) rotate(-660deg); } }
+@keyframes icon-spin-6 {
+  from { transform: rotate(300deg) translate(110px) rotate(-300deg); }
+  to { transform: rotate(300deg) translate(110px) rotate(-660deg); }
+}
 
-.orbit-icon:nth-child(1) { animation: icon-spin-1 20s linear infinite; }
-.orbit-icon:nth-child(2) { animation: icon-spin-2 20s linear infinite; }
-.orbit-icon:nth-child(3) { animation: icon-spin-3 20s linear infinite; }
-.orbit-icon:nth-child(4) { animation: icon-spin-4 20s linear infinite; }
-.orbit-icon:nth-child(5) { animation: icon-spin-5 20s linear infinite; }
-.orbit-icon:nth-child(6) { animation: icon-spin-6 20s linear infinite; }
+@keyframes orbit-icon-tone {
+  0%, 100% {
+    color: #2563eb;
+  }
+  42% {
+    color: #111827;
+  }
+  68% {
+    color: #020617;
+  }
+}
 
 @keyframes pulse-logo {
-  0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.4); }
-  70% { transform: scale(1.05); box-shadow: 0 0 0 15px rgba(37, 99, 235, 0); }
-  100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(37, 99, 235, 0); }
+  0% {
+    transform: scale(1);
+  }
+  70% {
+    transform: scale(1.045);
+  }
+  100% {
+    transform: scale(1);
+  }
 }
 
-/* Dark mode support */
+@keyframes loading-label-pulse {
+  0%, 100% { opacity: 0.68; }
+  50% { opacity: 1; }
+}
+
+html.theme-dark .splash-overlay,
 body.theme-dark .splash-overlay {
-  background-color: #0b0b0d;
+  background: #020617;
 }
-body.theme-dark .splash-center-logo {
-  background: #18181b;
+
+html.theme-dark .splash-overlay::before,
+body.theme-dark .splash-overlay::before {
+  background:
+    radial-gradient(circle at 18% 28%, rgba(37, 99, 235, 0.54), transparent 34%),
+    radial-gradient(circle at 78% 64%, rgba(0, 0, 0, 0.66), transparent 36%),
+    radial-gradient(circle at 58% 16%, rgba(59, 130, 246, 0.34), transparent 30%);
+  opacity: 0.9;
 }
+
+html.theme-dark .splash-overlay::after,
+body.theme-dark .splash-overlay::after {
+  background:
+    linear-gradient(120deg, rgba(2, 6, 23, 0.58), rgba(2, 6, 23, 0.34)),
+    radial-gradient(circle at center, rgba(15, 23, 42, 0.28), rgba(2, 6, 23, 0.72));
+}
+
+html.theme-dark .splash-center-logo,
+body.theme-dark .splash-center-logo,
+html.theme-dark .orbit-icon,
 body.theme-dark .orbit-icon {
-  background: #18181b;
-  color: #e2e8f0;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  background: transparent;
+  border-color: transparent;
 }
-body.theme-dark .splash-orbit::before {
-  border-color: rgba(37, 99, 235, 0.4);
+
+html.theme-dark .splash-loading-label,
+body.theme-dark .splash-loading-label {
+  color: #e5e7eb;
+  text-shadow: 0 1px 18px rgba(0, 0, 0, 0.85);
+}
+
+@media (max-width: 520px) {
+  .splash-content {
+    width: min(280px, 78vw);
+    height: min(280px, 78vw);
+  }
+
+  .splash-center-logo {
+    width: 90px;
+    height: 90px;
+    border-radius: 20px;
+  }
+
+  .splash-center-logo img {
+    width: 54px;
+  }
+
+  .orbit-icon {
+    width: 40px;
+    height: 40px;
+    margin-top: -20px;
+    margin-left: -20px;
+  }
 }
