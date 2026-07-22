@@ -35,6 +35,7 @@ import autoTable from 'jspdf-autotable';
 import { useSettings } from '../contexts/SettingsContext';
 import { useToast } from '../components/Toast';
 import soundManager from '../utils/soundManager';
+import { formatVatPercentage } from '../utils/vat';
 import { usePageState } from '../hooks/usePageState';
 import useScrollLock from '../hooks/useScrollLock';
 import './OrderDetails.css';
@@ -386,7 +387,7 @@ const OrderDetails = () => {
     let totalSection = '';
     if (order.include_vat && order.vat_amount > 0) {
       totalSection = `💰 Subtotal: ${formatCurrency(order.total_sales_price)}
-📊 VAT (7.5%): ${formatCurrency(order.vat_amount)}
+📊 VAT (${formatVatPercentage(order.vat_percentage)}): ${formatCurrency(order.vat_amount)}
 💵 Total: ${formatCurrency(grandTotal)}`;
     } else {
       totalSection = `💰 Total: ${formatCurrency(order.total_sales_price)}`;
@@ -642,7 +643,7 @@ Sent from Ryme Inventory`;
     }
     
     if (order.include_vat && order.vat_amount > 0) {
-        drawTotalRow('VAT (7.5%)', order.vat_amount);
+        drawTotalRow(`VAT (${formatVatPercentage(order.vat_percentage)})`, order.vat_amount);
     }
     
     // Ensure space for the final total and line
@@ -1149,7 +1150,7 @@ Sent from Ryme Inventory`;
 
           {order.include_vat && order.vat_amount > 0 && (
             <div className="totals-row">
-              <span>VAT (7.5%)</span>
+              <span>VAT ({formatVatPercentage(order.vat_percentage)})</span>
               <span>{formatCurrency(order.vat_amount)}</span>
             </div>
           )}

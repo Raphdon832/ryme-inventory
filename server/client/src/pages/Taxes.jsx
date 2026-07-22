@@ -9,6 +9,7 @@ import {
   ArrowDownRightIcon
 } from '../components/CustomIcons';
 import { exportTaxReport } from '../utils/exportUtils';
+import { DEFAULT_VAT_PERCENTAGE, formatVatPercentage } from '../utils/vat';
 import { usePageState } from '../hooks/usePageState';
 import './Taxes.css';
 
@@ -22,11 +23,11 @@ const Taxes = () => {
     const [profit, setProfit] = useState(0);
     const [vatCollected, setVatCollected] = useState(0);
     const [vatOrdersCount, setVatOrdersCount] = useState(0);
+    const [vatRateLabel, setVatRateLabel] = useState(formatVatPercentage(DEFAULT_VAT_PERCENTAGE));
     const [loading, setLoading] = useState(true);
     const [taxType, setTaxType] = useState(pageState.taxType);
     
     // Nigerian Tax Constants (2024 Guidelines)
-    const VAT_RATE = 0.075; 
     const EDT_RATE = 0.03;  
     const PENSION_RATE = 0.08; // Based on PwC sample
 
@@ -59,11 +60,13 @@ const Taxes = () => {
             // Calculate actual VAT collected from PAID orders where VAT was charged
             const vatOrders = paidOrders.filter(order => order.include_vat);
             const totalVatCollected = vatOrders.reduce((sum, order) => sum + (order.vat_amount || 0), 0);
+            const vatRates = new Set(vatOrders.map(order => formatVatPercentage(order.vat_percentage)));
             
             setRevenue(totalRevenue);
             setProfit(totalGrossProfit - totalExpenses);
             setVatCollected(totalVatCollected);
             setVatOrdersCount(vatOrders.length);
+            setVatRateLabel(vatRates.size > 1 ? 'Variable rates' : ([...vatRates][0] || formatVatPercentage(DEFAULT_VAT_PERCENTAGE)));
             setLoading(false);
         } catch (error) {
             console.error('Error fetching financial data:', error);
@@ -154,6 +157,7 @@ const Taxes = () => {
             calculateCIT,
             calculateEDT,
             calculateVAT,
+            vatRateLabel,
             totalTaxLiability,
             netProfitAfterTax
         });
@@ -336,7 +340,7 @@ const Taxes = () => {
                                             <strong>VAT Collected</strong>
                                             <p className="text-muted small">From {vatOrdersCount} order{vatOrdersCount !== 1 ? 's' : ''} with VAT</p>
                                         </td>
-                                        <td>7.5% on VAT-enabled orders</td>
+                                        <td>{vatRateLabel === 'Variable rates' ? 'Variable rates on VAT-enabled orders' : `${vatRateLabel} on VAT-enabled orders`}</td>
                                         <td style={{ textAlign: 'right' }} className="amount-cell text-blue">{formatCurrency(calculateVAT())}</td>
                                         <td><span className="status-pill recurring">Monthly</span></td>
                                     </tr>
@@ -457,7 +461,7 @@ const Taxes = () => {
                                     </>
                                 )}
                                 <li>
-                                    <strong>VAT (7.5%)</strong>
+                                    <strong>{vatRateLabel === 'Variable rates' ? 'VAT (variable rates)' : `VAT (${vatRateLabel})`}</strong>
                                     <p>Calculated from orders where VAT was enabled. Enable VAT when creating orders to track liability. Remit by 21st of next month.</p>
                                 </li>
                             </ul>

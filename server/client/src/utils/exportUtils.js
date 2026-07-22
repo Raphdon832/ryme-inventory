@@ -186,7 +186,11 @@ export const exportFinancialReport = (data, type = 'pdf') => {
  * Formatter for Tax & Financial Data
  */
 export const exportTaxReport = (financials, type = 'pdf') => {
-  const { revenue, profit, taxType, pitDetails, citRate, calculateCIT, calculateEDT, calculateVAT, totalTaxLiability, netProfitAfterTax } = financials;
+  const { revenue, profit, taxType, pitDetails, citRate, calculateCIT, calculateEDT, calculateVAT, vatRateLabel = '7.5%', totalTaxLiability, netProfitAfterTax } = financials;
+  const vatLabel = vatRateLabel === 'Variable rates' ? 'VAT (variable rates)' : `VAT (${vatRateLabel})`;
+  const vatBasis = vatRateLabel === 'Variable rates'
+    ? 'Rates saved on VAT-enabled orders'
+    : `${vatRateLabel} on VAT-enabled orders`;
   
   const reportTitle = `Tax Compliance Report (${taxType === 'CIT' ? 'Corporate' : 'Individual/PIT'})`;
   const fileName = `tax_report_${new Date().toISOString().split('T')[0]}`;
@@ -197,7 +201,7 @@ export const exportTaxReport = (financials, type = 'pdf') => {
       { Label: 'Total Revenue', Value: revenue },
       { Label: 'Total Profit (Assessable)', Value: profit },
       { Label: 'Tax Liability', Value: totalTaxLiability },
-      { Label: 'VAT (7.5%)', Value: calculateVAT() },
+      { Label: vatLabel, Value: calculateVAT() },
       { Label: 'Net After Tax', Value: netProfitAfterTax }
     ];
     exportToCSV(csvData, fileName);
@@ -242,12 +246,12 @@ export const exportTaxReport = (financials, type = 'pdf') => {
     const breakdownBody = taxType === 'CIT' ? [
         ['CIT (Company Income Tax)', `${(citRate * 100)}% of Profit`, `N${calculateCIT().toLocaleString()}`],
         ['EDT (Education Tax)', '3.0% of Profit', `N${calculateEDT().toLocaleString()}`],
-        ['VAT (Value Added Tax)', '7.5% of Revenue', `N${calculateVAT().toLocaleString()}`]
+        ['VAT (Value Added Tax)', vatBasis, `N${calculateVAT().toLocaleString()}`]
     ] : [
         ['Consolidated Relief Allowance', 'Higher of 200k/1% GI + 20% GI', `(N${pitDetails.cra.toLocaleString()})`],
         ['Statutory Pension', '8% of Gross Income', `(N${pitDetails.pension.toLocaleString()})`],
         ['PIT (Personal Income Tax)', 'Graduated Scale (7%-24%)', `N${pitDetails.finalTax.toLocaleString()}`],
-        ['VAT (Value Added Tax)', '7.5% of Revenue', `N${calculateVAT().toLocaleString()}`]
+        ['VAT (Value Added Tax)', vatBasis, `N${calculateVAT().toLocaleString()}`]
     ];
 
     autoTable(doc, {
