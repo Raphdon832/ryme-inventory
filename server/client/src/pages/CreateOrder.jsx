@@ -24,6 +24,12 @@ import api from '../api';
 import { useSettings } from '../contexts/SettingsContext';
 import offlineManager from '../utils/offlineManager';
 import soundManager from '../utils/soundManager';
+import {
+  DEFAULT_VAT_PERCENTAGE,
+  formatVatPercentage,
+  getOrderVatPercentage,
+  normalizeVatPercentage
+} from '../utils/vat';
 import { useToast } from '../components/Toast';
 import { usePageState } from '../hooks/usePageState';
 import './CreateOrder.css';
@@ -41,7 +47,8 @@ const createEmptyOrderData = () => ({
   discount: { type: 'none', value: 0 },
   status: 'pending',
   order_number: '',
-  include_vat: false
+  include_vat: false,
+  vat_percentage: DEFAULT_VAT_PERCENTAGE
 });
 
 const createEmptyItem = () => ({
@@ -107,8 +114,6 @@ const CreateOrder = () => {
   const draftTimerRef = useRef(null);
 
   const [orderData, setOrderData] = useState(() => createEmptyOrderData());
-
-  const VAT_RATE = 0.075; // 7.5% Nigerian VAT
 
   const [currentItem, setCurrentItem] = useState(() => createEmptyItem());
 
@@ -192,6 +197,7 @@ const CreateOrder = () => {
             status: order.status || 'pending',
             order_number: order.order_number || '',
             include_vat: order.include_vat || false,
+            vat_percentage: getOrderVatPercentage(order),
             _offline: order._offline || false
           };
           setOrderData(loadedOrderData);
@@ -530,6 +536,7 @@ const CreateOrder = () => {
         })),
         discount: orderData.discount,
         include_vat: orderData.include_vat,
+        vat_percentage: normalizeVatPercentage(orderData.vat_percentage),
         vat_amount: vatAmount
       };
 
@@ -628,6 +635,7 @@ const CreateOrder = () => {
         })),
         discount: orderData.discount,
         include_vat: orderData.include_vat,
+        vat_percentage: normalizeVatPercentage(orderData.vat_percentage),
         vat_amount: vatAmount,
         subtotal: calculateSubtotal(),
         total: calculateGrandTotal(),
@@ -693,6 +701,7 @@ const CreateOrder = () => {
     setError(null);
     
     try {
+      const vatAmount = calculateVAT();
       const orderPayload = {
         customer_id: orderData.customer_id || '',
         customer_name: orderData.customer_name,
@@ -705,7 +714,10 @@ const CreateOrder = () => {
           sales_price: item.sales_price,
           cost: item.cost
         })),
-        discount: orderData.discount
+        discount: orderData.discount,
+        include_vat: orderData.include_vat,
+        vat_percentage: normalizeVatPercentage(orderData.vat_percentage),
+        vat_amount: vatAmount
       };
 
       if (isEditing && !isOfflineOrder) {
@@ -782,8 +794,8 @@ const CreateOrder = () => {
 
   const calculateVAT = () => {
     if (!orderData.include_vat) return 0;
-    const afterDiscount = calculateSubtotal() - calculateDiscountAmount();
-    return afterDiscount * VAT_RATE;
+    const vatPercentage = normalizeVatPercentage(orderData.vat_percentage);
+    return calculateTotal() * (vatPercentage / 100);
   };
 
   const calculateGrandTotal = () => {
@@ -1327,7 +1339,7 @@ const CreateOrder = () => {
               </div>
             )}
 
-            {/* VAT Toggle */}
+            {/* VAT controls */}
             <div className="vat-section">
               <label className="vat-toggle">
                 <input
@@ -1336,13 +1348,46 @@ const CreateOrder = () => {
                   onChange={(e) => setOrderData({...orderData, include_vat: e.target.checked})}
                 />
                 <span className="toggle-slider"></span>
-                <span className="toggle-label">Add VAT (7.5%)</span>
+                <span className="toggle-label">Add VAT</span>
               </label>
+
+              {orderData.include_vat && (
+                <label className="vat-rate-control" htmlFor="vat-percentage">
+                  <span>Rate</span>
+                  <span className="vat-rate-input">
+                    <input
+                      id="vat-percentage"
+                      type="number"
+                      min="0"
+                      max="100"
+                      step="0.1"
+                      inputMode="decimal"
+                      value={orderData.vat_percentage}
+                      onChange={(e) => setOrderData({
+                        ...orderData,
+                        vat_percentage: e.target.value === ''
+                          ? ''
+                          : normalizeVatPercentage(e.target.value)
+                      })}
+                      onBlur={() => {
+                        if (orderData.vat_percentage === '') {
+                          setOrderData({
+                            ...orderData,
+                            vat_percentage: DEFAULT_VAT_PERCENTAGE
+                          });
+                        }
+                      }}
+                      aria-label="VAT percentage"
+                    />
+                    <span>%</span>
+                  </span>
+                </label>
+              )}
             </div>
 
             {orderData.include_vat && (
               <div className="summary-row vat-row">
-                <span>VAT (7.5%)</span>
+                <span>VAT ({formatVatPercentage(orderData.vat_percentage)})</span>
                 <span className="value">{formatCurrency(calculateVAT())}</span>
               </div>
             )}

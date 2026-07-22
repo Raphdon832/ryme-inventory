@@ -24,6 +24,7 @@ import useScrollLock from '../hooks/useScrollLock';
 import { usePageState } from '../hooks/usePageState';
 import offlineManager from '../utils/offlineManager';
 import { exportOrders } from '../utils/exportUtils';
+import { formatVatPercentage } from '../utils/vat';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import './Orders.css';
@@ -128,6 +129,8 @@ const Orders = () => {
         order_date: o.createdAt,
         payment_status: 'Pending',
         total_sales_price: totalSales,
+        include_vat: o.include_vat || false,
+        vat_percentage: o.vat_percentage,
         vat_amount: vatAmount,
         total_profit: 0,
         items: o.items || [],
@@ -381,7 +384,7 @@ const Orders = () => {
         }
 
         if (order.include_vat && order.vat_amount > 0) {
-          drawTotalRow('VAT (7.5%)', order.vat_amount);
+          drawTotalRow(`VAT (${formatVatPercentage(order.vat_percentage)})`, order.vat_amount);
         }
 
         // Ensure space for the final total and line
@@ -436,10 +439,14 @@ const Orders = () => {
       let totalOrderDiscounts = 0;
       let totalItems = 0;
       const itemCounts = {};
+      const vatRates = new Set();
 
       validOrders.forEach(order => {
         totalAmount += order.total_sales_price || 0;
         totalVAT += order.vat_amount || 0;
+        if (order.include_vat && order.vat_amount > 0) {
+          vatRates.add(formatVatPercentage(order.vat_percentage));
+        }
 
         // Order-level discount
         if (order.discount && order.discount.value > 0) {
@@ -547,7 +554,10 @@ const Orders = () => {
         doc.setFontSize(9);
         doc.setFont('helvetica', 'normal');
         doc.setTextColor(...primaryColor);
-        doc.text(`VAT (7.5%): ${safeCurrency(totalVAT)}`, 25, summaryY + 6);
+        const vatRateSummary = vatRates.size === 1
+          ? ` (${[...vatRates][0]})`
+          : ' (variable rates)';
+        doc.text(`VAT${vatRateSummary}: ${safeCurrency(totalVAT)}`, 25, summaryY + 6);
 
         summaryY += 22;
       }

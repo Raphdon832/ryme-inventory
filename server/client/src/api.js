@@ -16,6 +16,7 @@ import {
 } from 'firebase/firestore';
 import { db } from './firebase';
 import offlineManager from './utils/offlineManager';
+import { normalizeVatPercentage } from './utils/vat';
 
 // Re-export db for use in other components
 export { db };
@@ -488,7 +489,7 @@ const api = {
     }
 
     if (path === '/orders') {
-      const { customer_name, customer_address, items, discount, include_vat, vat_amount } = payload;
+      const { customer_name, customer_address, items, discount, include_vat, vat_amount, vat_percentage } = payload;
       if (!customer_name || !items || items.length === 0) {
         throw new Error('Order must contain items.');
       }
@@ -559,6 +560,7 @@ const api = {
         total_sales_price: final_total_sales_price,
         total_profit: final_total_profit,
         include_vat: include_vat || false,
+        vat_percentage: normalizeVatPercentage(vat_percentage),
         vat_amount: vat_amount || 0,
         items: orderItems
       });
@@ -976,7 +978,7 @@ const api = {
        }
 
        // General order update
-      const { customer_name, customer_address, items, discount, customer_id, include_vat, vat_amount } = payload;
+      const { customer_name, customer_address, items, discount, customer_id, include_vat, vat_amount, vat_percentage } = payload;
        
        // Get the existing order to compare changes
        const existingOrderSnap = await getDoc(doc(ordersRef, id));
@@ -1042,6 +1044,7 @@ const api = {
          total_sales_price: final_total_sales_price,
          total_profit: final_total_profit,
          include_vat: include_vat || false,
+         vat_percentage: normalizeVatPercentage(vat_percentage),
          vat_amount: vat_amount || 0,
          items: orderItems,
          updated_at: new Date().toISOString()
